@@ -48,28 +48,43 @@ Design constraints:
 
 ### ✅ Phase 2: Public Marketing Site + User Dashboard (Feb 2026)
 **Public Marketing Pages (`/`)**
-- HomePage with hero, AI Mirror Demo, ROI calc, Jalwa Score showcase, Framer Motion entrance + scroll animations
+- HomePage with hero (**Bricolage Grotesque 800** for the 3 hero lines), AI Mirror Demo, ROI calc, Growth Score showcase, Framer Motion entrance + scroll animations
 - FeaturesPage, PricingPage (reads `seo_jalwa_admin.pricing`), IntegrationsPage, AboutPage
 - BlogPage (listing) + BlogPostPage (detail with related)
 - ContactPage, PrivacyPage, TermsPage, CookiesPage
 - Shared PublicLayout: Navbar (sticky, logo, nav, Sign in, Start free), Footer, CookieBanner
+
+**Module naming (final)**
+- Jalwa Pulse  → **AI Visibility**     (`/dashboard/ai-visibility`)
+- Jalwa Write  → **AI Writer**         (`/dashboard/ai-writer`)
+- Jalwa Publish → **Auto Publish**     (`/dashboard/auto-publish`)
+- Jalwa Post   → **Social Autopilot**  (`/dashboard/social-autopilot`)
+- Jalwa Score  → **Growth Score**      (`/dashboard/growth-score` — standalone page)
+- Brand name "SEO Jalwa" / "Jalwa" preserved in logo only.
+
+**Integration logos** — shared `PlatformLogo` component (colored 40x40 brand-square with white letter, Instagram gradient). Used on /integrations grid, homepage marquee, /dashboard/connections.
 
 **Auth Pages**
 - LoginPage (split layout: brand panel + form), SignupPage, ForgotPasswordPage
 - All redirect to `/dashboard` on success
 - `AuthRedirect` wrapper sends logged-in users to `/dashboard`
 
-**User Dashboard (`/dashboard/*`)**
-- DashboardLayout with sidebar nav (collapses on mobile), top bar with notifications + avatar menu, logout
-- DashboardHome, PulsePage, WritePage, PublishPage, PostPage, SettingsPage
+**User Dashboard (`/dashboard/*`)** — Sidebar order: Dashboard, **Growth Score**, AI Visibility, AI Writer, Auto Publish, Social Autopilot, **Connections** (NEW), Settings
+- DashboardLayout with sidebar nav (collapses on mobile), top bar with **dynamic page title**, notifications, avatar menu, logout
+- All 8 pages: DashboardHome, GrowthScorePage, PulsePage, WritePage, PublishPage, PostPage, ConnectionsPage, SettingsPage
 - Protected via `<Navigate to="/login" replace />` guard inside DashboardLayout
-- Logout uses `isLoggingOutRef` to avoid redirect-to-login race on unmount
+- Logout uses `isLoggingOutRef` to avoid redirect-to-login race
+- Legacy routes (/dashboard/pulse, /write, /publish, /post) redirect to new ones
+
+**ConnectionsPage** (`/dashboard/connections`)
+- Section A "Connect your website" — 9 platform cards (WordPress, Shopify, Webflow [pre-connected], Ghost, HubSpot, Wix, Squarespace, Notion, Next.js). Each card has method badge (Plugin/OAuth/API Key/Webhook/App) and Connect/Disconnect.
+- Per-platform modals: WordPress shows copyable API key `jalwa_live_abc123xyz`; Ghost & Wix have credential input fields; Next.js shows copyable webhook URL + code snippet; others OAuth-style.
+- Section B "Connect your social accounts" — 6 platforms (3 pre-connected, 3 disconnected). OAuth modal with platform-brand-colored Connect button.
 
 **Critical localStorage bridge** — verified working:
 - Admin Pricing page writes `{pricing: {starter, growth, agency}}` into `seo_jalwa_admin`
 - Public PricingPage + UserContext.getPricing() read from same key
-- Falls back to default $79/$199/$499 if absent
-- Tested: `/app/test_reports/iteration_2.json` — 97% → 100% after logout fix
+- Tested: `/app/test_reports/iteration_2.json` (97%→100% after logout fix), `/app/test_reports/iteration_3.json` (100% on all 5 targeted changes)
 
 ### Technical Stack
 - React 19 + React Router DOM v7

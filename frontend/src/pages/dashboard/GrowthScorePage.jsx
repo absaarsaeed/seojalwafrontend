@@ -76,15 +76,17 @@ export const GrowthScorePage = () => {
       {/* Score history */}
       <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
         <h3 className="font-semibold text-[#0A0A0A] mb-4">Score history (last 8 weeks)</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={PULSE_DATA.scoreHistory}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-            <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-            <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#1D9E75' }} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div style={{ width: '100%', height: 250 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={PULSE_DATA.scoreHistory}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+              <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+              <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#1D9E75' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </motion.div>
 
       {/* What affects your score */}

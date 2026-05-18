@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, Outlet, Navigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { Toaster } from 'sonner';
 import { 
@@ -28,6 +28,7 @@ const navItems = [
 export const DashboardLayout = () => {
   const { isAuthenticated, user, logout } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const isLoggingOutRef = useRef(false);
 
@@ -40,6 +41,13 @@ export const DashboardLayout = () => {
     logout();
     navigate('/', { replace: true });
   };
+
+  const currentPageLabel = (() => {
+    const match = navItems.find((item) =>
+      item.exact ? location.pathname === item.path : location.pathname === item.path
+    );
+    return match ? match.label : 'Dashboard';
+  })();
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex" data-testid="dashboard-layout">
@@ -139,7 +147,7 @@ export const DashboardLayout = () => {
         <header className="bg-white border-b border-[#F0F0F0] px-6 py-4 sticky top-0 z-20">
           <div className="flex items-center justify-between lg:ml-0 ml-12">
             <h1 className="text-lg font-semibold text-[#0A0A0A]" data-testid="dash-page-title">
-              Dashboard
+              {currentPageLabel}
             </h1>
             <div className="flex items-center gap-3">
               <button className="relative p-2 text-[#6B7280] hover:text-[#0A0A0A] transition-colors">
