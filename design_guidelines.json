@@ -1,0 +1,124 @@
+{
+  "theme": "Light",
+  "archetype": "Archetype 4: Swiss & High-Contrast (adapted for SaaS Admin)",
+  "rationale": "SaaS Admin Panels require extreme clarity and functionality over decoration. We are combining Archetype 4 (Swiss logic, high contrast, clean structure) with touches of Archetype 1 (Organic trust) introduced by the primary green #1D9E75. It prioritizes data legibility and optical alignment over decorative styling.",
+  "colors": {
+    "primary": {
+      "DEFAULT": "#1D9E75",
+      "hover": "#178562",
+      "active": "#136A4F",
+      "foreground": "#FFFFFF",
+      "light": "#E8F5F1"
+    },
+    "background": {
+      "app": "#FAFAFA",
+      "surface": "#FFFFFF",
+      "sidebar": "#FFFFFF",
+      "table_alt": "#FAFAFA"
+    },
+    "border": {
+      "subtle": "#F0F0F0",
+      "focus": "#1D9E75"
+    },
+    "text": {
+      "heading": "#09090B",
+      "body": "#27272A",
+      "muted": "#71717A"
+    },
+    "accent": {
+      "info": "#2563EB",
+      "success": "#1D9E75",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "rules": {
+      "h1": "text-2xl sm:text-3xl font-bold tracking-tight text-[#09090B]",
+      "h2": "text-xl sm:text-2xl font-semibold tracking-tight text-[#09090B]",
+      "h3": "text-lg sm:text-xl font-medium text-[#09090B]",
+      "body": "text-sm text-[#27272A] leading-relaxed",
+      "label": "text-xs font-semibold uppercase tracking-[0.05em] text-[#71717A]",
+      "h1_anti_pattern": "Do not use sizes larger than text-3xl for standard admin dashboard page titles. Maintain compact scales for 'Control Room' grid."
+    }
+  },
+  "layout_and_spacing": {
+    "sidebar": "w-[240px] flex-shrink-0 bg-white border-r border-[#F0F0F0] h-screen sticky top-0",
+    "main_content": "flex-1 min-h-screen bg-[#FAFAFA]",
+    "container": "p-6 md:p-8 max-w-[1600px] mx-auto w-full",
+    "grid_system": "Control Room Grid (Dense). Use grid-cols-1 md:grid-cols-3 lg:grid-cols-4 or grid-cols-12 for detailed data tracking. Gap strategy: gap-6.",
+    "cards": "bg-white rounded-[12px] border border-[#F0F0F0] shadow-none overflow-hidden",
+    "card_padding": "p-5 md:p-6",
+    "tables": "w-full text-sm text-left. Alternating rows with bg-[#FAFAFA] on odd rows. Header bg-white border-b border-[#F0F0F0] py-3 text-xs uppercase font-semibold text-[#71717A]."
+  },
+  "components": {
+    "button": {
+      "primary": "bg-[#1D9E75] hover:bg-[#178562] text-white rounded-md px-4 py-2 font-medium transition-colors focus:ring-2 focus:ring-[#1D9E75] focus:ring-offset-2",
+      "secondary": "bg-white border border-[#F0F0F0] hover:bg-gray-50 text-[#09090B] rounded-md px-4 py-2 font-medium transition-colors",
+      "ghost": "hover:bg-[#F0F0F0]/50 text-[#27272A] rounded-md px-4 py-2 transition-colors"
+    },
+    "inputs": {
+      "default": "border border-[#F0F0F0] rounded-md px-3 py-2 bg-white text-sm focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75] outline-none transition-all"
+    },
+    "charts": {
+      "library": "recharts",
+      "styling": "Use crisp lines. No massive drop shadows on lines. Tooltips should have bg-white border-[#F0F0F0] text-sm. Primary chart color #1D9E75."
+    },
+    "shadcn": {
+      "strategy": "Use Shadcn UI for standard interactions (Tabs, Dropdowns, Dialogs, Select). Override their default gray borders with #F0F0F0. Override radii to rounded-[12px] for cards, rounded-md for interactive elements like buttons/inputs."
+    }
+  },
+  "accessibility_and_testing": {
+    "data_testid": "MANDATORY. All interactive elements (buttons, links, form inputs, tabs, chart tooltips, table rows) must have data-testid in kebab-case format. E.g., data-testid='sidebar-nav-users', data-testid='login-submit-button'.",
+    "contrast": "Ensure all text meets at least 4.5:1 against #FAFAFA and #FFFFFF."
+  },
+  "media": {
+    "logos": {
+      "brand": {
+        "url": "https://images.unsplash.com/photo-1725784254011-cd5ec8f506a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzh8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpYyUyMGxvZ28lMjBncmVlbnxlbnwwfHx8fDE3NzkwODc5NzF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract geometric logo in green for SEO Jalwa. Display as a small square icon in the sidebar header.",
+        "usage": "sidebar_header"
+      }
+    },
+    "avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3OTAxOTk3OHww&ixlib=rb-4.1.0&q=85",
+        "description": "User 1 avatar"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3OTAxOTk3OHww&ixlib=rb-4.1.0&q=85",
+        "description": "User 2 avatar"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3OTAxOTk3OHww&ixlib=rb-4.1.0&q=85",
+        "description": "User 3 avatar"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1607503873903-c5e95f80d7b9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0fGVufDB8fHx8MTc3OTAxOTk3OHww&ixlib=rb-4.1.0&q=85",
+        "description": "User 4 avatar"
+      },
+      {
+        "url": "https://images.pexels.com/photos/32721690/pexels-photo-32721690.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "User 5 avatar"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install necessary font families: '@fontsource/inter' for body and '@fontsource/manrope' for headings. Never use Inter for headings.",
+    "Install Phosphor Icons (@phosphor-icons/react) or lucide-react for sharp, precise UI icons. Stick to one library.",
+    "Implement the Layout with a fixed sidebar (240px wide, bg-white, right border #F0F0F0) and a flexible main area (bg-#FAFAFA).",
+    "Configure routing exact paths: /adminpanel/ (Login), /adminpanel/dashboard, /adminpanel/users, /adminpanel/users/[id], /adminpanel/pricing, /adminpanel/billing, /adminpanel/coupons, /adminpanel/blog, /adminpanel/announcements, /adminpanel/analytics, /adminpanel/api-keys, /adminpanel/settings.",
+    "All data is dummy/static. Build robust arrays with fake data (use the provided real image URLs for user avatars).",
+    "For Tables: Ensure row backgrounds strictly alternate with #FAFAFA for odd rows and #FFFFFF for even rows to adhere to design specs.",
+    "Cards MUST have 'bg-white rounded-[12px] border border-[#F0F0F0] shadow-none'. Strip any default shadcn heavy shadows.",
+    "API Keys Manager needs Tabs (AI, Payments, Email, SEO, Storage, Social, CMS) using the shadcn Tabs component.",
+    "Pricing Plans Editor should visually present plan cards allowing inline edit or modal edit.",
+    "Always apply 'data-testid' to critical interactions for robust testing (e.g. data-testid='admin-login-button').",
+    "Ensure chart components (via recharts) use custom styling matching our minimal system (#1D9E75 lines/bars, custom clean tooltips)."
+  ]
+}
