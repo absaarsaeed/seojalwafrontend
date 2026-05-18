@@ -221,13 +221,20 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 - `ArticleViewPage` → `/api/articles/:id` with graceful fallback to demo content
 - `ArticleSettingsPage`, `SettingsPage` → no matching backend endpoints discovered; remain mocked with TODOs
 
-### STEP 3 (Admin)
-- `adminApi` wrappers added in `lib/api.js` for: dashboardStats, users, plans, coupons, blog, announcements, apiKeys, settings — all gated on admin token.
-- **BLOCKED**: live admin login fails — `jalwa/jalwaadmin` returns INVALID_CREDENTIALS on the live backend. Admin panel cannot be live-tested until correct admin credentials are seeded server-side.
+### STEP 3 (Admin) — ✅ COMPLETED
+- **Auth header**: admin uses `X-Admin-Token` (NOT `Authorization: Bearer`); `api.js` updated accordingly.
+- Live admin login: `jalwa` / `jalwaisadmin` → returns `data: { token, expiresAt }`.
+- `AdminContext` now hydrates from real API on admin login: coupons, blog posts, announcements, api-keys, settings.
+- `Dashboard.jsx` → live `/api/admin/dashboard/stats` (totalUsers, paidUsers, MRR, churn, planDistribution).
+- `UsersList.jsx` → live `/api/admin/users` with adapter mapping `fullName`+`subscription` → row shape.
+- `Pricing.jsx` → live `/api/admin/plans` with bidirectional mapping (flat API ↔ nested UI), Save persists via `PUT /api/admin/plans/:id`.
+- `Coupons`, `Blog`, `Announcements`, `ApiKeys`, `Settings` admin pages → display live data from AdminContext when present; mutations stay local until backend mutation endpoints are explored.
+- `Analytics` + `Billing` admin pages remain visual mockups (no matching backend endpoints).
 
-### 🔴 Critical blockers for live verification (Feb 18, 2026)
-1. **CORS**: `api.seojalwa.com` doesn't send `Access-Control-Allow-Origin` for `https://admin-seo-jalwa.preview.emergentagent.com`. All browser requests fail with CORS errors. Backend must whitelist that origin (and any custom prod domain). Curl tests confirm the wiring is otherwise correct.
-2. **Admin credentials**: Backend admin seed uses different password than the legacy `jalwa/jalwaadmin`. User must share the correct admin login.
+### 🔴 BLOCKERS — RESOLVED on Feb 18, 2026 (later)
+1. ✅ **CORS** — fixed (trailing-slash bug); preview origin now allowed.
+2. ✅ **Admin credentials** — confirmed `jalwa / jalwaisadmin`.
+3. ✅ **Made with Emergent badge** — removed from `public/index.html`.
 
 ### P2 (Nice to Have)
 - Export CSV from admin

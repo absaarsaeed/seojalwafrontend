@@ -4,6 +4,7 @@ import { ChartSkeleton } from '../components/SkeletonLoaders';
 import { DASHBOARD_METRICS, PLAN_DISTRIBUTION, USER_SIGNUPS_CHART, RECENT_ACTIVITY } from '../data/dummyData';
 import { Users, UserCheck, DollarSign, TrendingDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { adminApi } from '../../lib/api';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -28,11 +29,28 @@ const ActivityDot = ({ type }) => {
 
 export const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminApi.dashboardStats();
+        if (!cancelled) setStats(data);
+      } catch {}
+      if (!cancelled) setIsLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
+
+  const liveMetrics = stats ? {
+    totalUsers: stats.totalUsers ?? 0,
+    paidUsers: stats.paidUsers ?? 0,
+    mrr: stats.MRR ?? 0,
+    churn: stats.churnThisMonth ?? 0,
+  } : DASHBOARD_METRICS;
+
+  const planDist = stats?.planDistribution ?? PLAN_DISTRIBUTION;
 
   if (isLoading) {
     return (
@@ -54,26 +72,26 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Users"
-          value={DASHBOARD_METRICS.totalUsers}
+          value={liveMetrics.totalUsers}
           trend={DASHBOARD_METRICS.trends.totalUsers}
           icon={Users}
         />
         <MetricCard
           title="Paid Users"
-          value={DASHBOARD_METRICS.paidUsers}
+          value={liveMetrics.paidUsers}
           trend={DASHBOARD_METRICS.trends.paidUsers}
           icon={UserCheck}
         />
         <MetricCard
           title="MRR"
-          value={DASHBOARD_METRICS.mrr}
+          value={liveMetrics.mrr}
           trend={DASHBOARD_METRICS.trends.mrr}
           icon={DollarSign}
           format="currency"
         />
         <MetricCard
           title="Churn This Month"
-          value={DASHBOARD_METRICS.churn}
+          value={liveMetrics.churn}
           trend={DASHBOARD_METRICS.trends.churn}
           icon={TrendingDown}
           format="percentage"
@@ -141,7 +159,7 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#71717A]">Starter Plan</p>
-              <p className="text-2xl font-bold text-[#09090B] mt-1">{PLAN_DISTRIBUTION.starter.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-[#09090B] mt-1" data-testid="plan-dist-starter">{(planDist.starter ?? 0).toLocaleString()}</p>
             </div>
             <div className="px-3 py-1 rounded-full bg-[#2563EB]/10 text-[#2563EB] text-xs font-medium">
               Starter
@@ -152,7 +170,7 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#71717A]">Growth Plan</p>
-              <p className="text-2xl font-bold text-[#09090B] mt-1">{PLAN_DISTRIBUTION.growth.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-[#09090B] mt-1" data-testid="plan-dist-growth">{(planDist.growth ?? 0).toLocaleString()}</p>
             </div>
             <div className="px-3 py-1 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-xs font-medium">
               Growth
@@ -163,7 +181,7 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#71717A]">Agency Plan</p>
-              <p className="text-2xl font-bold text-[#09090B] mt-1">{PLAN_DISTRIBUTION.agency.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-[#09090B] mt-1" data-testid="plan-dist-agency">{(planDist.agency ?? 0).toLocaleString()}</p>
             </div>
             <div className="px-3 py-1 rounded-full bg-[#8B5CF6]/10 text-[#8B5CF6] text-xs font-medium">
               Agency

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext';
+import { adminApi } from '../../lib/api';
 import { CardSkeleton } from '../components/SkeletonLoaders';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -34,14 +35,70 @@ const LimitInput = ({ label, value, onChange, isUnlimited }) => (
   </div>
 );
 
+// Map live API plan → legacy admin-page nested shape ({limits, features}).
+const apiPlanToLocal = (p) => ({
+  id: p.id,
+  name: p.name,
+  monthlyPrice: p.monthlyPrice ?? 0,
+  annualPrice: p.annualPrice ?? 0,
+  description: p.description || '',
+  popular: !!p.popular || p.name === 'Growth',
+  limits: {
+    articles: p.articlesPerMonth ?? 0,
+    socialPosts: p.socialPostsPerMonth ?? 0,
+    aiScans: p.aiScansPerMonth ?? 0,
+    teamSeats: p.teamSeats ?? 0,
+    cmsConnections: p.cmsConnections === -1 ? 'unlimited' : (p.cmsConnections ?? 0),
+  },
+  features: {
+    brandVoice: !!p.brandVoiceModel,
+    competitorComparison: !!p.competitorComparison,
+    prioritySupport: !!p.prioritySupport,
+    whiteLabel: !!p.whiteLabel,
+  },
+});
+
+const localToApiPayload = (local) => ({
+  name: local.name,
+  monthlyPrice: Number(local.monthlyPrice) || 0,
+  annualPrice: Number(local.annualPrice) || 0,
+  description: local.description,
+  articlesPerMonth: Number(local.limits.articles) || 0,
+  socialPostsPerMonth: Number(local.limits.socialPosts) || 0,
+  aiScansPerMonth: Number(local.limits.aiScans) || 0,
+  teamSeats: Number(local.limits.teamSeats) || 0,
+  cmsConnections: local.limits.cmsConnections === 'unlimited' ? -1 : (Number(local.limits.cmsConnections) || 0),
+  brandVoiceModel: !!local.features.brandVoice,
+  competitorComparison: !!local.features.competitorComparison,
+  prioritySupport: !!local.features.prioritySupport,
+  whiteLabel: !!local.features.whiteLabel,
+});
+
 export const Pricing = () => {
   const { pricing, updatePricing } = useAdmin();
   const [isLoading, setIsLoading] = useState(true);
   const [localPricing, setLocalPricing] = useState(pricing);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminApi.plans();
+        if (cancelled) return;
+        const list = Array.isArray(data) ? data : [];
+        if (list.length) {
+          const keyed = {};
+          for (const p of list) {
+            const k = (p.name || '').toLowerCase();
+            if (k) keyed[k] = apiPlanToLocal(p);
+          }
+          setLocalPricing((prev) => ({ ...prev, ...keyed }));
+        }
+      } catch {}
+      if (!cancelled) setIsLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -84,9 +141,26 @@ export const Pricing = () => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+    let savedAny = false;
+    let errors = 0;
+    for (const planKey of ['starter', 'growth', 'agency']) {
+      const plan = localPricing[planKey];
+      if (!plan?.id) continue;
+      try {
+        await adminApi.updatePlan(plan.id, localToApiPayload(plan));
+        savedAny = true;
+      } catch {
+        errors++;
+      }
+    }
+    // Always also persist locally so the rest of the admin UI stays consistent.
     updatePricing(localPricing);
-    toast.success('Pricing saved successfully');
+    setIsSaving(false);
+    if (errors) toast.error(`${errors} plan(s) failed to save to backend`);
+    else if (savedAny) toast.success('Pricing saved to backend');
+    else toast.success('Pricing saved (local only — no plan IDs found)');
   };
 
   if (isLoading) {
@@ -244,9 +318,9 @@ export const Pricing = () => {
 
       {/* Actions */}
       <div className="flex items-center gap-4">
-        <Button onClick={handleSave} className="admin-btn-primary" data-testid="save-pricing-btn">
+        <Button onClick={handleSave} disabled={isSaving} className="admin-btn-primary" data-testid="save-pricing-btn">
           <Check size={16} className="mr-2" />
-          Save changes
+          {isSaving ? 'Saving...' : 'Save changes'}
         </Button>
         <Button variant="outline" className="admin-btn-secondary">
           Preview changes

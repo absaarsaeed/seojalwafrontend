@@ -117,7 +117,7 @@ async function request(path, opts = {}) {
     if (access) headers['Authorization'] = `Bearer ${access}`;
   } else if (auth === 'admin') {
     const adminToken = tokenStore.getAdmin();
-    if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+    if (adminToken) headers['X-Admin-Token'] = adminToken;
   }
 
   // Build URL with query string

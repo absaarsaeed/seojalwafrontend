@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { DEFAULT_PRICING, SETTINGS_DATA, COUPONS, BLOG_POSTS, ANNOUNCEMENTS, USERS_LIST, API_KEYS_CONFIG } from '../data/dummyData';
 import { AdminAuthProvider, useAdminAuth } from '../../context/AdminAuthContext';
+import { adminApi } from '../../lib/api';
 
 const AdminContext = createContext(null);
 
@@ -53,6 +54,42 @@ const AdminBridge = ({ children }) => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Hydrate state from live API once the admin session is active.
+  useEffect(() => {
+    if (!adminAuth.isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [coupons, blogPosts, announcements, apiKeysArr, settings] = await Promise.all([
+          adminApi.coupons().catch(() => null),
+          adminApi.blog().catch(() => null),
+          adminApi.announcements().catch(() => null),
+          adminApi.apiKeys().catch(() => null),
+          adminApi.settings().catch(() => null),
+        ]);
+        if (cancelled) return;
+        setState((prev) => {
+          const next = { ...prev };
+          if (Array.isArray(coupons) && coupons.length) next.coupons = coupons;
+          if (Array.isArray(blogPosts) && blogPosts.length) next.blogPosts = blogPosts;
+          if (Array.isArray(announcements) && announcements.length) next.announcements = announcements;
+          if (Array.isArray(apiKeysArr) && apiKeysArr.length) {
+            // Live API returns flat array; UI groups keys into sections. Build a lookup by `key`.
+            next.liveApiKeys = apiKeysArr.reduce((acc, k) => {
+              acc[k.key] = k;
+              return acc;
+            }, {});
+          }
+          if (settings && typeof settings === 'object') next.liveSettings = settings;
+          return next;
+        });
+      } catch {
+        // Silent — fallbacks remain
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [adminAuth.isAuthenticated]);
 
   // Auth now flows from AdminAuthContext (real backend).
   const login = async (username, password) => {

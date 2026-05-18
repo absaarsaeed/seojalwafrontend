@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
+import { adminApi } from '../../lib/api';
 import { TableSkeleton } from '../components/SkeletonLoaders';
 import { EmptyState } from '../components/EmptyState';
 import { Input } from '../../components/ui/input';
@@ -38,8 +39,28 @@ const StatusDot = ({ status }) => {
   );
 };
 
+// Adapt a live API user (with optional subscription) to the row shape this UI expects.
+const adaptUser = (u) => {
+  const sub = u.subscription;
+  const plan = sub?.planName || sub?.plan || 'Free';
+  const initials = (u.fullName || u.email || '?').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  return {
+    id: u.id,
+    name: u.fullName || u.name || u.email,
+    email: u.email,
+    plan,
+    status: sub?.status === 'CANCELLED' ? 'Suspended' : 'Active',
+    signupDate: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '',
+    lastLogin: u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '—',
+    jalwaScore: u.jalwaScore ?? u.growthScore ?? '—',
+    avatar: u.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.fullName || u.email)}&background=1D9E75&color=fff&bold=true`,
+    _initials: initials,
+  };
+};
+
 export const UsersList = () => {
-  const { users } = useAdmin();
+  const { users: dummyUsers } = useAdmin();
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [planFilter, setPlanFilter] = useState('all');
@@ -48,9 +69,21 @@ export const UsersList = () => {
   const perPage = 15;
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminApi.users({ limit: 200 });
+        const list = Array.isArray(data) ? data : data?.users || [];
+        if (cancelled) return;
+        setUsers(list.length ? list.map(adaptUser) : dummyUsers);
+      } catch {
+        if (!cancelled) setUsers(dummyUsers);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [dummyUsers]);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -208,9 +241,9 @@ export const UsersList = () => {
         </div>
       )}
 
-      {/* Note: Showing dummy pagination */}
+      {/* Note: real-time backend pagination not yet wired */}
       <p className="text-xs text-[#71717A] text-center">
-        Page 1 of 190 (showing sample data)
+        Showing {users.length} {users.length === 1 ? 'user' : 'users'} from the live database
       </p>
     </div>
   );
