@@ -685,7 +685,7 @@ const WhatYouGet = () => {
       <div className="max-w-7xl mx-auto">
         <motion.div variants={fadeUp} className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="font-syne text-3xl md:text-5xl font-bold text-[#0A0A0A] mb-3">Everything Your Brand Needs to Dominate Online</h2>
-          <p className="text-lg text-[#6B7280]">Four modules. One platform. Your entire growth stack — automated.</p>
+          <p className="text-lg text-[#6B7280]">Five modules. One platform. Your entire growth stack — automated.</p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

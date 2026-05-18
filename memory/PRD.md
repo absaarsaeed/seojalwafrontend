@@ -46,6 +46,25 @@ Design constraints:
 12. **Settings** — General, Maintenance, Social, Password
 - Tested: `/app/test_reports/iteration_1.json` — 100% pass
 
+### ✅ Phase 4: Homepage rebuild + Article View (Feb 2026)
+- **Article View** — `/dashboard/auto-publish/article/:id` with premium blog reading layout: action bar (Back / Edit / View Live / Republish), 780px article with meta + 40px Syne title + gradient hero + Key Takeaways box + TOC + 6-section body with 3 green external links + designed dark infographic + YouTube placeholder + dark CTA, sticky right sidebar (Article Performance / SEO Score 78 / Target Keyword / Published to). Wired View Article + Performance "View" links in PublishPage.
+- **Homepage rebuild** — 12 sections, conversion-focused, 100% verified (iteration_5):
+  1. Hero (Bricolage 3-line headline, browser mockup with calendar + 3 floating cards)
+  2. Fear (dark bg, Without/With ChatGPT cards, 3 stats: 67%/3x/319%, CTA Fix My AI Visibility)
+  3. Social proof (stars + marquee with Google Search Console)
+  4. How It Works (4 steps with dotted line, writing sample preview, agency vs jalwa columns)
+  5. Real Results (4 count-up metrics, 3 testimonial cards with industry badges and 5-star rows)
+  6. Comparison ($5,000/mo vs $199 — 7-row table, savings card $3,801/mo / $45,612/yr)
+  7. AI Mirror (dark, 2s fake loading, score 23/100 red bar)
+  8. ROI Calculator (light green bg, 4 sliders, dark right panel)
+  9. What You Get (4 detailed module cards: AI Visibility, Daily Article Publishing, Social Autopilot, AI Writer)
+  10. Integrations grid (18 brand-logo cards + Open API)
+  11. Pricing (Monthly/Annual toggle, 3 plans, Value breakdown ending in green "$3,678/mo savings")
+  12. Final dark CTA (Bricolage huge headline "Your Competitors Are Already on Autopilot.")
+- Existing localStorage pricing bridge (`seo_jalwa_admin.pricing`) still works on the new homepage.
+
+Tested: `/app/test_reports/iteration_5.json` — 100% pass; testing agent self-applied a 1-line InView `id`-forwarding fix during testing.
+
 ### ✅ Phase 3: Multi-site, Analytics, Team & WordPress flow (Feb 2026)
 1. **Multi-site support** — `SiteContext` + `SiteSwitcher` in sidebar (above nav). Default sites: myblog.com + mystore.com. Active site persists to `localStorage.jalwa_active_site`. Add-site modal (URL/name/platform). Active-site badge in dashboard topbar.
 2. **Auto Publish upgrade** — Full month calendar grid (Sun-Sat, 4-5 rows) with status pills (PUBLISHED / READY TO PUBLISH / SCHEDULED) + clickable article popover (View Article / Edit). 4 stats cards. 'Add Search Terms' dialog with 'Search Terms' + 'Let AI decide' tabs. Recycle Bin collapsible. Performance tab: 4 metric cards + 10-row table.
