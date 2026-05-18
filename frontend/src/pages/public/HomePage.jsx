@@ -560,14 +560,14 @@ const AIMirror = () => {
   return (
     <InView className="bg-[#111827] text-white py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto text-center">
-        <motion.h2 variants={fadeUp} className="font-syne text-3xl md:text-5xl font-bold mb-3">What Does AI Say About Your Business Right Now?</motion.h2>
+        <motion.h2 variants={fadeUp} className="font-syne text-3xl md:text-5xl font-bold mb-3 !text-white">What Does AI Say About Your Business Right Now?</motion.h2>
         <motion.p variants={fadeUp} className="text-[#9CA3AF] mb-8 text-lg">Type your website URL. See what ChatGPT actually says about you in seconds. No signup needed.</motion.p>
 
         <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-2 mb-8">
           <Input
             value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()}
             placeholder="https://yourwebsite.com"
-            className="flex-1 h-12 bg-[#1F2937] border-white/10 text-white placeholder:text-[#6B7280] focus-visible:ring-[#1D9E75]"
+            className="flex-1 h-12 bg-[#1F2937] border-white/10 !text-white placeholder:text-[#6B7280] focus-visible:ring-[#1D9E75]"
             data-testid="ai-mirror-url"
           />
           <Button onClick={submit} disabled={loading} className="h-12 bg-[#1D9E75] hover:bg-[#0F6E56] text-white px-6 whitespace-nowrap" data-testid="ai-mirror-submit">
@@ -580,7 +580,7 @@ const AIMirror = () => {
             <p className="text-[#9CA3AF] mb-4">Scanning ChatGPT, Perplexity, Gemini<span className="animate-pulse">...</span></p>
             <div className="flex justify-center gap-3">
               {['ChatGPT', 'Perplexity', 'Gemini'].map((ai, i) => (
-                <motion.div key={ai} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.4 }} className="px-3 py-1.5 bg-[#0A0A0A] rounded-lg text-xs">
+                <motion.div key={ai} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.4 }} className="px-3 py-1.5 bg-[#0A0A0A] rounded-lg text-xs text-white">
                   {ai}
                 </motion.div>
               ))}
@@ -591,7 +591,7 @@ const AIMirror = () => {
         {result && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-[#1F2937] border border-white/10 p-6 text-left">
             <p className="text-xs text-[#9CA3AF] mb-2">ChatGPT response for "{result.domain}"</p>
-            <p className="text-sm leading-relaxed mb-5">{result.response}</p>
+            <p className="text-sm leading-relaxed mb-5 text-white">{result.response}</p>
             <p className="text-xs text-[#9CA3AF] mb-1">Your AI Visibility Score</p>
             <div className="flex items-center gap-3 mb-1">
               <span className="font-bricolage text-4xl font-extrabold text-[#EF4444]">{result.score}<span className="text-[#6B7280] text-xl">/100</span></span>
@@ -834,10 +834,11 @@ const Pricing = () => {
 // SECTION 12 — FINAL CTA
 // =====================================================
 const FinalCTA = () => (
-  <InView className="bg-[#0A0A0A] text-white py-24 px-4 sm:px-6 lg:px-8">
+  <InView className="bg-[#0A0A0A] text-white pt-32 pb-24 px-4 sm:px-6 lg:px-8">
     <div className="max-w-4xl mx-auto text-center">
-      <motion.h2 variants={fadeUp} className="font-bricolage font-extrabold leading-[0.95] mb-6" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
-        Your Competitors Are Already <span className="text-[#1D9E75]">on Autopilot.</span>
+      <motion.h2 variants={fadeUp} className="font-bricolage font-extrabold leading-[1.05] mb-6 !text-white" style={{ fontSize: 'clamp(40px, 6vw, 72px)' }}>
+        <span className="block !text-white">Your Competitors Are Already</span>
+        <span className="block text-[#1D9E75]">on Autopilot.</span>
       </motion.h2>
       <motion.p variants={fadeUp} className="text-[#9CA3AF] text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed">
         Every day you wait is another day they publish content, climb AI rankings, and take customers that should be yours.
