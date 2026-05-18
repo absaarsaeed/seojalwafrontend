@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Eye, Pen, Send, BarChart3, Settings, CreditCard, 
   LogOut, Bell, ChevronUp, Menu, X
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -28,14 +28,16 @@ export const DashboardLayout = () => {
   const { isAuthenticated, user, logout } = useUser();
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const isLoggingOutRef = useRef(false);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isLoggingOutRef.current) {
     return <Navigate to="/login" replace />;
   }
 
   const handleLogout = () => {
+    isLoggingOutRef.current = true;
     logout();
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   return (
