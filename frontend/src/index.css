@@ -6,6 +6,8 @@
 @import '@fontsource/manrope/600.css';
 @import '@fontsource/manrope/700.css';
 @import '@fontsource/manrope/800.css';
+@import '@fontsource/syne/700.css';
+@import '@fontsource/syne/800.css';
 
 @tailwind base;
 @tailwind components;
@@ -13,9 +15,10 @@
 
 :root {
     --primary: #1D9E75;
+    --primary-dark: #0F6E56;
     --primary-hover: #178562;
     --primary-active: #136A4F;
-    --primary-light: #E8F5F1;
+    --primary-light: #E1F5EE;
     --primary-foreground: #FFFFFF;
     
     --bg-app: #FAFAFA;
@@ -26,8 +29,9 @@
     --border-subtle: #F0F0F0;
     --border-focus: #1D9E75;
     
-    --text-heading: #09090B;
+    --text-heading: #0A0A0A;
     --text-body: #27272A;
+    --text-secondary: #6B7280;
     --text-muted: #71717A;
     
     --accent-info: #2563EB;
@@ -41,13 +45,21 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg-app);
+    background-color: #FFFFFF;
     color: var(--text-body);
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Manrope', sans-serif;
     color: var(--text-heading);
+}
+
+.font-syne {
+    font-family: 'Syne', sans-serif;
+}
+
+.font-inter {
+    font-family: 'Inter', sans-serif;
 }
 
 code {
@@ -96,20 +108,6 @@ code {
 @layer base {
     [data-debug-wrapper="true"] {
         display: contents !important;
-    }
-
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
     }
 }
 
@@ -182,4 +180,78 @@ code {
     50% {
         opacity: 0.5;
     }
+}
+
+/* Marquee animation for logo scroll */
+@keyframes marquee {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.animate-marquee {
+    animation: marquee 30s linear infinite;
+}
+
+/* Float animation */
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+    animation: float 3s ease-in-out infinite;
+    animation-delay: 1s;
+}
+
+.animate-float-delayed-2 {
+    animation: float 3s ease-in-out infinite;
+    animation-delay: 2s;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #F0F0F0;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #C0C0C0;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #A0A0A0;
+}
+
+/* Hero underline SVG style */
+.hero-underline {
+    position: relative;
+    display: inline-block;
+}
+
+.hero-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 100%;
+    height: 12px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12'%3E%3Cpath d='M2 8 Q50 2 100 8 T198 8' stroke='%231D9E75' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center;
+    background-size: 100% 100%;
 }
