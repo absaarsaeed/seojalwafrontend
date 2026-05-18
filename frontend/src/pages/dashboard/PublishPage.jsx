@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -223,9 +224,11 @@ export const PublishPage = () => {
                           <p className="text-xs text-[#6B7280] mb-2">Search term: {cell.article.searchTerm}</p>
                           <p className="text-xs text-[#6B7280] mb-3">Scheduled: {cell.date.toLocaleDateString()}</p>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="border-[#F0F0F0] text-xs">
-                              <ExternalLink size={12} className="mr-1" /> View Article
-                            </Button>
+                            <Link to={`/dashboard/auto-publish/article/${cell.article.id}`}>
+                              <Button size="sm" variant="outline" className="border-[#F0F0F0] text-xs">
+                                <ExternalLink size={12} className="mr-1" /> View Article
+                              </Button>
+                            </Link>
                             <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-xs">
                               <Edit2 size={12} className="mr-1" /> Edit
                             </Button>
@@ -375,9 +378,9 @@ export const PublishPage = () => {
                       <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.ctr}%</td>
                       <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.position.toFixed(1)}</td>
                       <td className="p-4 text-right">
-                        <a href="#" className="text-sm text-[#1D9E75] hover:underline inline-flex items-center gap-1">
+                        <Link to={`/dashboard/auto-publish/article/${r.term.replace(/[^a-z0-9]+/g, '-')}-${i}`} className="text-sm text-[#1D9E75] hover:underline inline-flex items-center gap-1">
                           View <ExternalLink size={12} />
-                        </a>
+                        </Link>
                       </td>
                     </tr>
                   ))}

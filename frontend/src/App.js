@@ -42,6 +42,7 @@ import { GrowthScorePage } from "./pages/dashboard/GrowthScorePage";
 import { PulsePage } from "./pages/dashboard/PulsePage";
 import { WritePage } from "./pages/dashboard/WritePage";
 import { PublishPage } from "./pages/dashboard/PublishPage";
+import { ArticleViewPage } from "./pages/dashboard/ArticleViewPage";
 import { AnalyticsPage } from "./pages/dashboard/AnalyticsPage";
 import { PostPage } from "./pages/dashboard/PostPage";
 import { ArticleSettingsPage } from "./pages/dashboard/ArticleSettingsPage";
@@ -91,6 +92,7 @@ function App() {
                 <Route path="ai-visibility" element={<PulsePage />} />
                 <Route path="ai-writer" element={<WritePage />} />
                 <Route path="auto-publish" element={<PublishPage />} />
+                <Route path="auto-publish/article/:id" element={<ArticleViewPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="social-autopilot" element={<PostPage />} />
                 <Route path="article-settings" element={<ArticleSettingsPage />} />
