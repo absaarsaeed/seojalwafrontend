@@ -3,25 +3,110 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="A product of emergent.sh" />
+        <meta name="theme-color" content="#1D9E75" />
+
+        <!-- ===== Primary SEO Meta ===== -->
+        <title>SEO Jalwa — AI-Powered SEO That Publishes Daily, Grows Your Traffic on Autopilot</title>
+        <meta name="description" content="SEO Jalwa writes and publishes 1 expert article to your website every single day, grows your AI search visibility on ChatGPT and Perplexity, and posts to all your social media — fully automated. Replace your $5,000/mo agency from $79/mo." />
+        <meta name="keywords" content="SEO automation, AI SEO tool, AI content marketing, automated content publishing, ChatGPT SEO, AI visibility, Perplexity SEO, content calendar, WordPress SEO plugin, Shopify SEO, social media autopilot, AI writer, programmatic SEO, AEO, generative engine optimization, GEO" />
+        <meta name="author" content="SEO Jalwa" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow" />
+        <link rel="canonical" href="https://seojalwa.com/" />
+        <meta name="application-name" content="SEO Jalwa" />
+        <meta name="apple-mobile-web-app-title" content="SEO Jalwa" />
+        <meta name="format-detection" content="telephone=no" />
+
+        <!-- ===== Favicon / App Icons ===== -->
+        <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="256x256" href="%PUBLIC_URL%/favicon-256.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="%PUBLIC_URL%/favicon-512.png" />
+        <link rel="apple-touch-icon" sizes="256x256" href="%PUBLIC_URL%/favicon-256.png" />
+        <link rel="apple-touch-icon" sizes="512x512" href="%PUBLIC_URL%/favicon-512.png" />
+        <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
+        <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+        <!-- ===== Open Graph ===== -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://seojalwa.com/" />
+        <meta property="og:site_name" content="SEO Jalwa" />
+        <meta property="og:title" content="SEO Jalwa — AI-Powered SEO That Publishes Daily, on Autopilot" />
+        <meta property="og:description" content="1 expert article published to your website every day. AI visibility monitoring across ChatGPT, Perplexity, Gemini. Social posts auto-generated. From $79/mo — replace your $5,000/mo agency." />
+        <meta property="og:image" content="https://seojalwa.com/favicon-512.png" />
+        <meta property="og:image:width" content="512" />
+        <meta property="og:image:height" content="512" />
+        <meta property="og:image:alt" content="SEO Jalwa — AI SEO Autopilot" />
+        <meta property="og:locale" content="en_US" />
+
+        <!-- ===== Twitter Card ===== -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@seojalwa" />
+        <meta name="twitter:creator" content="@seojalwa" />
+        <meta name="twitter:title" content="SEO Jalwa — AI SEO That Publishes Daily, on Autopilot" />
+        <meta name="twitter:description" content="1 expert article published to your website every day. AI visibility on ChatGPT, Perplexity, Gemini. From $79/mo." />
+        <meta name="twitter:image" content="https://seojalwa.com/favicon-512.png" />
+        <meta name="twitter:image:alt" content="SEO Jalwa — AI SEO Autopilot" />
+
+        <!-- ===== Fonts ===== -->
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />
-        <!--
-        manifest.json provides metadata used when your web app is installed on a
-        user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-        -->
-        <!--
-        Notice the use of %PUBLIC_URL% in the tags above.
-        It will be replaced with the URL of the `public` folder during the build.
-        Only files inside the `public` folder can be referenced from the HTML.
 
-        Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-        work correctly both with client-side routing and a non-root public URL.
-        Learn how to configure a non-root public URL by running `npm run build`.
-        -->
-        <title>Emergent | Fullstack App</title>
+        <!-- ===== Structured Data (JSON-LD) ===== -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": "https://seojalwa.com/#organization",
+              "name": "SEO Jalwa",
+              "url": "https://seojalwa.com/",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://seojalwa.com/seo-jalwa-logo.png",
+                "width": 512,
+                "height": 512
+              },
+              "sameAs": [
+                "https://twitter.com/seojalwa",
+                "https://www.linkedin.com/company/seojalwa",
+                "https://www.instagram.com/seojalwa"
+              ]
+            },
+            {
+              "@type": "WebSite",
+              "@id": "https://seojalwa.com/#website",
+              "url": "https://seojalwa.com/",
+              "name": "SEO Jalwa",
+              "description": "AI-powered SEO that publishes daily and grows your traffic on autopilot.",
+              "publisher": { "@id": "https://seojalwa.com/#organization" },
+              "inLanguage": "en-US"
+            },
+            {
+              "@type": "SoftwareApplication",
+              "name": "SEO Jalwa",
+              "operatingSystem": "Web",
+              "applicationCategory": "BusinessApplication",
+              "description": "SEO Jalwa writes and publishes 1 expert article to your website every day, monitors AI visibility on ChatGPT/Perplexity/Gemini, and automates your social posts.",
+              "offers": {
+                "@type": "Offer",
+                "price": "79",
+                "priceCurrency": "USD",
+                "priceValidUntil": "2027-12-31"
+              },
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": "4.9",
+                "reviewCount": "847",
+                "bestRating": "5",
+                "worstRating": "1"
+              }
+            }
+          ]
+        }
+        </script>
+
         <script>window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);</script>
         <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
     </head>

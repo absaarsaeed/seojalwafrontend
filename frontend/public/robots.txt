@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /adminpanel
+Disallow: /dashboard
+
+Sitemap: https://seojalwa.com/sitemap.xml

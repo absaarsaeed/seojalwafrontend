@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Logo } from './Logo';
 
 const navLinks = [
   { path: '/features', label: 'Features' },
@@ -39,9 +40,8 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-0.5" data-testid="navbar-logo">
-            <span className="text-xl font-extrabold text-[#0A0A0A]">SEO</span>
-            <span className="text-xl font-extrabold text-[#1D9E75]">Jalwa</span>
+          <Link to="/" className="flex items-center" data-testid="navbar-logo">
+            <Logo height={36} />
           </Link>
 
           {/* Desktop Nav */}

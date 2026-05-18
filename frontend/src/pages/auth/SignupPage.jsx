@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Check } from 'lucide-react';
+import { Logo } from '../../components/public/Logo';
 
 export const SignupPage = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', website: '' });
@@ -56,9 +57,8 @@ export const SignupPage = () => {
           className="w-full max-w-md"
         >
           <div className="lg:hidden mb-8">
-            <Link to="/" className="flex items-center gap-0.5">
-              <span className="text-2xl font-extrabold text-[#0A0A0A]">SEO</span>
-              <span className="text-2xl font-extrabold text-[#1D9E75]">Jalwa</span>
+            <Link to="/" className="flex items-center">
+              <Logo height={36} />
             </Link>
           </div>
           

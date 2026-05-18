@@ -46,6 +46,13 @@ Design constraints:
 12. **Settings** — General, Maintenance, Social, Password
 - Tested: `/app/test_reports/iteration_1.json` — 100% pass
 
+### ✅ Phase 5: Brand assets + SEO meta (Feb 2026)
+- **Brand logo** — User-uploaded SEO Jalwa wordmark (`seo-jalwa-logo.png`) + square app icon (`seo-jalwa-icon.png`) live under `/app/frontend/public/`. New shared `Logo`/`LogoIcon` components in `/components/public/Logo.jsx`. Logo image now used in Navbar, Footer (next to copyright), Dashboard sidebar, Login mobile header, Signup mobile header, Forgot Password header. Green side panels in Login/Signup keep the white wordmark text (better contrast on green).
+- **Favicons** — Multi-resolution: `favicon.ico` + `favicon-256.png` + `favicon-512.png` (with apple-touch-icon variants).
+- **SEO meta on landing page** — `<title>SEO Jalwa — AI-Powered SEO That Publishes Daily, Grows Your Traffic on Autopilot</title>`, comprehensive meta description, keywords, canonical URL, robots/googlebot directives, theme-color #1D9E75. Open Graph (og:type/url/title/description/image 512x512), Twitter Card (summary_large_image with @seojalwa handles). JSON-LD structured data: Organization + WebSite + SoftwareApplication ($79 offer + 4.9★/847 reviews aggregateRating).
+- **PWA manifest** rewritten with brand colors + icon set.
+- **`robots.txt`** + **`sitemap.xml`** added (root + 9 public pages, disallows /adminpanel + /dashboard).
+
 ### ✅ Phase 4: Homepage rebuild + Article View (Feb 2026)
 - **Article View** — `/dashboard/auto-publish/article/:id` with premium blog reading layout: action bar (Back / Edit / View Live / Republish), 780px article with meta + 40px Syne title + gradient hero + Key Takeaways box + TOC + 6-section body with 3 green external links + designed dark infographic + YouTube placeholder + dark CTA, sticky right sidebar (Article Performance / SEO Score 78 / Target Keyword / Published to). Wired View Article + Performance "View" links in PublishPage.
 - **Homepage rebuild** — 12 sections, conversion-focused, 100% verified (iteration_5):

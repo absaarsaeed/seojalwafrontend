@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Logo } from './Logo';
 
 export const Footer = () => {
   return (
@@ -57,9 +58,12 @@ export const Footer = () => {
 
         {/* Bottom bar */}
         <div className="mt-12 pt-8 border-t border-[#F0F0F0] flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-[#6B7280]">
-            © 2026 SEO Jalwa. Built for businesses that refuse to stay small.
-          </p>
+          <div className="flex items-center gap-4">
+            <Logo height={28} />
+            <p className="text-sm text-[#6B7280]">
+              © 2026 SEO Jalwa. Built for businesses that refuse to stay small.
+            </p>
+          </div>
           <div className="flex items-center gap-6">
             <a href="#" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Status</a>
             <Link to="/privacy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Privacy</Link>

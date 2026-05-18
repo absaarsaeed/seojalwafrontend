@@ -2,6 +2,7 @@ import { NavLink, useNavigate, useLocation, Outlet, Navigate } from 'react-route
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
 import { SiteSwitcher } from './SiteSwitcher';
+import { Logo } from '../public/Logo';
 import { Toaster } from 'sonner';
 import { 
   LayoutDashboard, Trophy, Radar, Pen, Send, BarChart3, Share2, SlidersHorizontal, Plug, Users, Settings,
@@ -74,10 +75,7 @@ export const DashboardLayout = () => {
       <aside className={`fixed lg:sticky top-0 left-0 h-screen w-[260px] bg-white border-r border-[#F0F0F0] flex flex-col z-40 transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         {/* Logo */}
         <div className="p-6 border-b border-[#F0F0F0]">
-          <div className="flex items-center gap-0.5">
-            <span className="text-xl font-extrabold text-[#0A0A0A]">SEO</span>
-            <span className="text-xl font-extrabold text-[#1D9E75]">Jalwa</span>
-          </div>
+          <Logo height={32} />
         </div>
 
         {/* Site Switcher */}

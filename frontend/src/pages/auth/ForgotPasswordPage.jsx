@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { ArrowLeft, CheckCircle, Mail } from 'lucide-react';
+import { Logo } from '../../components/public/Logo';
 
 export const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
@@ -27,9 +28,8 @@ export const ForgotPasswordPage = () => {
         className="w-full max-w-md"
       >
         <div className="bg-white rounded-2xl border border-[#F0F0F0] p-8">
-          <Link to="/" className="flex items-center gap-0.5 mb-8">
-            <span className="text-2xl font-extrabold text-[#0A0A0A]">SEO</span>
-            <span className="text-2xl font-extrabold text-[#1D9E75]">Jalwa</span>
+          <Link to="/" className="flex items-center mb-8">
+            <Logo height={36} />
           </Link>
           
           {submitted ? (

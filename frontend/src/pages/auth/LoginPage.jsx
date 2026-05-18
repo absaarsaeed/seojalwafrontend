@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
+import { Logo } from '../../components/public/Logo';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Check } from 'lucide-react';
@@ -57,9 +58,8 @@ export const LoginPage = () => {
           className="w-full max-w-md"
         >
           <div className="lg:hidden mb-8">
-            <Link to="/" className="flex items-center gap-0.5">
-              <span className="text-2xl font-extrabold text-[#0A0A0A]">SEO</span>
-              <span className="text-2xl font-extrabold text-[#1D9E75]">Jalwa</span>
+            <Link to="/" className="flex items-center">
+              <Logo height={36} />
             </Link>
           </div>
           
