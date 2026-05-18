@@ -73,7 +73,7 @@ const FloatingCard = ({ className, delay = 0, children }) => (
 );
 
 // Logo marquee items
-const LOGOS = ['WordPress', 'Shopify', 'Webflow', 'Ghost', 'HubSpot', 'Wix', 'Notion', 'Squarespace', 'LinkedIn', 'Instagram', 'Facebook', 'X'];
+const LOGOS = ['WordPress', 'Shopify', 'Webflow', 'Ghost', 'HubSpot', 'Wix', 'Notion', 'Squarespace', 'Google Search Console', 'LinkedIn', 'Instagram', 'Facebook', 'X'];
 
 export const HomePage = () => {
   const { getPricing } = useUser();
@@ -158,6 +158,7 @@ export const HomePage = () => {
               <span className="flex items-center gap-1"><Check size={16} className="text-[#1D9E75]" /> 14-day free trial</span>
               <span className="flex items-center gap-1"><Check size={16} className="text-[#1D9E75]" /> Cancel anytime</span>
               <span className="flex items-center gap-1"><Check size={16} className="text-[#1D9E75]" /> Setup in 10 minutes</span>
+              <span className="flex items-center gap-1"><Check size={16} className="text-[#1D9E75]" /> 1 article/day auto-published</span>
             </motion.div>
           </motion.div>
           
@@ -293,8 +294,8 @@ export const HomePage = () => {
               {
                 icon: Send,
                 name: 'Auto Publish',
-                tagline: 'From keyword to published article — automatically',
-                features: ['AI keyword research', 'Research-backed article drafts', 'One-click publish to WordPress + 9 more', 'Content ROI tracker']
+                tagline: '1 article published to your website every single day — automatically.',
+                features: ['1 article per day on autopilot', 'AI researches best topics for you', 'Publishes directly to your website', 'Track rankings in Google Search Console']
               },
               {
                 icon: Share2,

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { Check, Radar, Pen, Send, Share2, ArrowRight } from 'lucide-react';
+import { Check, Radar, Pen, Send, Share2, BarChart3, ArrowRight } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -54,7 +54,10 @@ const modules = [
       'One-click publishing to WordPress, Shopify, Webflow, and 7 more',
       'Built-in SEO scoring with real-time suggestions',
       'Content calendar with auto-scheduling',
-      'ROI tracking — see exactly which content drives revenue'
+      'ROI tracking — see exactly which content drives revenue',
+      'Google Search Console integration — see exactly how your articles rank',
+      '1 article published daily to your connected website',
+      'Multi-site support — manage multiple websites from one dashboard'
     ]
   },
   {
@@ -71,6 +74,20 @@ const modules = [
       'Automatic article → social post conversion (1 article = 6 posts)',
       'Approval workflow for teams',
       'Analytics dashboard with engagement insights'
+    ]
+  },
+  {
+    id: 'analytics',
+    icon: BarChart3,
+    name: 'Analytics',
+    tagline: 'Analytics',
+    headline: 'See exactly how your content performs in Google',
+    description: 'Connect Google Search Console and watch your articles climb the rankings. Track impressions, clicks, CTR, and average position for every article SEO Jalwa writes.',
+    features: [
+      'Google Search Console integration',
+      'Per-article ranking data',
+      'Top search terms driving traffic',
+      'Traffic trend over time'
     ]
   }
 ];

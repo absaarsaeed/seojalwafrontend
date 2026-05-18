@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only testing of 9 NEW dashboard + public-page changes for SEO Jalwa. Logged in with test@jalwa.com/test1234, traversed every new screen, modal, dialog, and toggle, and verified all advertised data-testids, copy strings, and behaviours. Everything passes after a one-time frontend restart that flushed a stale dev-server bundle (initial public-page checks failed; after `sudo supervisorctl restart frontend` they all pass).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Public /features", "issues": ["Hero subtitle still says 'Four intelligent modules that work together so you don't have to.' but the page now lists 5 modules (AI Visibility, AI Writer, Auto Publish, Social Autopilot, Analytics). Update copy to 'Five intelligent modules'."]},
+      {"screen": "Dashboard – multiple dialogs", "issues": ["Console accessibility warnings/errors: several Radix Dialog instances missing DialogTitle / aria-describedby (e.g., WordPress connect modal, Add Site dialog, Add Terms dialog). Wrap titles in VisuallyHidden or add descriptions."]},
+      {"screen": "Dashboard – sparkline charts on Home", "issues": ["Recharts ResponsiveContainer logs 'The width(-1) and height(-1) of chart should be greater than 0' on every render. Set explicit min-width/min-height on the chart container to silence the warning."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Update FeaturesPage hero subtitle from 'Four intelligent modules' → 'Five intelligent modules' to match the newly-added Analytics module.",
+    "Add DialogTitle (or VisuallyHidden wrapper) + aria-describedby to WordPressConnectModal, SiteSwitcher add-site dialog and PublishPage 'Add article topics' dialog to fix a11y console errors.",
+    "Give Recharts ResponsiveContainer on DashboardHome a defined parent height (e.g. h-12) to remove width(-1)/height(-1) warnings.",
+    "Note for future agents: the dev bundle did NOT pick up the latest HomePage.jsx/FeaturesPage.jsx edits until `sudo supervisorctl restart frontend` was issued — main agent may want to investigate why webpack hot reload silently missed those file changes (timestamps showed edits at 11:07 / 11:08 but bundle still served old strings until restart at 11:13)."
+  ],
+  "critical_code_review_comments": [
+    "SiteContext.jsx persists activeSiteId as JSON-stringified value ('\"mystore\"' instead of plain 'mystore'). Spec says localStorage `jalwa_active_site` should be the id. Currently it's JSON. Functionally fine (load() does JSON.parse) but doesn't match spec verbatim — confirm whether a string or JSON value was intended.",
+    "DashboardLayout currentPageLabel computation has redundant ternary `item.exact ? location.pathname === item.path : location.pathname === item.path` — both branches identical. Refactor to a simple equality + nested-route prefix match.",
+    "WordPressConnectModal hard-codes API_KEY 'jalwa_live_abc123xyz' at module scope — fine for mock, but mark clearly as mock so it isn't shipped to production.",
+    "Several files exceed component scope (PublishPage, ArticleSettingsPage). If they cross 700 lines consider splitting into sub-section components.",
+    "Multiple Radix Dialogs missing DialogTitle/Description — accessibility regression."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% (all 9 changes verified after frontend restart)"},
+  "test_credentials": "test@jalwa.com / test1234 (per /app/memory/test_credentials.md if maintained; supplied in review request)",
+  "seed_data_creation": "Added a third site 'testsite.com' via Add-site dialog during testing — persisted in localStorage `jalwa_sites`. Main agent may want to clear localStorage before demoing.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 9 changes (site switcher + localStorage, Auto Publish calendar/performance, Analytics page, Article Settings 10 sections + toggles, Team page, Connect Site rename + 3-step WordPress modal full flow ending in success screen, This-week strip on DashboardHome, sidebar 11-item ordering, public HomePage/FeaturesPage copy updates) all PASS. Only minor copy + a11y cleanup remains (see action_items). Important gotcha: webpack dev-server may serve stale bundle after edits — restart frontend if checks fail unexpectedly.",
+  "verified_testids_on_dashboard": [
+    "site-switcher-trigger", "site-option-myblog", "site-option-mystore", "site-add-new",
+    "add-site-url", "add-site-name", "add-site-platform", "add-site-submit", "add-site-dialog",
+    "active-site-badge", "this-week-section", "week-day-mon..sun",
+    "publish-page", "calendar-grid", "add-search-terms-btn", "add-terms-dialog", "keywords-textarea", "recycle-bin-toggle",
+    "analytics-page", "analytics-range", "articles-table", "top-search-terms", "top-pages",
+    "article-settings-page", "save-all-settings", "toggle-delay-24 (and 7 more toggles)",
+    "team-page", "invite-card", "team-members-card", "invite-email", "invite-submit",
+    "download-plugin-section", "wordpress-connect-modal", "wp-step-1/2/3", "wp-url-input",
+    "wp-step-1-continue", "wp-step-2-continue", "wp-api-key", "wp-test-connect", "wp-success"
+  ],
+  "regression_check": "Login (test@jalwa.com/test1234) → /dashboard works. Unauth /dashboard with cleared localStorage → redirects to /login (verified). Sidebar order matches spec exactly: ['Dashboard','Growth Score','AI Visibility','AI Writer','Auto Publish','Analytics','Social Autopilot','Article Settings','Connect Site','Team','Settings'] (11 items)."
+}

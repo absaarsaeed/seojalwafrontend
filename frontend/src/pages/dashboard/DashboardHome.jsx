@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import { useSite } from '../../context/SiteContext';
 import { DASHBOARD_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
-import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp } from 'lucide-react';
+import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 const fadeInUp = {
@@ -36,7 +37,35 @@ const activityIcons = {
 
 export const DashboardHome = () => {
   const { user } = useUser();
+  const { activeSite } = useSite();
   const data = DASHBOARD_DATA;
+
+  // Build this week's strip (Mon-Sun starting from this week's Monday)
+  const today = new Date();
+  const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Monday
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dayOfWeek);
+  monday.setHours(0, 0, 0, 0);
+  const weekTitles = [
+    '10 SEO Trends for 2026',
+    'AI Content Marketing Guide',
+    'Rank #1 with AI Tools',
+    'ChatGPT vs Perplexity SEO',
+    'Local SEO Checklist',
+    'Long-Tail Keywords in AI Era',
+    'Topical Authority Guide',
+  ];
+  const weekArticles = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const past = d < today;
+    return {
+      date: d,
+      day: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
+      title: weekTitles[i],
+      status: past ? 'Published' : 'Scheduled',
+    };
+  });
 
   return (
     <motion.div
@@ -116,6 +145,35 @@ export const DashboardHome = () => {
                   {rec.action} <ArrowRight size={14} className="ml-1" />
                 </Button>
               </Link>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* This Week's Articles */}
+      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="this-week-section">
+        <div className="flex flex-wrap items-start justify-between gap-2 mb-4">
+          <div>
+            <h3 className="font-semibold text-[#0A0A0A]">This week's articles</h3>
+            <p className="text-xs text-[#6B7280]">Publishing automatically to {activeSite?.domain || 'myblog.com'}</p>
+          </div>
+          <Link to="/dashboard/auto-publish" className="text-sm text-[#1D9E75] hover:underline inline-flex items-center gap-1">
+            View full calendar <ArrowRight size={14} />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          {weekArticles.map((a, i) => (
+            <div key={i} className="bg-[#F9FAFB] rounded-lg p-3 flex flex-col min-h-[110px]" data-testid={`week-day-${a.day.toLowerCase()}`}>
+              <p className="text-[10px] font-semibold text-[#6B7280] uppercase">{a.day} {a.date.getDate()}</p>
+              <p className="text-xs text-[#0A0A0A] mt-1 line-clamp-2 flex-1">{a.title}</p>
+              <div className="flex items-center justify-between mt-2">
+                <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded ${a.status === 'Published' ? 'bg-[#E1F5EE] text-[#1D9E75]' : 'bg-[#F0F0F0] text-[#6B7280]'}`}>
+                  {a.status}
+                </span>
+                <a href="#" className="text-[10px] text-[#1D9E75] hover:underline inline-flex items-center gap-0.5">
+                  View <ExternalLink size={9} />
+                </a>
+              </div>
             </div>
           ))}
         </div>

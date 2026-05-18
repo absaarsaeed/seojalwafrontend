@@ -1,8 +1,10 @@
 import { NavLink, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import { useSite } from '../../context/SiteContext';
+import { SiteSwitcher } from './SiteSwitcher';
 import { Toaster } from 'sonner';
 import { 
-  LayoutDashboard, Trophy, Radar, Pen, Send, Share2, Plug, Settings,
+  LayoutDashboard, Trophy, Radar, Pen, Send, BarChart3, Share2, SlidersHorizontal, Plug, Users, Settings,
   LogOut, Bell, ChevronUp, Menu, X
 } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -20,13 +22,17 @@ const navItems = [
   { path: '/dashboard/ai-visibility', label: 'AI Visibility', icon: Radar },
   { path: '/dashboard/ai-writer', label: 'AI Writer', icon: Pen },
   { path: '/dashboard/auto-publish', label: 'Auto Publish', icon: Send },
+  { path: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/dashboard/social-autopilot', label: 'Social Autopilot', icon: Share2 },
-  { path: '/dashboard/connections', label: 'Connections', icon: Plug },
+  { path: '/dashboard/article-settings', label: 'Article Settings', icon: SlidersHorizontal },
+  { path: '/dashboard/connections', label: 'Connect Site', icon: Plug },
+  { path: '/dashboard/team', label: 'Team', icon: Users },
   { path: '/dashboard/settings', label: 'Settings', icon: Settings }
 ];
 
 export const DashboardLayout = () => {
   const { isAuthenticated, user, logout } = useUser();
+  const { activeSite } = useSite();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -72,6 +78,11 @@ export const DashboardLayout = () => {
             <span className="text-xl font-extrabold text-[#0A0A0A]">SEO</span>
             <span className="text-xl font-extrabold text-[#1D9E75]">Jalwa</span>
           </div>
+        </div>
+
+        {/* Site Switcher */}
+        <div className="p-4 border-b border-[#F0F0F0]">
+          <SiteSwitcher />
         </div>
 
         {/* User Info */}
@@ -146,9 +157,16 @@ export const DashboardLayout = () => {
         {/* Top Bar */}
         <header className="bg-white border-b border-[#F0F0F0] px-6 py-4 sticky top-0 z-20">
           <div className="flex items-center justify-between lg:ml-0 ml-12">
-            <h1 className="text-lg font-semibold text-[#0A0A0A]" data-testid="dash-page-title">
-              {currentPageLabel}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold text-[#0A0A0A]" data-testid="dash-page-title">
+                {currentPageLabel}
+              </h1>
+              {activeSite && (
+                <span className="px-2 py-0.5 bg-[#F0F0F0] text-[#6B7280] text-xs font-medium rounded-full" data-testid="active-site-badge">
+                  {activeSite.domain}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <button className="relative p-2 text-[#6B7280] hover:text-[#0A0A0A] transition-colors">
                 <Bell size={20} />

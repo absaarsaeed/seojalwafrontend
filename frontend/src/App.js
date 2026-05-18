@@ -19,6 +19,7 @@ import { Settings as AdminSettings } from "./admin/pages/Settings";
 
 // Public
 import { UserProvider, useUser } from "./context/UserContext";
+import { SiteProvider } from "./context/SiteContext";
 import { PublicLayout } from "./components/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
 import { FeaturesPage } from "./pages/public/FeaturesPage";
@@ -41,8 +42,11 @@ import { GrowthScorePage } from "./pages/dashboard/GrowthScorePage";
 import { PulsePage } from "./pages/dashboard/PulsePage";
 import { WritePage } from "./pages/dashboard/WritePage";
 import { PublishPage } from "./pages/dashboard/PublishPage";
+import { AnalyticsPage } from "./pages/dashboard/AnalyticsPage";
 import { PostPage } from "./pages/dashboard/PostPage";
+import { ArticleSettingsPage } from "./pages/dashboard/ArticleSettingsPage";
 import { ConnectionsPage } from "./pages/dashboard/ConnectionsPage";
+import { TeamPage } from "./pages/dashboard/TeamPage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
 
 // Redirect authenticated users away from auth pages
@@ -57,7 +61,8 @@ function App() {
     <div className="App">
       <AdminProvider>
         <UserProvider>
-          <BrowserRouter>
+          <SiteProvider>
+            <BrowserRouter>
             <Routes>
               {/* Public Marketing Site */}
               <Route element={<PublicLayout />}>
@@ -86,8 +91,11 @@ function App() {
                 <Route path="ai-visibility" element={<PulsePage />} />
                 <Route path="ai-writer" element={<WritePage />} />
                 <Route path="auto-publish" element={<PublishPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="social-autopilot" element={<PostPage />} />
+                <Route path="article-settings" element={<ArticleSettingsPage />} />
                 <Route path="connections" element={<ConnectionsPage />} />
+                <Route path="team" element={<TeamPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 {/* Legacy redirects */}
                 <Route path="pulse" element={<Navigate to="/dashboard/ai-visibility" replace />} />
@@ -117,7 +125,8 @@ function App() {
               {/* Catch all */}
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
-          </BrowserRouter>
+            </BrowserRouter>
+          </SiteProvider>
         </UserProvider>
       </AdminProvider>
     </div>

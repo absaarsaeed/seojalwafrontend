@@ -13,8 +13,9 @@ import {
 } from '../../components/ui/dialog';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { POST_DATA } from '../../data/publicData';
-import { Check, Copy, X as XIcon } from 'lucide-react';
+import { Check, Copy, X as XIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { WordPressConnectModal } from '../../components/dashboard/WordPressConnectModal';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -327,6 +328,7 @@ export const ConnectionsPage = () => {
   const [socialAccounts, setSocialAccounts] = useState(POST_DATA.socialAccounts);
   const [activeWebsite, setActiveWebsite] = useState(null);
   const [activeSocial, setActiveSocial] = useState(null);
+  const [wpOpen, setWpOpen] = useState(false);
 
   const connectWebsite = (name) => {
     setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: true, description: `Connected · ${name.toLowerCase()}.com` } : p));
@@ -343,6 +345,14 @@ export const ConnectionsPage = () => {
     toast.success(`${platform} disconnected`);
   };
 
+  const openWebsite = (platform) => {
+    if (platform.name === 'WordPress') {
+      setWpOpen(true);
+    } else {
+      setActiveWebsite(platform);
+    }
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -352,8 +362,8 @@ export const ConnectionsPage = () => {
       data-testid="connections-page"
     >
       <motion.div variants={fadeInUp}>
-        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Connections</h1>
-        <p className="text-sm text-[#6B7280]">Connect SEO Jalwa to the platforms where your brand lives.</p>
+        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Connect Site</h1>
+        <p className="text-sm text-[#6B7280]">Connect your website so SEO Jalwa can publish articles directly. Choose your platform below.</p>
       </motion.div>
 
       {/* Section A — Website */}
@@ -370,7 +380,7 @@ export const ConnectionsPage = () => {
               method={p.method}
               description={p.description}
               connected={p.connected}
-              onConnect={() => setActiveWebsite(p)}
+              onConnect={() => openWebsite(p)}
               onDisconnect={() => disconnectWebsite(p.name)}
               testid={`website-card-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
             />
@@ -399,6 +409,22 @@ export const ConnectionsPage = () => {
         </div>
       </motion.section>
 
+      {/* Download plugin footer */}
+      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6 flex flex-wrap items-center justify-between gap-4" data-testid="download-plugin-section">
+        <div>
+          <p className="font-medium text-[#0A0A0A]">Prefer to install manually?</p>
+          <p className="text-xs text-[#6B7280]">Latest version: v1.0.0 · Filename: seojalwa-plugin.zip</p>
+        </div>
+        <Button onClick={() => toast.success('seojalwa-plugin.zip download started')} variant="outline" className="border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE]">
+          <Download size={14} className="mr-2" /> Download Plugin (.zip)
+        </Button>
+      </motion.div>
+
+      <WordPressConnectModal
+        open={wpOpen}
+        onClose={() => setWpOpen(false)}
+        onConnected={() => connectWebsite('WordPress')}
+      />
       <WebsiteModal
         platform={activeWebsite}
         open={!!activeWebsite}
