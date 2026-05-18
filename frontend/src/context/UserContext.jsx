@@ -1,126 +1,135 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+/**
+ * UserContext (bridge)
+ *
+ * Wraps AuthProvider and exposes the legacy `useUser` API so existing pages
+ * keep working without changes:
+ *   { isAuthenticated, user, login, signup, logout, updateUser,
+ *     cookieConsent, acceptCookies, getPricing }
+ *
+ * - Auth state now flows from AuthContext (real backend).
+ * - `login` / `signup` remain async; existing pages should await them.
+ * - `getPricing` is a synchronous accessor returning the most recently fetched
+ *   /api/plans payload (normalised). It falls back to DEFAULT_PRICING until the
+ *   first successful fetch (kicked off on mount).
+ */
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { AuthProvider, useAuth } from './AuthContext';
+import { plansApi } from '../lib/api';
 
-const UserContext = createContext(null);
+const COOKIE_KEY = 'jalwa_cookie_consent';
 
-const STORAGE_KEY = 'seo_jalwa_user';
-const PRICING_KEY = 'seo_jalwa_admin';
+const DEFAULT_PRICING = {
+  starter: { name: 'Starter', monthlyPrice: 79, annualPrice: 69 },
+  growth: { name: 'Growth', monthlyPrice: 199, annualPrice: 166, popular: true },
+  agency: { name: 'Agency', monthlyPrice: 499, annualPrice: 416 },
+};
 
-const getInitialState = () => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return null;
-    }
+// Normalise a /api/plans response into the legacy { starter, growth, agency } shape.
+const normalisePlans = (data) => {
+  if (!data) return DEFAULT_PRICING;
+
+  // Already keyed: { starter: {...}, growth: {...}, agency: {...} }
+  if (!Array.isArray(data) && (data.starter || data.growth || data.agency)) {
+    return { ...DEFAULT_PRICING, ...data };
   }
-  return null;
+
+  // Array of plan objects from the API.
+  const list = Array.isArray(data) ? data : data.plans || [];
+  if (!list.length) return DEFAULT_PRICING;
+
+  const byKey = {};
+  for (const p of list) {
+    const key = (p.key || p.slug || p.id || p.name || '').toString().toLowerCase();
+    if (!key) continue;
+    byKey[key] = {
+      name: p.name || key.charAt(0).toUpperCase() + key.slice(1),
+      monthlyPrice: p.monthly_price ?? p.monthlyPrice ?? p.price_monthly ?? 0,
+      annualPrice: p.annual_price ?? p.annualPrice ?? p.price_annual ?? 0,
+      popular: !!(p.popular ?? p.is_popular),
+    };
+  }
+  return { ...DEFAULT_PRICING, ...byKey };
 };
 
-const defaultUser = {
-  id: '1',
-  name: 'Ahmed Hassan',
-  email: 'ahmed@mybrand.com',
-  website: 'https://mybrand.com',
-  plan: 'Growth',
-  avatar: null,
-  jalwaScore: 67,
-  createdAt: '2025-10-15'
-};
+const LegacyUserContext = createContext(null);
 
-const defaultState = {
-  isAuthenticated: false,
-  user: null,
-  cookieConsent: false
-};
+const UserBridge = ({ children }) => {
+  const auth = useAuth();
 
-export const UserProvider = ({ children }) => {
-  const [state, setState] = useState(() => {
-    const initial = getInitialState();
-    return initial || defaultState;
+  const [cookieConsent, setCookieConsent] = useState(() => {
+    try {
+      return localStorage.getItem(COOKIE_KEY) === '1';
+    } catch {
+      return false;
+    }
   });
 
+  const [pricing, setPricing] = useState(DEFAULT_PRICING);
+  const pricingRef = useRef(pricing);
+  pricingRef.current = pricing;
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
-  const signup = (userData) => {
-    const newUser = {
-      ...defaultUser,
-      ...userData,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setState(prev => ({ ...prev, isAuthenticated: true, user: newUser }));
-    return true;
-  };
-
-  const login = (email, password) => {
-    // For demo, any login works
-    setState(prev => ({ 
-      ...prev, 
-      isAuthenticated: true, 
-      user: { ...defaultUser, email } 
-    }));
-    return true;
-  };
-
-  const logout = () => {
-    setState(prev => ({ ...prev, isAuthenticated: false, user: null }));
-  };
-
-  const updateUser = (updates) => {
-    setState(prev => ({
-      ...prev,
-      user: { ...prev.user, ...updates }
-    }));
-  };
-
-  const acceptCookies = () => {
-    setState(prev => ({ ...prev, cookieConsent: true }));
-  };
-
-  // Get pricing from admin panel localStorage
-  const getPricing = () => {
-    try {
-      const adminData = localStorage.getItem(PRICING_KEY);
-      if (adminData) {
-        const parsed = JSON.parse(adminData);
-        if (parsed.pricing) {
-          return parsed.pricing;
-        }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await plansApi.list();
+        if (cancelled) return;
+        setPricing(normalisePlans(res));
+      } catch {
+        // Silent fallback to defaults — surface in PricingPage if needed.
       }
-    } catch {}
-    
-    // Default pricing
-    return {
-      starter: { name: 'Starter', monthlyPrice: 79, annualPrice: 69 },
-      growth: { name: 'Growth', monthlyPrice: 199, annualPrice: 166, popular: true },
-      agency: { name: 'Agency', monthlyPrice: 499, annualPrice: 416 }
+    })();
+    return () => {
+      cancelled = true;
     };
-  };
+  }, []);
+
+  const acceptCookies = useCallback(() => {
+    try {
+      localStorage.setItem(COOKIE_KEY, '1');
+    } catch {}
+    setCookieConsent(true);
+  }, []);
+
+  // Legacy sync login/signup signatures kept for backwards compatibility,
+  // but now return promises. Existing pages should `await` them.
+  const login = useCallback((email, password) => auth.login({ email, password }), [auth]);
+  const signup = useCallback(
+    (formData) =>
+      auth.signup({
+        name: formData?.name,
+        email: formData?.email,
+        password: formData?.password,
+        website: formData?.website,
+      }),
+    [auth],
+  );
 
   const value = {
-    ...state,
-    signup,
+    isAuthenticated: auth.isAuthenticated,
+    isLoading: auth.isLoading,
+    user: auth.user,
     login,
-    logout,
-    updateUser,
+    signup,
+    logout: auth.logout,
+    updateUser: auth.updateUser,
+    cookieConsent,
     acceptCookies,
-    getPricing
+    pricing,
+    getPricing: () => pricingRef.current,
   };
 
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <LegacyUserContext.Provider value={value}>{children}</LegacyUserContext.Provider>;
 };
 
+export const UserProvider = ({ children }) => (
+  <AuthProvider>
+    <UserBridge>{children}</UserBridge>
+  </AuthProvider>
+);
+
 export const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser must be used within UserProvider');
-  }
-  return context;
+  const ctx = useContext(LegacyUserContext);
+  if (!ctx) throw new Error('useUser must be used within UserProvider');
+  return ctx;
 };

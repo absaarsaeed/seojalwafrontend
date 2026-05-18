@@ -24,16 +24,18 @@ export const AdminLogin = () => {
     setError('');
     setIsLoading(true);
 
-    // Simulate loading
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const success = login(username, password);
-    if (success) {
-      navigate('/adminpanel/dashboard');
-    } else {
-      setError('Invalid username or password');
+    try {
+      const success = await login(username, password);
+      if (success) {
+        navigate('/adminpanel/dashboard');
+      } else {
+        setError('Invalid username or password');
+      }
+    } catch (err) {
+      setError(err?.message || 'Invalid username or password');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { DEFAULT_PRICING, SETTINGS_DATA, COUPONS, BLOG_POSTS, ANNOUNCEMENTS, USERS_LIST, API_KEYS_CONFIG } from '../data/dummyData';
+import { AdminAuthProvider, useAdminAuth } from '../../context/AdminAuthContext';
 
 const AdminContext = createContext(null);
 
@@ -25,7 +26,6 @@ const getInitialState = () => {
 };
 
 const defaultState = {
-  isAuthenticated: false,
   pricing: DEFAULT_PRICING,
   settings: SETTINGS_DATA,
   coupons: COUPONS,
@@ -36,7 +36,14 @@ const defaultState = {
   userNotes: {}
 };
 
-export const AdminProvider = ({ children }) => {
+export const AdminProvider = ({ children }) => (
+  <AdminAuthProvider>
+    <AdminBridge>{children}</AdminBridge>
+  </AdminAuthProvider>
+);
+
+const AdminBridge = ({ children }) => {
+  const adminAuth = useAdminAuth();
   const [state, setState] = useState(() => {
     const initial = getInitialState();
     return initial || defaultState;
@@ -47,16 +54,18 @@ export const AdminProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const login = (username, password) => {
-    if (username === 'jalwa' && password === 'jalwaadmin') {
-      setState(prev => ({ ...prev, isAuthenticated: true }));
+  // Auth now flows from AdminAuthContext (real backend).
+  const login = async (username, password) => {
+    try {
+      await adminAuth.login({ username, password });
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
-    setState(prev => ({ ...prev, isAuthenticated: false }));
+    adminAuth.logout();
   };
 
   const updatePricing = (newPricing) => {
@@ -144,6 +153,7 @@ export const AdminProvider = ({ children }) => {
 
   const value = {
     ...state,
+    isAuthenticated: adminAuth.isAuthenticated,
     login,
     logout,
     updatePricing,

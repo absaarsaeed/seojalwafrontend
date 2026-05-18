@@ -5,22 +5,29 @@ import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Eye, EyeOff, Check } from 'lucide-react';
+import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Logo } from '../../components/public/Logo';
 
 export const SignupPage = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', website: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { signup } = useUser();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    signup(formData);
-    navigate('/dashboard');
+    try {
+      await signup(formData);
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err?.message || 'Unable to create account. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -134,6 +141,16 @@ export const SignupPage = () => {
             >
               {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
+
+            {error && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-[#EF4444] text-sm"
+                data-testid="signup-error-message"
+              >
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
             
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">

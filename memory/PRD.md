@@ -172,6 +172,28 @@ Tested: `/app/test_reports/iteration_4.json` — 100% pass on all 9 changes.
 - Email transactional (SendGrid/Resend) for password reset, signup, billing
 - Stripe billing integration
 
+## Phase 6: API Foundation — STEP 0 (Feb 18, 2026)
+Frontend connected to external backend at `https://api.seojalwa.com` (DNS pending deploy).
+
+**New files:**
+- `src/lib/api.js` — fetch wrapper, JWT + refresh single-flight, ApiError, endpoint helpers (`authApi`, `plansApi`, `adminAuthApi`)
+- `src/context/AuthContext.jsx` — real user auth, hydrates from `/api/auth/me`
+- `src/context/AdminAuthContext.jsx` — admin auth, token in sessionStorage
+- `src/components/RequireAuth.jsx`, `src/components/RequireAdmin.jsx` — route guards
+
+**Refactored (no UI breakage):**
+- `src/context/UserContext.jsx` — now a bridge over `AuthProvider`; pricing fetched from `/api/plans`
+- `src/admin/context/AdminContext.jsx` — uses `AdminAuthProvider`; preserves all admin local state
+- `LoginPage`, `SignupPage`, `AdminLogin` — async submit, real error display
+
+**Endpoints wired (5):**
+- `POST /api/auth/register` · `POST /api/auth/login` · `GET /api/auth/me`
+- `GET /api/plans` (public) · `POST /api/admin/auth/login`
+
+**Token storage:** access+refresh in localStorage (user); admin token in sessionStorage.
+
+**Live testing BLOCKED:** `api.seojalwa.com` does not resolve from preview environment yet — awaiting backend DNS/deployment.
+
 ### P2 (Nice to Have)
 - Export CSV from admin
 - Rich text editor for blog (TipTap/Lexical)

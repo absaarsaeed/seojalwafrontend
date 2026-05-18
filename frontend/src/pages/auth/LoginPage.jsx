@@ -1,27 +1,36 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
 import { Logo } from '../../components/public/Logo';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Eye, EyeOff, Check } from 'lucide-react';
+import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    login(email, password);
-    navigate('/dashboard');
+    try {
+      await login(email, password);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err?.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -115,6 +124,16 @@ export const LoginPage = () => {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
+
+            {error && (
+              <div
+                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-[#EF4444] text-sm"
+                data-testid="login-error-message"
+              >
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
             
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
