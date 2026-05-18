@@ -1,0 +1,60 @@
+{
+  "summary": "Completed end-to-end frontend testing of SEO Jalwa Public Marketing site + User Dashboard (phase 2). 11 public routes load, both auth pages load without navbar, signup/login flows authenticate and redirect to /dashboard, AuthRedirect protects auth pages when logged-in, DashboardLayout protects dashboard when logged-out (redirects to /login), all 6 dashboard pages render with sidebar nav working, CookieBanner appears and persists consent to localStorage, and the critical localStorage pricing bridge (seo_jalwa_admin key) is verified working - custom prices $99/$299/$599 render correctly when set, and defaults $79/$199/$499 render when key is absent. Light theme + Syne font + #1D9E75 green primary all verified on HomePage. No console errors, no framer-motion errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "DashboardLayout.handleLogout",
+        "issue": "After clicking dash-logout-btn, user lands on /login instead of / (home) as the spec requires. Cause: logout() sets isAuthenticated=false which triggers DashboardLayout's `if (!isAuthenticated) return <Navigate to=\"/login\" replace />` BEFORE the subsequent `navigate('/')` can execute. Order of operations is wrong.",
+        "selector": "[data-testid=\"dash-logout-btn\"]",
+        "priority": "MEDIUM",
+        "fix_suggestion": "In handleLogout, call navigate('/') FIRST, then logout() — or move the redirect-to-login guard so it does not fire on the same tick as logout. Example: const handleLogout = () => { navigate('/'); setTimeout(() => logout(), 0); };"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix DashboardLayout logout so it redirects to '/' (home) instead of '/login'. Reorder so navigate('/') runs before logout() state update, or guard the Navigate so it doesn't fire on the click tick."
+  ],
+  "critical_code_review_comments": [
+    "UserContext.getPricing reads from localStorage key 'seo_jalwa_admin' which is the SAME key the AdminContext uses for admin auth. Admin login writes {isAuthenticated, username}; pricing edit writes {pricing: {...}}. There is a real risk of one overwriting the other depending on admin context's setState pattern. Recommend verifying AdminContext merges with existing key contents (read → merge → write) rather than overwriting. Worth a focused review of /app/frontend/src/admin/context/AdminContext.jsx.",
+    "UserContext useEffect persists state on every mount even when state is null/default — first visit to ANY public page writes {isAuthenticated:false,user:null,cookieConsent:false} into seo_jalwa_user immediately. Functionally fine but could be skipped on first mount.",
+    "DashboardLayout navItems has a 'Billing' entry pointing to '/dashboard/settings?tab=billing' but is sliced off via navItems.slice(0,-1) — dead code; remove or render it.",
+    "AuthRedirect wrapper exists for /login, /signup, /forgot-password but there is no analogous redirect for an authenticated user landing on / (home) — spec is silent on this so this may be intentional.",
+    "PricingPage feature list only shows allFeatures.slice(0, 10) in the cards (the comparison table below shows all 15). Acceptable design choice but worth confirming with PRD."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only / mocked auth via localStorage)",
+    "frontend": "97% (35/36 verified — only logout redirect destination is off)"
+  },
+  "test_credentials": "Dummy mode — any email/password works. Used test@jalwa.com / test1234 for signup with name='Test User', website='https://test.com'. No real auth.",
+  "seed_data_creation": "Set localStorage.seo_jalwa_admin = {pricing:{starter:{monthlyPrice:99,annualPrice:89},growth:{monthlyPrice:299,annualPrice:249,popular:true},agency:{monthlyPrice:599,annualPrice:499}}} to verify pricing bridge from admin → public pricing page.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase-2 (Public+Dashboard) verified. Key testids: login-page, signup-page, pricing-page, dashboard-layout, dash-page-title, dash-logout-btn, dash-nav-home/jalwa-pulse/jalwa-write/jalwa-publish/jalwa-post/settings, login-email-input, login-password-input, login-submit-btn, signup-name-input, signup-email-input, signup-password-input, signup-website-input, signup-submit-btn. To clear auth: localStorage.removeItem('seo_jalwa_user'). Pricing bridge key: 'seo_jalwa_admin' with {pricing:{starter,growth,agency}}. CookieBanner: 'Accept' button writes cookieConsent:true into seo_jalwa_user. PricingPage cards use framer-motion whileInView so must scroll into viewport before reading innerText (page.content() may still show them but innerText needs scroll).",
+  "verified_flows": [
+    "All 11 public routes (/, /features, /pricing, /integrations, /about, /blog, /blog/ai-seo-2026-complete-guide, /contact, /privacy, /terms, /cookies) load without errors",
+    "All 3 auth routes (/login, /signup, /forgot-password) load without PublicLayout navbar",
+    "Signup with {name, email, password, website} → navigates to /dashboard and writes seo_jalwa_user with isAuthenticated:true",
+    "Login with any email/password → navigates to /dashboard",
+    "AuthRedirect: logged-in user visiting /login or /signup is redirected to /dashboard",
+    "Protected dashboard: unauthed visit to /dashboard redirects to /login (DashboardLayout's Navigate guard)",
+    "All 6 dashboard pages render with DashboardLayout (home, pulse, write, publish, post, settings)",
+    "All 6 sidebar nav items navigate correctly and active state shows green (#E1F5EE bg + #1D9E75 text via Tailwind arbitrary classes)",
+    "Public Navbar: Sign in → /login; Start free → /signup; logo links to /",
+    "CookieBanner appears on first visit, Accept button persists cookieConsent:true into seo_jalwa_user",
+    "PricingPage default values render $79 / $199 / $499 when seo_jalwa_admin has no pricing field",
+    "PricingPage reads custom pricing from seo_jalwa_admin localStorage and renders $99 / $299 / $599 correctly — bridge confirmed working",
+    "Light theme verified: body background rgb(255,255,255), 18 elements with .font-syne class on HomePage, #1D9E75 (rgb 29,158,117) used as bg/border/text on multiple elements",
+    "Framer Motion: HomePage hero animation present, no console errors related to framer-motion"
+  ],
+  "rca of the issue": {
+    "logout_redirect": "RCA: In DashboardLayout.handleLogout, the order is `logout()` then `navigate('/')`. logout() calls setState which marks isAuthenticated=false. React schedules a re-render of DashboardLayout, which on next render hits `if (!isAuthenticated) return <Navigate to='/login' replace />`. The Navigate component runs during render and replaces the current URL with /login BEFORE the imperative navigate('/') call can take effect (or after, but Navigate replace wins because the component re-renders again). Result: user ends up on /login instead of /. Reproduction: login → click dash-logout-btn → URL ends with /login. Mitigation: navigate('/') BEFORE logout(), or wrap logout() in setTimeout(()=>logout(),0) so the navigation completes first, or guard the Navigate redirect with a flag that distinguishes 'just-logged-out' from 'never-authed'."
+  }
+}
