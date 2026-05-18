@@ -247,7 +247,7 @@ export const BLOG_POSTS = [
 ];
 
 export const ANNOUNCEMENTS = [
-  { id: 1, subject: 'New Feature: AI Visibility Pulse', target: 'All users', channel: 'Both', date: '2026-01-10', recipients: 2847 },
+  { id: 1, subject: 'New Feature: AI Visibility', target: 'All users', channel: 'Both', date: '2026-01-10', recipients: 2847 },
   { id: 2, subject: 'Scheduled Maintenance Notice', target: 'All users', channel: 'Email', date: '2026-01-05', recipients: 2847 },
   { id: 3, subject: 'Exclusive Offer: Upgrade to Growth', target: 'Starter plan', channel: 'In-app banner', date: '2025-12-28', recipients: 847 },
   { id: 4, subject: 'Agency Features Now Available', target: 'Agency plan', channel: 'Email', date: '2025-12-20', recipients: 58 },
@@ -258,13 +258,13 @@ export const ANALYTICS_DATA = {
   pageviews: 124847,
   avgSessionDuration: '4m 32s',
   conversionRate: 3.2,
-  mostUsedModule: 'Jalwa Write',
+  mostUsedModule: 'AI Writer',
   userGrowth: USER_SIGNUPS_CHART,
   moduleUsage: [
-    { module: 'Jalwa Write', usage: 8945 },
-    { module: 'Jalwa Publish', usage: 6723 },
-    { module: 'Jalwa Post', usage: 5891 },
-    { module: 'Jalwa Pulse', usage: 3456 }
+    { module: 'AI Writer', usage: 8945 },
+    { module: 'Auto Publish', usage: 6723 },
+    { module: 'Social Autopilot', usage: 5891 },
+    { module: 'AI Visibility', usage: 3456 }
   ],
   conversionFunnel: [
     { stage: 'Visitors', count: 45000 },
@@ -273,10 +273,10 @@ export const ANALYTICS_DATA = {
     { stage: 'Paid', count: 1440 }
   ],
   featureUsage: [
-    { module: 'Jalwa Write', activeUsers: 1847, avgUsage: 12, topAction: 'Generate Article' },
-    { module: 'Jalwa Publish', activeUsers: 1234, avgUsage: 8, topAction: 'Schedule Post' },
-    { module: 'Jalwa Post', activeUsers: 987, avgUsage: 15, topAction: 'Create Social Post' },
-    { module: 'Jalwa Pulse', activeUsers: 654, avgUsage: 3, topAction: 'Run AI Scan' }
+    { module: 'AI Writer', activeUsers: 1847, avgUsage: 12, topAction: 'Generate Article' },
+    { module: 'Auto Publish', activeUsers: 1234, avgUsage: 8, topAction: 'Schedule Post' },
+    { module: 'Social Autopilot', activeUsers: 987, avgUsage: 15, topAction: 'Create Social Post' },
+    { module: 'AI Visibility', activeUsers: 654, avgUsage: 3, topAction: 'Run AI Scan' }
   ]
 };
 
@@ -286,7 +286,7 @@ export const API_KEYS_CONFIG = {
       id: 'openai',
       name: 'OpenAI (GPT-4o + DALL-E 3)',
       icon: 'brain',
-      description: 'Powers article generation, content suggestions, and image creation.',
+      description: 'Powers AI Writer content generation and Auto Publish article drafting. DALL-E generates hero images for Auto Publish articles and Social Autopilot posts.',
       fields: [{ key: 'apiKey', label: 'API Key', type: 'password' }],
       instructions: [
         'Go to platform.openai.com',
@@ -301,7 +301,7 @@ export const API_KEYS_CONFIG = {
       id: 'anthropic',
       name: 'Anthropic (Claude)',
       icon: 'cpu',
-      description: 'Alternative AI model for content generation with different writing style.',
+      description: 'Used by AI Visibility to query Claude and monitor how it talks about your users\' brands.',
       fields: [{ key: 'apiKey', label: 'API Key', type: 'password' }],
       instructions: [
         'Go to console.anthropic.com',
@@ -315,7 +315,7 @@ export const API_KEYS_CONFIG = {
       id: 'gemini',
       name: 'Google Gemini',
       icon: 'sparkles',
-      description: 'Google AI model for multimodal content understanding.',
+      description: 'Used by AI Visibility to monitor brand mentions on Gemini.',
       fields: [{ key: 'apiKey', label: 'API Key', type: 'password' }],
       instructions: [
         'Go to aistudio.google.com',
@@ -329,7 +329,7 @@ export const API_KEYS_CONFIG = {
       id: 'perplexity',
       name: 'Perplexity',
       icon: 'search',
-      description: 'Real-time web search and fact-checking for content accuracy.',
+      description: 'Used by AI Visibility to track brand visibility on Perplexity.',
       fields: [{ key: 'apiKey', label: 'API Key', type: 'password' }],
       instructions: [
         'Go to perplexity.ai/settings/api',
@@ -384,7 +384,7 @@ export const API_KEYS_CONFIG = {
       id: 'dataforseo',
       name: 'DataForSEO',
       icon: 'bar-chart',
-      description: 'SEO data, keyword research, and SERP tracking.',
+      description: 'Powers keyword research inside Auto Publish — search volume, difficulty, and SERP data.',
       fields: [
         { key: 'email', label: 'Login Email', type: 'email' },
         { key: 'password', label: 'Password', type: 'password' }
@@ -494,16 +494,16 @@ export const API_KEYS_CONFIG = {
       id: 'pinterest',
       name: 'Pinterest',
       icon: 'pin',
-      description: 'Pinterest pin creation and board management.',
+      description: 'Used by Social Autopilot to schedule and publish pins on behalf of users.',
       fields: [
         { key: 'appId', label: 'App ID', type: 'text' },
         { key: 'appSecret', label: 'App Secret', type: 'password' }
       ],
       instructions: [
         'Go to developers.pinterest.com',
-        'Navigate to My Apps',
-        'Create a new app',
-        'Copy App ID and Secret'
+        'Click My Apps → Create app',
+        'Fill in app details and submit',
+        'Copy App ID and App Secret'
       ],
       status: 'not_connected'
     }
@@ -529,6 +529,26 @@ export const API_KEYS_CONFIG = {
       icon: 'target',
       description: 'Uses OAuth — no key needed here. Users connect their own HubSpot accounts.',
       isOAuth: true
+    }
+  ],
+  analytics: [
+    {
+      id: 'gsc',
+      name: 'Google Search Console',
+      icon: 'bar-chart',
+      description: 'Allows users to connect their Search Console for the Analytics module. Shows impressions, clicks, CTR and rankings per article.',
+      fields: [
+        { key: 'clientId', label: 'Client ID', type: 'text' },
+        { key: 'clientSecret', label: 'Client Secret', type: 'password' }
+      ],
+      instructions: [
+        'Go to console.cloud.google.com',
+        'Create Project → Credentials',
+        'Create OAuth 2.0 Client ID',
+        'Enable Search Console API in API Library',
+        'Add your domain to authorized redirect URIs'
+      ],
+      status: 'not_connected'
     }
   ]
 };

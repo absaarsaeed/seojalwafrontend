@@ -151,10 +151,10 @@ export const UserProfile = () => {
               </div>
             </div>
 
-            {/* Jalwa Score */}
+            {/* Growth Score */}
             <div className="py-4 border-t border-[#F0F0F0]">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-[#27272A]">Jalwa Score</span>
+                <span className="text-sm font-medium text-[#27272A]">Growth Score</span>
                 <span className="text-lg font-bold text-[#1D9E75]">{user.jalwaScore}/100</span>
               </div>
               <div className="relative">

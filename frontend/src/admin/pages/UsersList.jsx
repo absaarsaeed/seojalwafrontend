@@ -132,7 +132,7 @@ export const UsersList = () => {
                   <th>Status</th>
                   <th>Signup Date</th>
                   <th>Last Login</th>
-                  <th>Jalwa Score</th>
+                  <th>Growth Score</th>
                   <th>Actions</th>
                 </tr>
               </thead>

@@ -9,7 +9,14 @@ const getInitialState = () => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Merge in any API key sections that didn't exist when the stored state was created
+      // (e.g. `analytics` was added after launch). Existing sections are preserved.
+      const mergedApiKeys = { ...API_KEYS_CONFIG, ...(parsed.apiKeys || {}) };
+      Object.keys(API_KEYS_CONFIG).forEach((sectionKey) => {
+        if (!mergedApiKeys[sectionKey]) mergedApiKeys[sectionKey] = API_KEYS_CONFIG[sectionKey];
+      });
+      return { ...parsed, apiKeys: mergedApiKeys };
     } catch {
       return null;
     }

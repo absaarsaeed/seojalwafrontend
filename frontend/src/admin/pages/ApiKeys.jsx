@@ -207,6 +207,7 @@ export const ApiKeys = () => {
     { key: 'payments', title: 'Payments', description: 'Payment processing and billing' },
     { key: 'email', title: 'Email', description: 'Email delivery services' },
     { key: 'seo', title: 'SEO Data', description: 'SEO and keyword research providers' },
+    { key: 'analytics', title: 'Analytics & Search Data', description: 'Google Search Console and analytics-related integrations' },
     { key: 'storage', title: 'File Storage', description: 'Object storage for media files' },
     { key: 'social', title: 'Social Media OAuth Apps', description: 'Platform-level developer credentials for social integrations' },
     { key: 'cms', title: 'CMS Integrations', description: 'Content management system connections' }
