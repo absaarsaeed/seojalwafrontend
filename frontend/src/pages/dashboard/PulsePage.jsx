@@ -67,7 +67,7 @@ export const PulsePage = () => {
       {/* Header */}
       <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Jalwa Pulse</h1>
+          <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">AI Visibility</h1>
           <p className="text-sm text-[#6B7280]">Monitor your AI visibility across all major platforms</p>
         </div>
         <div className="flex items-center gap-3">

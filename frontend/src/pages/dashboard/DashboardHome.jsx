@@ -46,7 +46,7 @@ export const DashboardHome = () => {
       className="space-y-6"
       data-testid="user-dashboard-home"
     >
-      {/* Jalwa Score */}
+      {/* Growth Score */}
       <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="relative">
@@ -58,11 +58,14 @@ export const DashboardHome = () => {
             </div>
           </div>
           <div className="text-center md:text-left">
-            <h2 className="font-syne text-2xl font-bold text-[#0A0A0A] mb-1">Your Jalwa Score</h2>
+            <h2 className="font-syne text-2xl font-bold text-[#0A0A0A] mb-1">Your Growth Score</h2>
             <div className="flex items-center justify-center md:justify-start gap-2 text-[#1D9E75]">
               <ArrowUp size={16} />
               <span className="font-medium">+{data.jalwaScoreChange} this week</span>
             </div>
+            <Link to="/dashboard/growth-score" className="inline-flex items-center gap-1 mt-3 text-sm text-[#1D9E75] hover:underline">
+              View full score breakdown <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
       </motion.div>

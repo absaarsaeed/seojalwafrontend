@@ -5,8 +5,9 @@ import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Slider } from '../../components/ui/slider';
+import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { 
-  Check, ArrowRight, Eye, Pen, Send, BarChart3, ChevronRight,
+  Check, ArrowRight, Radar, Pen, Send, Share2, ChevronRight,
   Sparkles, Globe, Instagram, Linkedin, Facebook, Twitter
 } from 'lucide-react';
 
@@ -126,7 +127,7 @@ export const HomePage = () => {
             </motion.div>
             
             {/* Headline */}
-            <motion.h1 variants={fadeInUp} className="font-syne text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.1] mb-6">
+            <motion.h1 variants={fadeInUp} className="font-bricolage text-5xl sm:text-6xl lg:text-7xl tracking-tight leading-[1.05] mb-6" style={{ fontSize: 'clamp(48px, 7vw, 88px)' }}>
               <span className="text-[#0A0A0A]">Your Brand.</span><br />
               <span className="hero-underline text-[#0A0A0A]">Everywhere.</span><br />
               <span className="text-[#1D9E75]">Automatically.</span>
@@ -163,7 +164,7 @@ export const HomePage = () => {
           {/* Right - Floating Cards */}
           <div className="relative h-[500px] hidden lg:block">
             <FloatingCard className="absolute top-0 right-0 w-56" delay={0}>
-              <p className="text-xs text-[#6B7280] mb-2">Jalwa Score</p>
+              <p className="text-xs text-[#6B7280] mb-2">Growth Score</p>
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-full border-4 border-[#1D9E75] flex items-center justify-center">
                   <span className="font-bold text-lg text-[#0A0A0A]">74</span>
@@ -212,7 +213,8 @@ export const HomePage = () => {
         <div className="relative">
           <div className="flex animate-marquee">
             {[...LOGOS, ...LOGOS].map((logo, i) => (
-              <div key={i} className="flex-shrink-0 mx-8 px-4 py-2 bg-white rounded-lg border border-[#F0F0F0]">
+              <div key={i} className="flex-shrink-0 mx-4 flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-[#F0F0F0]">
+                <PlatformLogo name={logo} size={24} />
                 <span className="text-sm font-medium text-[#6B7280]">{logo}</span>
               </div>
             ))}
@@ -277,26 +279,26 @@ export const HomePage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               {
-                icon: Eye,
-                name: 'Jalwa Pulse',
+                icon: Radar,
+                name: 'AI Visibility',
                 tagline: 'See what AI says about your brand — and fix it',
                 features: ['Track ChatGPT + Perplexity + Gemini mentions', 'AI visibility score 0-100', 'Competitor comparison', 'Weekly improvement recommendations']
               },
               {
                 icon: Pen,
-                name: 'Jalwa Write',
+                name: 'AI Writer',
                 tagline: 'Write like you, not like every other AI tool',
                 features: ['Custom brand voice model', 'Blog articles, emails, ad copy', 'Voice consistency scorer', '100+ languages']
               },
               {
                 icon: Send,
-                name: 'Jalwa Publish',
+                name: 'Auto Publish',
                 tagline: 'From keyword to published article — automatically',
                 features: ['AI keyword research', 'Research-backed article drafts', 'One-click publish to WordPress + 9 more', 'Content ROI tracker']
               },
               {
-                icon: BarChart3,
-                name: 'Jalwa Post',
+                icon: Share2,
+                name: 'Social Autopilot',
                 tagline: 'Your brand posts itself every day',
                 features: ['Instagram, Facebook, LinkedIn, X, Pinterest, YouTube', 'AI-generated images per post', 'Smart scheduling', 'Article → 6 social posts auto-generated']
               }
@@ -335,7 +337,7 @@ export const HomePage = () => {
             One number tells you everything
           </h2>
           <p className="text-lg text-[#6B7280] mb-12 max-w-2xl mx-auto">
-            The Jalwa Score combines your Google rankings, AI visibility, social consistency, and content performance into a single score.
+            The Growth Score combines your Google rankings, AI visibility, social consistency, and content performance into a single score.
           </p>
           
           <div className="relative inline-block mb-8">
@@ -511,9 +513,9 @@ export const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { type: 'E-commerce store', headline: '+216% organic traffic in 90 days', story: 'We connected Shopify and let Jalwa Publish run. 3 months later our organic traffic had tripled without a single paid ad.' },
-              { type: 'SaaS company', headline: 'ChatGPT now recommends us first', story: 'Our Jalwa Score went from 31 to 78 in 60 days. We\'re now the top AI recommendation in our category.' },
-              { type: 'Marketing agency', headline: 'Manages 12 client brands on autopilot', story: 'As an agency, Jalwa Post alone saves us 40 hours a week. Each client\'s social presence runs itself.' }
+              { type: 'E-commerce store', headline: '+216% organic traffic in 90 days', story: 'We connected Shopify and let Auto Publish run. 3 months later our organic traffic had tripled without a single paid ad.' },
+              { type: 'SaaS company', headline: 'ChatGPT now recommends us first', story: 'Our Growth Score went from 31 to 78 in 60 days. We\'re now the top AI recommendation in our category.' },
+              { type: 'Marketing agency', headline: 'Manages 12 client brands on autopilot', story: 'As an agency, Social Autopilot alone saves us 40 hours a week. Each client\'s social presence runs itself.' }
             ].map((item) => (
               <div key={item.type} className="bg-[#F9FAFB] rounded-xl p-6 border border-[#F0F0F0]">
                 <p className="text-sm text-[#1D9E75] font-medium mb-2">{item.type}</p>

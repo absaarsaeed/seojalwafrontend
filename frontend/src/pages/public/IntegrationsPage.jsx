@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { INTEGRATIONS } from '../../data/publicData';
-import { ArrowRight, Globe } from 'lucide-react';
+import { PlatformLogo } from '../../components/public/PlatformLogo';
+import { ArrowRight } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -78,9 +79,7 @@ export const IntegrationsPage = () => {
                 className="bg-white rounded-xl border border-[#F0F0F0] p-6 transition-shadow hover:shadow-lg"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#F0F0F0] flex items-center justify-center flex-shrink-0">
-                    <Globe size={24} className="text-[#6B7280]" />
-                  </div>
+                  <PlatformLogo name={integration.name} size={48} />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-[#0A0A0A]">{integration.name}</h3>

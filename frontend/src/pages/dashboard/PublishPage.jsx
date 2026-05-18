@@ -40,7 +40,7 @@ export const PublishPage = () => {
       data-testid="publish-page"
     >
       <motion.div variants={fadeInUp}>
-        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Jalwa Publish</h1>
+        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Auto Publish</h1>
         <p className="text-sm text-[#6B7280]">Manage your content calendar and CMS connections</p>
       </motion.div>
 

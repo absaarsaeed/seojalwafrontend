@@ -87,7 +87,7 @@ export const INTEGRATIONS = [
 export const FAQ_DATA = [
   {
     question: 'Do I need all 4 modules?',
-    answer: 'No! Each module works independently. Start with what you need most — many users begin with Jalwa Write or Jalwa Post and add more as they grow.'
+    answer: 'No! Each module works independently. Start with what you need most — many users begin with AI Writer or Social Autopilot and add more as they grow.'
   },
   {
     question: 'How does the brand voice model work?',
@@ -128,9 +128,9 @@ export const DASHBOARD_DATA = {
   socialPostsScheduled: 24,
   trafficChange: 34,
   recommendations: [
-    { id: 1, priority: 'HIGH', text: 'Write article about: Top SEO mistakes 2026', action: 'Write now', link: '/dashboard/write' },
-    { id: 2, priority: 'MEDIUM', text: 'Schedule 3 more posts for this week', action: 'Schedule', link: '/dashboard/post' },
-    { id: 3, priority: 'LOW', text: 'Your AI visibility dropped on Perplexity this week', action: 'View details', link: '/dashboard/pulse' }
+    { id: 1, priority: 'HIGH', text: 'Write article about: Top SEO mistakes 2026', action: 'Write now', link: '/dashboard/ai-writer' },
+    { id: 2, priority: 'MEDIUM', text: 'Schedule 3 more posts for this week', action: 'Schedule', link: '/dashboard/social-autopilot' },
+    { id: 3, priority: 'LOW', text: 'Your AI visibility dropped on Perplexity this week', action: 'View details', link: '/dashboard/ai-visibility' }
   ],
   recentActivity: [
     { id: 1, icon: 'article', text: 'Published article: "Content Marketing in 2026"', time: '2 hours ago' },

@@ -10,10 +10,10 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold text-[#0A0A0A] mb-4">Product</h4>
             <ul className="space-y-2">
-              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Jalwa Pulse</Link></li>
-              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Jalwa Write</Link></li>
-              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Jalwa Publish</Link></li>
-              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Jalwa Post</Link></li>
+              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">AI Visibility</Link></li>
+              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">AI Writer</Link></li>
+              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Auto Publish</Link></li>
+              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Social Autopilot</Link></li>
             </ul>
           </div>
 

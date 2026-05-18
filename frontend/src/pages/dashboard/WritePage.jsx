@@ -68,7 +68,7 @@ export const WritePage = () => {
     >
       {/* Header */}
       <motion.div variants={fadeInUp}>
-        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Jalwa Write</h1>
+        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">AI Writer</h1>
         <p className="text-sm text-[#6B7280]">Create content in your unique brand voice</p>
       </motion.div>
 

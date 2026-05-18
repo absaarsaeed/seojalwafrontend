@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { Check, Eye, Pen, Send, BarChart3, ArrowRight } from 'lucide-react';
+import { Check, Radar, Pen, Send, Share2, ArrowRight } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -10,9 +10,9 @@ const fadeInUp = {
 
 const modules = [
   {
-    id: 'pulse',
-    icon: Eye,
-    name: 'Jalwa Pulse',
+    id: 'ai-visibility',
+    icon: Radar,
+    name: 'AI Visibility',
     tagline: 'AI Visibility Monitoring',
     headline: 'Know exactly what AI says about you — and fix it',
     description: 'While your competitors wonder why they\'re invisible to ChatGPT and Perplexity, you\'ll have a clear dashboard showing exactly where you stand and what to do about it.',
@@ -26,28 +26,28 @@ const modules = [
     ]
   },
   {
-    id: 'write',
+    id: 'ai-writer',
     icon: Pen,
-    name: 'Jalwa Write',
+    name: 'AI Writer',
     tagline: 'AI Content in Your Voice',
     headline: 'Content that sounds like you, not like everyone else',
-    description: 'Most AI content sounds generic because it is. Jalwa Write learns your unique brand voice and creates content that your audience will never know was AI-assisted.',
+    description: 'Most AI content sounds generic because it is. AI Writer learns your unique brand voice and creates content that your audience will never know was AI-assisted.',
     features: [
       'Custom brand voice model trained on your existing content',
       'Blog articles, emails, ad copy, product descriptions',
       'Voice consistency scoring — never go off-brand',
       'Support for 100+ languages with voice preservation',
       'Content brief to finished draft in minutes',
-      'Seamless handoff to Jalwa Publish'
+      'Seamless handoff to Auto Publish'
     ]
   },
   {
-    id: 'publish',
+    id: 'auto-publish',
     icon: Send,
-    name: 'Jalwa Publish',
+    name: 'Auto Publish',
     tagline: 'Automated Content Publishing',
     headline: 'From keyword idea to published article — on autopilot',
-    description: 'Stop switching between keyword tools, writing apps, and your CMS. Jalwa Publish handles the entire content pipeline so you can focus on running your business.',
+    description: 'Stop switching between keyword tools, writing apps, and your CMS. Auto Publish handles the entire content pipeline so you can focus on running your business.',
     features: [
       'AI-powered keyword research with traffic estimates',
       'Automatic research and outline generation',
@@ -58,12 +58,12 @@ const modules = [
     ]
   },
   {
-    id: 'post',
-    icon: BarChart3,
-    name: 'Jalwa Post',
+    id: 'social-autopilot',
+    icon: Share2,
+    name: 'Social Autopilot',
     tagline: 'Social Media Automation',
     headline: 'Your brand posts itself. Every single day.',
-    description: 'Consistency is the #1 factor in social media success. Jalwa Post ensures your brand shows up every day across every platform — without you lifting a finger.',
+    description: 'Consistency is the #1 factor in social media success. Social Autopilot ensures your brand shows up every day across every platform — without you lifting a finger.',
     features: [
       'Publish to Instagram, Facebook, LinkedIn, X, Pinterest, YouTube',
       'AI-generated images tailored to each platform',

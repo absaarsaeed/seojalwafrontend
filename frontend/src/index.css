@@ -8,6 +8,7 @@
 @import '@fontsource/manrope/800.css';
 @import '@fontsource/syne/700.css';
 @import '@fontsource/syne/800.css';
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -56,6 +57,12 @@ h1, h2, h3, h4, h5, h6 {
 
 .font-syne {
     font-family: 'Syne', sans-serif;
+}
+
+.font-bricolage {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
 }
 
 .font-inter {

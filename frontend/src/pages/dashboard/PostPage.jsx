@@ -71,7 +71,7 @@ export const PostPage = () => {
       data-testid="post-page"
     >
       <motion.div variants={fadeInUp}>
-        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Jalwa Post</h1>
+        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Social Autopilot</h1>
         <p className="text-sm text-[#6B7280]">Schedule and automate your social media presence</p>
       </motion.div>
 

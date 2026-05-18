@@ -13,10 +13,10 @@ const fadeInUp = {
 };
 
 const allFeatures = [
-  { name: 'AI Visibility Monitoring (Jalwa Pulse)', starter: true, growth: true, agency: true },
-  { name: 'Content Writing (Jalwa Write)', starter: true, growth: true, agency: true },
-  { name: 'Auto Publishing (Jalwa Publish)', starter: true, growth: true, agency: true },
-  { name: 'Social Posting (Jalwa Post)', starter: true, growth: true, agency: true },
+  { name: 'AI Visibility Monitoring', starter: true, growth: true, agency: true },
+  { name: 'AI Writer (Content Writing)', starter: true, growth: true, agency: true },
+  { name: 'Auto Publish', starter: true, growth: true, agency: true },
+  { name: 'Social Autopilot', starter: true, growth: true, agency: true },
   { name: 'Custom Brand Voice Model', starter: true, growth: true, agency: true },
   { name: 'Articles per month', starter: '10', growth: '30', agency: 'Unlimited' },
   { name: 'Social posts per month', starter: '30', growth: '100', agency: 'Unlimited' },

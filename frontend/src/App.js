@@ -37,10 +37,12 @@ import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 // Dashboard
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { DashboardHome } from "./pages/dashboard/DashboardHome";
+import { GrowthScorePage } from "./pages/dashboard/GrowthScorePage";
 import { PulsePage } from "./pages/dashboard/PulsePage";
 import { WritePage } from "./pages/dashboard/WritePage";
 import { PublishPage } from "./pages/dashboard/PublishPage";
 import { PostPage } from "./pages/dashboard/PostPage";
+import { ConnectionsPage } from "./pages/dashboard/ConnectionsPage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
 
 // Redirect authenticated users away from auth pages
@@ -80,11 +82,18 @@ function App() {
               {/* User Dashboard (DashboardLayout itself enforces auth) */}
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardHome />} />
-                <Route path="pulse" element={<PulsePage />} />
-                <Route path="write" element={<WritePage />} />
-                <Route path="publish" element={<PublishPage />} />
-                <Route path="post" element={<PostPage />} />
+                <Route path="growth-score" element={<GrowthScorePage />} />
+                <Route path="ai-visibility" element={<PulsePage />} />
+                <Route path="ai-writer" element={<WritePage />} />
+                <Route path="auto-publish" element={<PublishPage />} />
+                <Route path="social-autopilot" element={<PostPage />} />
+                <Route path="connections" element={<ConnectionsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                {/* Legacy redirects */}
+                <Route path="pulse" element={<Navigate to="/dashboard/ai-visibility" replace />} />
+                <Route path="write" element={<Navigate to="/dashboard/ai-writer" replace />} />
+                <Route path="publish" element={<Navigate to="/dashboard/auto-publish" replace />} />
+                <Route path="post" element={<Navigate to="/dashboard/social-autopilot" replace />} />
               </Route>
 
               {/* Admin Login */}

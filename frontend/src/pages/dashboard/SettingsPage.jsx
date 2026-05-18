@@ -134,7 +134,7 @@ export const SettingsPage = () => {
             <div className="space-y-4">
               {[
                 { key: 'emailDigest', label: 'Daily email digest' },
-                { key: 'weeklyReport', label: 'Weekly Jalwa Score report' },
+                { key: 'weeklyReport', label: 'Weekly Growth Score report' },
                 { key: 'aiAlerts', label: 'AI visibility alerts' },
                 { key: 'billingAlerts', label: 'Billing alerts' }
               ].map((item) => (

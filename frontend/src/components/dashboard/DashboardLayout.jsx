@@ -2,7 +2,7 @@ import { NavLink, useNavigate, Outlet, Navigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { Toaster } from 'sonner';
 import { 
-  LayoutDashboard, Eye, Pen, Send, BarChart3, Settings, CreditCard, 
+  LayoutDashboard, Trophy, Radar, Pen, Send, Share2, Plug, Settings,
   LogOut, Bell, ChevronUp, Menu, X
 } from 'lucide-react';
 import { useState, useRef } from 'react';
@@ -15,13 +15,14 @@ import {
 } from '../ui/dropdown-menu';
 
 const navItems = [
-  { path: '/dashboard', label: 'Home', icon: LayoutDashboard, exact: true },
-  { path: '/dashboard/pulse', label: 'Jalwa Pulse', icon: Eye },
-  { path: '/dashboard/write', label: 'Jalwa Write', icon: Pen },
-  { path: '/dashboard/publish', label: 'Jalwa Publish', icon: Send },
-  { path: '/dashboard/post', label: 'Jalwa Post', icon: BarChart3 },
-  { path: '/dashboard/settings', label: 'Settings', icon: Settings },
-  { path: '/dashboard/settings?tab=billing', label: 'Billing', icon: CreditCard }
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { path: '/dashboard/growth-score', label: 'Growth Score', icon: Trophy },
+  { path: '/dashboard/ai-visibility', label: 'AI Visibility', icon: Radar },
+  { path: '/dashboard/ai-writer', label: 'AI Writer', icon: Pen },
+  { path: '/dashboard/auto-publish', label: 'Auto Publish', icon: Send },
+  { path: '/dashboard/social-autopilot', label: 'Social Autopilot', icon: Share2 },
+  { path: '/dashboard/connections', label: 'Connections', icon: Plug },
+  { path: '/dashboard/settings', label: 'Settings', icon: Settings }
 ];
 
 export const DashboardLayout = () => {
@@ -84,7 +85,7 @@ export const DashboardLayout = () => {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navItems.slice(0, -1).map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -97,7 +98,7 @@ export const DashboardLayout = () => {
                     : 'text-[#6B7280] hover:bg-[#F0F0F0] hover:text-[#0A0A0A]'
                 }`
               }
-              data-testid={`dash-nav-${item.label.toLowerCase().replace(' ', '-')}`}
+              data-testid={`dash-nav-${item.label.toLowerCase().replace(/ /g, '-')}`}
             >
               <item.icon size={18} />
               <span>{item.label}</span>

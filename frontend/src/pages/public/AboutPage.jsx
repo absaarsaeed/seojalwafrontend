@@ -90,7 +90,7 @@ export const AboutPage = () => {
               {
                 icon: Target,
                 title: 'Built for Results',
-                description: 'Every feature exists to improve your Jalwa Score. If it doesn\'t move the needle, we don\'t build it.'
+                description: 'Every feature exists to improve your Growth Score. If it doesn\'t move the needle, we don\'t build it.'
               }
             ].map((value) => (
               <motion.div
