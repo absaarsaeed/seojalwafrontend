@@ -1,0 +1,55 @@
+{
+  "summary": "Frontend-only end-to-end testing of the rebuilt 12-section conversion-focused homepage at /, plus regression checks across all other public pages, the dashboard (login + sidebar + article view), and mobile responsiveness. All 16 review checkpoints pass after a 1-line fix to the InView wrapper (was swallowing the `id` prop, breaking the #how-it-works anchor link). Frontend was restarted twice to flush stale webpack bundles — same dev-server quirk noted in iteration_4.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Homepage Section 9 'What You Get'", "issues": ["The Section 9 subtitle reads 'Four modules. One platform. Your entire growth stack — automated.' but the FeaturesPage hero (iteration_4 finding) now lists 5 modules (added Analytics). For brand consistency, consider aligning copy — either bump WhatYouGet to 5 cards (add Analytics) or revert FeaturesPage hero back to 4. Not a blocker, but inconsistent across public pages."]},
+      {"screen": "Homepage Section 11 Pricing - value breakdown", "issues": ["Value breakdown table line items are static mock numbers and do not react to the monthly/annual toggle. Acceptable per spec (mocked) but flag to main agent if dynamic behaviour was expected."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Self-applied) /app/frontend/src/pages/public/HomePage.jsx — InView wrapper now forwards `id` prop so #how-it-works anchor target exists in DOM and hero secondary CTA scrolls correctly (verified: scroll 0 → 2543px on click).",
+    "Optional: align 'Four modules' copy in HomePage WhatYouGet section with the 5-module FeaturesPage hero to prevent customer confusion (cross-page inconsistency carried over from iteration_4)."
+  ],
+  "critical_code_review_comments": [
+    "HomePage.jsx is 882 lines — beyond the 700-line guideline. Recommend splitting the 12 section components into individual files under /app/frontend/src/pages/public/home/ (Hero.jsx, FearSection.jsx, etc.) for maintainability and code-splitting.",
+    "InView wrapper originally accepted only `children`, `className`, `amount` and silently dropped any other props (including `id`). Fixed during this run. Consider switching to `{...rest}` spread so future ad-hoc props (id, role, aria-*) don't get swallowed.",
+    "framer-motion useInView with `amount: 0.2` keeps `initial='hidden'` until the section is 20% scrolled into view. On tall sections (e.g., HowItWorks, RealResults) the eyebrow `<p>` and other inner motion children initially render with opacity 0 — playwright's inner_text omitted them on first load. Functionally fine for users (animation triggers on scroll), but lower `amount` or use `whileInView` to make text always present from first paint (better for SEO crawlers + screen readers).",
+    "Multi-line `<br />` inside H1 / H2 means accessible-name strings concatenate without spaces (e.g., 'Right Now, AI Is RecommendingYour Competitors Instead of You'). Consider replacing `<br />` with a space-then-block-styled span, or add `aria-label` on the heading with the spaced version, to keep AT and SEO-friendly text intact.",
+    "Pricing card value breakdown numbers ($3,877, $3,678) are hard-coded literals — they don't recompute when localStorage admin pricing overrides change. If admin sets Growth price to $299, the 'You save $3,678/month' row becomes mathematically wrong. Compute these from the active plan price instead.",
+    "ROI calculator slider values are not persisted nor announced via aria-live, and Radix Slider 'role=slider' uses default thumb size which may be hard to grab on touch (300x100 hit area would be friendlier on mobile).",
+    "AI Mirror is a pure 2-second setTimeout returning hard-coded copy + score 23/100 regardless of input URL. Clearly marked mock in review request; ensure it's labelled 'Demo' in production UI so users don't think it's real."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/public/HomePage.jsx (InView component now forwards `id` prop — 1-line fix at line 25)"
+  ],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% — all 16 review checkpoints PASS after fix"},
+  "test_credentials": "test@jalwa.com / test1234 — login redirects to /dashboard, sidebar shows 11 items in correct order, /dashboard/auto-publish/article/sample-1 renders.",
+  "seed_data_creation": "Temporarily wrote `seo_jalwa_admin` localStorage with {starter:99/89, growth:299/249/popular, agency:599/499} to verify pricing bridge — confirmed override applied ($99/$299/$599 visible) — then removed the key.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "HomePage rebuild fully verified. Single bug fixed (InView id forwarding). Webpack hot reload was inconsistent again — required `sudo supervisorctl restart frontend` + 25s wait for the InView fix to take effect (same gotcha as iteration_4). All 12 sections, all data-testids (`homepage`, `hero-cta-primary`, `hero-cta-secondary`, `fear-cta`, `ai-mirror-url`, `ai-mirror-submit`, `final-cta`), pricing localStorage override, AI mirror 2s loading → result flow, ROI sliders (4 found, slider 1 keyboard-nudged → savings number changed), all 8 other public pages, login → dashboard with 11-item sidebar, and mobile 400px (no overflow) all PASS.",
+  "verified_checkpoints": [
+    "Homepage loads, single [data-testid=homepage] div, H1 'Get Found. Get Recommended.' uses font-bricolage",
+    "Hero badge '2,400+ growing businesses', subhead '1 expert article ... your website every day', primary CTA → /signup, secondary CTA '#how-it-works' (NOW scrolls correctly after fix)",
+    "Browser mockup chrome bar contains 'app.seojalwa.com/dashboard/auto-publish', 3 floating cards (Article published, Growth Score 74, 6 social posts scheduled)",
+    "Section 2 Fear: H2 'Right Now, AI Is Recommending Your Competitors Instead of You', Without/With cards, stats 67%/3x/319%, fear-cta 'Fix My AI Visibility'",
+    "Section 3 Social proof: animate-marquee, Google Search Console, 'Trusted by 2,400+ businesses growing on autopilot'",
+    "Section 4 How It Works: id='how-it-works' present, eyebrow 'Simple by design', H2 'From Setup to Growing Traffic in 4 Steps', writing sample with '2,100 words' + 'SEO Score: 91/100'",
+    "Section 5 Real Results: eyebrow 'Real businesses. Real growth. Real fast.', H2 'Numbers That Speak for Themselves', testimonials StyleBoutique/ProjectFlow/Surge Digital",
+    "Section 6 Comparison: H2 with '$5,000/Month', 'Traditional SEO Agency' column, '$3,801/mo' + '$45,612' annual, CTA 'Start Saving Today'",
+    "Section 7 AI Mirror: input → submit → 'Scanning ChatGPT, Perplexity, Gemini...' → 2s wait → 'ChatGPT response for \"test.com\"' result card with score 23/100 + 'Improve this score with SEO Jalwa →' CTA",
+    "Section 8 ROI: 4 sliders, Growth plan $199/month, sliders update savings live (verified slider 1 keyboard-arrow → savings number changed)",
+    "Section 9 What You Get: H2 'Everything Your Brand...', subtitle 'Four modules. One platform.', 4 cards (AI Visibility / Daily Article Publishing / Social Media Autopilot / AI Writer)",
+    "Section 10 Integrations: H2 'Plugs Into Everything You Already Use', 'Open API' note",
+    "Section 11 Pricing: H2 'Simple, Transparent Pricing', monthly/annual 'Save 17%' toggle, default $79/$199/$499, 'MOST POPULAR' on Growth, value breakdown ends in 'You save $3,678/month'. Override: localStorage seo_jalwa_admin → cards show $99/$299/$599 ✓",
+    "Section 12 Final CTA: dark bg, H2 'Your Competitors Are Already on Autopilot.' (font-bricolage), 'climb AI rankings' subtext, final-cta 'Start Free Trial — No Card Needed', 3 trust badges",
+    "Other public pages /features /pricing /integrations /about /blog /contact /signup /login all render with no console errors",
+    "Login (test@jalwa.com/test1234) → /dashboard, sidebar 11 items in correct order, /dashboard/auto-publish/article/sample-1 renders",
+    "Mobile 400x800: no horizontal overflow (scrollWidth=400), H1 visible and stacks correctly, CTAs stack"
+  ],
+  "rca_of_the_issue": "InView wrapper in HomePage.jsx accepted only `{children, className, amount}` and dropped any additional props. Section 4 was declared as `<InView id='how-it-works' ...>` but the id never reached the DOM, so the hero secondary CTA (href='#how-it-works') was a dead anchor. Fix: added `id` to the destructured props and applied it on the underlying motion.section. Verified by clicking secondary CTA → window.scrollY jumped 0 → 2543px."
+}
