@@ -50,7 +50,7 @@ export const DashboardLayout = () => {
 
   const currentPageLabel = (() => {
     const match = navItems.find((item) =>
-      item.exact ? location.pathname === item.path : location.pathname === item.path
+      item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path)
     );
     return match ? match.label : 'Dashboard';
   })();

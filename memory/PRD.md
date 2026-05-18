@@ -46,6 +46,19 @@ Design constraints:
 12. **Settings** — General, Maintenance, Social, Password
 - Tested: `/app/test_reports/iteration_1.json` — 100% pass
 
+### ✅ Phase 3: Multi-site, Analytics, Team & WordPress flow (Feb 2026)
+1. **Multi-site support** — `SiteContext` + `SiteSwitcher` in sidebar (above nav). Default sites: myblog.com + mystore.com. Active site persists to `localStorage.jalwa_active_site`. Add-site modal (URL/name/platform). Active-site badge in dashboard topbar.
+2. **Auto Publish upgrade** — Full month calendar grid (Sun-Sat, 4-5 rows) with status pills (PUBLISHED / READY TO PUBLISH / SCHEDULED) + clickable article popover (View Article / Edit). 4 stats cards. 'Add Search Terms' dialog with 'Search Terms' + 'Let AI decide' tabs. Recycle Bin collapsible. Performance tab: 4 metric cards + 10-row table.
+3. **NEW /dashboard/analytics** — GSC banner (connected state, sync), date-range selector, 4 colored metric cards, full-width Recharts area chart (Impressions+Clicks, 30 days, dual Y-axis), 15-row articles table, Top Search Terms + Top Pages side-by-side lists with position badges.
+4. **NEW /dashboard/article-settings** — 10 sections: Publishing Preferences (8 toggles), Article Length (4 radios), Publishing Frequency (5 radios), Writing Language, Global Writing Instructions, Website Information, Location Targeting (conditional city input), Competitors (add/remove, max 5), Business Offerings, Image Preferences. Sticky 'Save All Settings' button.
+5. **NEW /dashboard/team** — Invite card (email + per-site checkboxes + billing-access toggle + Send Invitation toast). My Team card with Owner row + empty state.
+6. **Connections → Connect Site rename** + 3-step WordPress full-page modal (URL → Install Plugin auto/manual + accordion → API key + Test & Connect with 2s spinner → success screen). Download plugin footer.
+7. **DashboardHome 'This week's articles'** — 7-day Mon-Sun strip with status badges and 'View full calendar →' link.
+8. **Sidebar (11 items, final)**: Dashboard, Growth Score, AI Visibility, AI Writer, Auto Publish, Analytics, Social Autopilot, Article Settings, Connect Site, Team, Settings.
+9. **Public site updates** — HomePage Auto Publish module rewritten ('1 article published every single day') + 4 new bullets; trust line +'1 article/day auto-published' pill; marquee +Google Search Console logo. FeaturesPage Auto Publish +3 bullets (GSC, daily, multi-site); NEW 5th Analytics module section. Subtitle updated to 'Five intelligent modules'.
+
+Tested: `/app/test_reports/iteration_4.json` — 100% pass on all 9 changes.
+
 ### ✅ Phase 2: Public Marketing Site + User Dashboard (Feb 2026)
 **Public Marketing Pages (`/`)**
 - HomePage with hero (**Bricolage Grotesque 800** for the 3 hero lines), AI Mirror Demo, ROI calc, Growth Score showcase, Framer Motion entrance + scroll animations

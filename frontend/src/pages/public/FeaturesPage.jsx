@@ -111,7 +111,7 @@ export const FeaturesPage = () => {
             transition={{ delay: 0.1 }}
             className="text-xl text-[#6B7280] max-w-2xl mx-auto"
           >
-            Four intelligent modules that work together so you don't have to.
+            Five intelligent modules that work together so you don't have to.
           </motion.p>
         </div>
       </section>
