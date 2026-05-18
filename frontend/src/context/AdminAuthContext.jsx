@@ -1,10 +1,11 @@
 /**
- * AdminAuthContext — Real admin session auth.
+ * AdminAuthContext — Admin session auth.
  *
- * - Admin token is stored in sessionStorage (so it clears on tab close).
- * - Calls POST /api/admin/auth/login with { username, password }.
+ * Live API:
+ *   POST /api/admin/auth/login → data: { accessToken, admin? }
+ *   Admin token stored in sessionStorage; cleared on tab close.
  */
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { adminAuthApi, tokenStore, ApiError } from '../lib/api';
 
 const AdminAuthContext = createContext(null);
@@ -13,19 +14,15 @@ export const AdminAuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!tokenStore.getAdmin());
   const [admin, setAdmin] = useState(null);
 
-  useEffect(() => {
-    // Re-sync on mount in case sessionStorage was cleared in another tab.
-    setIsAuthenticated(!!tokenStore.getAdmin());
-  }, []);
-
   const login = useCallback(async ({ username, password }) => {
-    const res = await adminAuthApi.login({ username, password });
-    const token = res?.access_token || res?.token || res?.admin_token;
+    const data = await adminAuthApi.login({ username, password });
+    const token =
+      data?.accessToken || data?.access_token || data?.token || data?.adminToken;
     if (!token) {
-      throw new ApiError('Login response missing token', { status: 500, data: res });
+      throw new ApiError('Login response missing token', { status: 500, data });
     }
     tokenStore.setAdmin(token);
-    setAdmin(res?.admin || res?.user || { username });
+    setAdmin(data?.admin || data?.user || { username });
     setIsAuthenticated(true);
     return true;
   }, []);

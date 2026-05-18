@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { POST_DATA } from '../../data/publicData';
+import { useSite } from '../../context/SiteContext';
+import { socialApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -44,10 +46,40 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export const PostPage = () => {
   const data = POST_DATA;
+  const { activeSite } = useSite();
   const [selectedPlatforms, setSelectedPlatforms] = useState(['Instagram', 'LinkedIn']);
   const [caption, setCaption] = useState('');
+  const [liveAccounts, setLiveAccounts] = useState(null);
+  const [livePosts, setLivePosts] = useState(null);
 
-  const connectedPlatforms = data.socialAccounts.filter(a => a.connected);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const accts = await socialApi.accounts();
+        if (!cancelled) setLiveAccounts(Array.isArray(accts) ? accts : []);
+      } catch {}
+      try {
+        const posts = await socialApi.posts({ limit: 20 });
+        if (!cancelled) setLivePosts(Array.isArray(posts) ? posts : []);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
+
+  const accountsForUI = liveAccounts && liveAccounts.length ? liveAccounts : data.socialAccounts;
+  const scheduledForUI = livePosts && livePosts.length
+    ? livePosts.map((p) => ({
+        id: p.id,
+        platform: p.platform || p.network,
+        caption: p.caption || p.text || '',
+        date: p.scheduledFor ? new Date(p.scheduledFor).toLocaleDateString() : p.date,
+        time: p.scheduledFor ? new Date(p.scheduledFor).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : p.time,
+        status: p.status || 'scheduled',
+      }))
+    : data.scheduledPosts;
+
+  const connectedPlatforms = accountsForUI.filter((a) => a.connected);
 
   const togglePlatform = (platform) => {
     setSelectedPlatforms(prev => 
@@ -85,7 +117,7 @@ export const PostPage = () => {
 
         <TabsContent value="accounts" className="space-y-6">
           <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.socialAccounts.map((account) => {
+            {accountsForUI.map((account) => {
               const Icon = platformIcons[account.platform];
               return (
                 <div key={account.platform} className="bg-white rounded-xl border border-[#F0F0F0] p-5">
@@ -123,7 +155,7 @@ export const PostPage = () => {
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
             <h3 className="font-semibold text-[#0A0A0A] mb-4">Scheduled Posts</h3>
             <div className="space-y-3">
-              {data.scheduledPosts.map((post) => {
+              {scheduledForUI.map((post) => {
                 const Icon = platformIcons[post.platform];
                 return (
                   <div key={post.id} className="flex items-start gap-4 p-4 bg-[#F9FAFB] rounded-lg">

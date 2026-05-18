@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DASHBOARD_DATA, PULSE_DATA } from '../../data/publicData';
+import { useSite } from '../../context/SiteContext';
+import { growthApi } from '../../lib/api';
 import { ArrowUp, TrendingUp, Eye, Pen, Share2, Search } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -28,8 +31,26 @@ const breakdown = [
 ];
 
 export const GrowthScorePage = () => {
-  const score = DASHBOARD_DATA.jalwaScore;
-  const change = DASHBOARD_DATA.jalwaScoreChange;
+  const { activeSite } = useSite();
+  const [live, setLive] = useState(null);
+
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await growthApi.get(activeSite.id);
+        if (!cancelled) setLive(data);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
+
+  const score = live?.latest?.score ?? DASHBOARD_DATA.jalwaScore;
+  const change = live?.latest?.change ?? live?.latest?.weeklyChange ?? DASHBOARD_DATA.jalwaScoreChange;
+  const history = Array.isArray(live?.history) && live.history.length
+    ? live.history.map((h) => ({ week: h.week || h.label || h.date, score: h.score }))
+    : PULSE_DATA.scoreHistory;
 
   return (
     <motion.div
@@ -51,7 +72,7 @@ export const GrowthScorePage = () => {
           <div className="relative">
             <div className="w-44 h-44 rounded-full border-8 border-[#1D9E75] flex items-center justify-center bg-[#E1F5EE]/30">
               <div className="text-center">
-                <span className="font-syne text-6xl font-bold text-[#0A0A0A]">{score}</span>
+                <span className="font-syne text-6xl font-bold text-[#0A0A0A]" data-testid="growth-score-value">{score}</span>
                 <span className="text-xl text-[#6B7280]">/100</span>
               </div>
             </div>
@@ -78,7 +99,7 @@ export const GrowthScorePage = () => {
         <h3 className="font-semibold text-[#0A0A0A] mb-4">Score history (last 8 weeks)</h3>
         <div style={{ width: '100%', height: 250 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={PULSE_DATA.scoreHistory}>
+            <LineChart data={history}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
               <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
               <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />

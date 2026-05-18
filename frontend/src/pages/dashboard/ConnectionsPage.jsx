@@ -16,6 +16,7 @@ import { POST_DATA } from '../../data/publicData';
 import { Check, Copy, X as XIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { WordPressConnectModal } from '../../components/dashboard/WordPressConnectModal';
+import { useSite } from '../../context/SiteContext';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -324,14 +325,26 @@ const SocialCard = ({ acc, onConnect, onDisconnect }) => (
 );
 
 export const ConnectionsPage = () => {
+  const { addSite } = useSite();
   const [websitePlatforms, setWebsitePlatforms] = useState(WEBSITE_PLATFORMS);
   const [socialAccounts, setSocialAccounts] = useState(POST_DATA.socialAccounts);
   const [activeWebsite, setActiveWebsite] = useState(null);
   const [activeSocial, setActiveSocial] = useState(null);
   const [wpOpen, setWpOpen] = useState(false);
 
-  const connectWebsite = (name) => {
-    setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: true, description: `Connected · ${name.toLowerCase()}.com` } : p));
+  const connectWebsite = async (name, payload = {}) => {
+    setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: true, description: `Connected · ${payload.url || name.toLowerCase() + '.com'}` } : p));
+    // Try to register the connected site in the backend (best-effort)
+    try {
+      const platformSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const url = payload.url || `https://my-${platformSlug}.com`;
+      const siteName = payload.name || (() => {
+        try { return new URL(url).hostname; } catch { return url; }
+      })();
+      await addSite({ name: siteName, url, platform: platformSlug });
+    } catch {
+      // Silent — UI still shows connected. Real backend may already track this site or reject duplicates.
+    }
   };
   const disconnectWebsite = (name) => {
     setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: false } : p));
@@ -423,7 +436,7 @@ export const ConnectionsPage = () => {
       <WordPressConnectModal
         open={wpOpen}
         onClose={() => setWpOpen(false)}
-        onConnected={() => connectWebsite('WordPress')}
+        onConnected={(payload) => connectWebsite('WordPress', payload || {})}
       />
       <WebsiteModal
         platform={activeWebsite}

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PULSE_DATA } from '../../data/publicData';
+import { useSite } from '../../context/SiteContext';
+import { aiVisibilityApi } from '../../lib/api';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -53,8 +56,44 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export const PulsePage = () => {
   const data = PULSE_DATA;
+  const { activeSite } = useSite();
   const [newCompetitor, setNewCompetitor] = useState('');
   const [simulatorQuery, setSimulatorQuery] = useState('');
+  const [scans, setScans] = useState([]);
+  const [isScanning, setIsScanning] = useState(false);
+
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await aiVisibilityApi.scans(activeSite.id);
+        if (!cancelled) setScans(Array.isArray(list) ? list : []);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
+
+  const handleScan = async () => {
+    if (!activeSite?.id) {
+      toast.error('Connect a site first');
+      return;
+    }
+    setIsScanning(true);
+    try {
+      await aiVisibilityApi.scan({ siteId: activeSite.id });
+      const list = await aiVisibilityApi.scans(activeSite.id);
+      setScans(Array.isArray(list) ? list : []);
+      toast.success('New AI visibility scan completed');
+    } catch (err) {
+      toast.error(err?.message || 'Could not run scan');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const liveScore = scans?.[0]?.overallScore;
+  const displayScore = liveScore ?? data.overallScore;
 
   return (
     <motion.div
@@ -73,11 +112,11 @@ export const PulsePage = () => {
         <div className="flex items-center gap-3">
           <div className="px-4 py-2 bg-[#E1F5EE] rounded-lg">
             <span className="text-sm text-[#6B7280]">AI Visibility Score: </span>
-            <span className="font-bold text-[#1D9E75]">{data.overallScore}/100</span>
+            <span className="font-bold text-[#1D9E75]" data-testid="ai-visibility-score">{displayScore}/100</span>
           </div>
-          <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
-            <RefreshCw size={16} className="mr-2" />
-            Run new scan
+          <Button onClick={handleScan} disabled={isScanning} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
+            <RefreshCw size={16} className={`mr-2 ${isScanning ? 'animate-spin' : ''}`} />
+            {isScanning ? 'Scanning...' : 'Run new scan'}
           </Button>
         </div>
       </motion.div>

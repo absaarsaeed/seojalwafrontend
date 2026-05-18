@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
+import { publicApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Slider } from '../../components/ui/slider';
@@ -542,20 +543,41 @@ const AIMirror = () => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const submit = () => {
+  const [error, setError] = useState('');
+
+  const submit = async () => {
     if (!url) return;
     setLoading(true);
     setResult(null);
-    setTimeout(() => {
-      const domain = url.replace(/https?:\/\//, '').split('/')[0];
+    setError('');
+    try {
+      const cleanUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      const data = await publicApi.aiMirrorDemo(cleanUrl);
+      const domain = cleanUrl.replace(/https?:\/\//, '').split('/')[0];
+      // Score color: red < 40, amber 40-69, green >= 70
       setResult({
         domain,
-        score: 23,
-        response: `Based on available information, ${domain} appears to be a business providing services in its industry. However, when potential customers ask about the best solutions in this space, your brand is not prominently featured in AI recommendations. Competitors are mentioned more frequently in AI-generated responses.`,
+        score: data.overallScore ?? 0,
+        models: data.models || {},
+        recommendations: data.recommendations || [],
+        response:
+          data.summary ||
+          `AI scan complete for ${domain}. Overall AI visibility score: ${data.overallScore ?? '?'}/100. See per-model breakdown and recommendations below.`,
       });
+    } catch (err) {
+      setError(err?.message || 'Could not run the AI scan. Please try again.');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
+
+  const scoreColor = result
+    ? result.score >= 70
+      ? '#1D9E75'
+      : result.score >= 40
+      ? '#F59E0B'
+      : '#EF4444'
+    : '#EF4444';
 
   return (
     <InView className="bg-[#111827] text-white py-24 px-4 sm:px-6 lg:px-8">
@@ -589,20 +611,51 @@ const AIMirror = () => {
         )}
 
         {result && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-[#1F2937] border border-white/10 p-6 text-left">
-            <p className="text-xs text-[#9CA3AF] mb-2">ChatGPT response for "{result.domain}"</p>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl bg-[#1F2937] border border-white/10 p-6 text-left" data-testid="ai-mirror-result">
+            <p className="text-xs text-[#9CA3AF] mb-2">AI scan summary for "{result.domain}"</p>
             <p className="text-sm leading-relaxed mb-5 text-white">{result.response}</p>
+
             <p className="text-xs text-[#9CA3AF] mb-1">Your AI Visibility Score</p>
             <div className="flex items-center gap-3 mb-1">
-              <span className="font-bricolage text-4xl font-extrabold text-[#EF4444]">{result.score}<span className="text-[#6B7280] text-xl">/100</span></span>
+              <span className="font-bricolage text-4xl font-extrabold" style={{ color: scoreColor }} data-testid="ai-mirror-score">
+                {result.score}<span className="text-[#6B7280] text-xl">/100</span>
+              </span>
             </div>
             <div className="h-2 bg-[#0A0A0A] rounded-full overflow-hidden mb-5">
-              <div className="h-full bg-[#EF4444]" style={{ width: `${result.score}%` }} />
+              <div className="h-full" style={{ width: `${result.score}%`, backgroundColor: scoreColor }} />
             </div>
+
+            {Object.keys(result.models || {}).length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-5">
+                {Object.entries(result.models).map(([model, m]) => (
+                  <div key={model} className="bg-[#0A0A0A] rounded-lg p-3 text-center">
+                    <p className="text-[10px] uppercase tracking-wide text-[#6B7280] mb-1">{model}</p>
+                    <p className="text-white text-lg font-semibold">{m.score ?? '—'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {result.recommendations?.length > 0 && (
+              <ul className="text-sm text-[#9CA3AF] space-y-1 mb-5 list-disc pl-5">
+                {result.recommendations.slice(0, 3).map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            )}
+
             <Link to="/signup">
-              <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full">Improve this score with SEO Jalwa →</Button>
+              <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full" data-testid="ai-mirror-cta">
+                Improve this score with SEO Jalwa →
+              </Button>
             </Link>
           </motion.div>
+        )}
+
+        {error && (
+          <div className="rounded-xl bg-[#1F2937] border border-[#EF4444]/30 p-4 text-left text-sm text-[#FCA5A5]" data-testid="ai-mirror-error">
+            {error}
+          </div>
         )}
       </div>
     </InView>

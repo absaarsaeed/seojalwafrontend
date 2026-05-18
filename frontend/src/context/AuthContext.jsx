@@ -1,9 +1,9 @@
 /**
  * AuthContext — Real JWT auth for end users.
  *
- * - Hydrates user from /api/auth/me on mount if an access token is present.
- * - Exposes login/signup/logout helpers wired to the real backend.
- * - Stores tokens via tokenStore (localStorage).
+ * Response shapes (from live API):
+ *   POST /api/auth/register / /api/auth/login → data: { user, accessToken, refreshToken }
+ *   GET  /api/auth/me                          → data: { user, subscription, sites }
  */
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { authApi, tokenStore, ApiError } from '../lib/api';
@@ -12,21 +12,42 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [sites, setSites] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const applyMe = (me) => {
+    const rawUser = me?.user || null;
+    // Backwards-compat: legacy UI code reads `user.name` / `user.plan` / `user.website`.
+    const normalisedUser = rawUser
+      ? {
+          ...rawUser,
+          name: rawUser.name || rawUser.fullName || '',
+          plan: rawUser.plan || me?.subscription?.planName || me?.subscription?.plan || 'Free',
+          website: rawUser.website || (me?.sites?.[0]?.url || ''),
+        }
+      : null;
+    setUser(normalisedUser);
+    setSubscription(me?.subscription || null);
+    setSites(Array.isArray(me?.sites) ? me.sites : []);
+  };
 
   const hydrate = useCallback(async () => {
     if (!tokenStore.getAccess()) {
       setUser(null);
+      setSubscription(null);
+      setSites([]);
       setIsLoading(false);
       return;
     }
     try {
       const me = await authApi.me();
-      // Some APIs return { user: {...} }, others return the user directly.
-      setUser(me?.user || me || null);
-    } catch (err) {
+      applyMe(me);
+    } catch {
       tokenStore.clearUser();
       setUser(null);
+      setSubscription(null);
+      setSites([]);
     } finally {
       setIsLoading(false);
     }
@@ -37,36 +58,50 @@ export const AuthProvider = ({ children }) => {
   }, [hydrate]);
 
   const login = useCallback(async ({ email, password }) => {
-    const res = await authApi.login({ email, password });
+    const data = await authApi.login({ email, password });
     tokenStore.setUserTokens({
-      access_token: res.access_token,
-      refresh_token: res.refresh_token,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
     });
-    const me = await authApi.me();
-    const u = me?.user || me || null;
-    setUser(u);
-    return u;
+    // /auth/me has the richer payload (subscription + sites)
+    try {
+      const me = await authApi.me();
+      applyMe(me);
+    } catch {
+      applyMe({ user: data.user });
+    }
+    return data.user;
   }, []);
 
   const signup = useCallback(async (payload) => {
-    const res = await authApi.register(payload);
-    if (res?.access_token) {
+    const data = await authApi.register(payload);
+    if (data?.accessToken) {
       tokenStore.setUserTokens({
-        access_token: res.access_token,
-        refresh_token: res.refresh_token,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
       });
-      const me = await authApi.me();
-      const u = me?.user || me || null;
-      setUser(u);
-      return u;
+      try {
+        const me = await authApi.me();
+        applyMe(me);
+      } catch {
+        applyMe({ user: data.user });
+      }
+      return data.user;
     }
-    // Some APIs require a separate login after register.
+    // Fallback: log in after register.
     return login({ email: payload.email, password: payload.password });
   }, [login]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // ignore — clearing local tokens is what matters
+    }
     tokenStore.clearUser();
     setUser(null);
+    setSubscription(null);
+    setSites([]);
   }, []);
 
   const updateUser = useCallback((updates) => {
@@ -75,6 +110,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    subscription,
+    sites,
     isAuthenticated: !!user,
     isLoading,
     login,

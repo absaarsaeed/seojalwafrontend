@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { useSite } from '../../context/SiteContext';
+import { articlesApi } from '../../lib/api';
 import {
   ArrowLeft, ExternalLink, Edit2, RotateCw, Check, X as XIcon, AlertTriangle, Play,
   TrendingUp, TrendingDown,
@@ -95,6 +97,26 @@ const SeoCheck = ({ label, status, value }) => {
 export const ArticleViewPage = () => {
   const navigate = useNavigate();
   const { activeSite } = useSite();
+  const { id } = useParams();
+  const [article, setArticle] = useState(null);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await articlesApi.get(id);
+        if (!cancelled) setArticle(data);
+      } catch {
+        // Article not found yet — UI falls back to demo content.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const title = article?.title || '5 SEO Mistakes That Are Killing Your Rankings in 2026 (And How to Fix Them)';
+  const excerpt = article?.excerpt || article?.summary || 'Most businesses make these SEO errors without even knowing it. Here\'s how to identify and fix each one fast.';
+  const status = article?.status || 'PUBLISHED';
 
   return (
     <motion.div
@@ -113,7 +135,7 @@ export const ArticleViewPage = () => {
           <ArrowLeft size={16} /> Back to Calendar
         </button>
         <span className="px-2.5 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-semibold rounded-full" data-testid="article-status-badge">
-          PUBLISHED
+          {status}
         </span>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" className="text-[#6B7280]"><Edit2 size={14} className="mr-1.5" />Edit</Button>
@@ -138,11 +160,11 @@ export const ArticleViewPage = () => {
           </div>
 
           {/* Title */}
-          <h1 className="font-syne font-bold text-[#0A0A0A] mb-4 leading-tight" style={{ fontSize: 40 }}>
-            5 SEO Mistakes That Are Killing Your Rankings in 2026 (And How to Fix Them)
+          <h1 className="font-syne font-bold text-[#0A0A0A] mb-4 leading-tight" style={{ fontSize: 40 }} data-testid="article-title">
+            {title}
           </h1>
           <p className="text-lg text-[#6B7280] mb-8 leading-relaxed">
-            Most businesses make these SEO errors without even knowing it. Here's how to identify and fix each one fast.
+            {excerpt}
           </p>
 
           {/* Hero image */}

@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WRITE_DATA } from '../../data/publicData';
+import { useSite } from '../../context/SiteContext';
+import { articlesApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -34,23 +36,60 @@ With over 60% of searches happening on mobile devices, a poor mobile experience 
 
 export const WritePage = () => {
   const data = WRITE_DATA;
+  const { activeSite } = useSite();
   const [selectedType, setSelectedType] = useState('Blog Article');
   const [brief, setBrief] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generated, setGenerated] = useState('');
   const [tones, setTones] = useState(data.toneSettings);
+  const [library, setLibrary] = useState(data.library);
 
-  const handleGenerate = () => {
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await articlesApi.list({ siteId: activeSite.id, limit: 20 });
+        if (cancelled) return;
+        const arr = Array.isArray(list) ? list : list?.items || [];
+        if (arr.length) {
+          setLibrary(arr.map((a) => ({
+            id: a.id,
+            type: a.type || 'Blog Article',
+            date: a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '',
+            title: a.title,
+            wordCount: a.wordCount || a.content?.split(/\s+/).length || 0,
+          })));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
+
+  const handleGenerate = async () => {
     if (!brief) {
       toast.error('Please enter a topic or brief');
       return;
     }
+    if (!activeSite?.id) {
+      toast.error('Connect a site first to generate articles');
+      return;
+    }
     setIsGenerating(true);
-    setTimeout(() => {
-      setGenerated(generatedContent);
-      setIsGenerating(false);
+    try {
+      const res = await articlesApi.generate({
+        siteId: activeSite.id,
+        searchTerm: brief,
+        type: selectedType,
+      });
+      const content = res?.content || res?.body || res?.article?.content || '';
+      setGenerated(content || `# ${brief}\n\nGenerated article — full content will appear once the AI Writer completes.`);
       toast.success('Content generated!');
-    }, 2000);
+    } catch (err) {
+      toast.error(err?.message || 'Generation failed');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCopy = () => {
@@ -213,7 +252,7 @@ export const WritePage = () => {
 
         <TabsContent value="library" className="space-y-6">
           <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.library.map((item) => (
+            {library.map((item) => (
               <div key={item.id} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="px-2 py-0.5 bg-[#F0F0F0] text-[#6B7280] text-xs font-medium rounded">

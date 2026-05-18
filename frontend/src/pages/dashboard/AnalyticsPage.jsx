@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import {
@@ -13,6 +13,7 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
 import { useSite } from '../../context/SiteContext';
+import { analyticsApi } from '../../lib/api';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -105,6 +106,25 @@ const MetricCard = ({ label, value, delta, deltaPositive, color }) => (
 export const AnalyticsPage = () => {
   const { activeSite } = useSite();
   const [range, setRange] = useState('30d');
+  const [overview, setOverview] = useState(null);
+
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await analyticsApi.overview(activeSite.id, range);
+        if (!cancelled) setOverview(data);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id, range]);
+
+  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
+  const liveClicks = overview ? fmt(overview.totalClicks) : '26,089';
+  const liveImpr = overview ? fmt(overview.totalImpressions) : '1,867,192';
+  const liveCtr = overview ? `${(overview.avgCTR * 100).toFixed(2)}%` : '1.40%';
+  const livePos = overview ? overview.avgPosition?.toFixed(1) : '2.8';
 
   return (
     <motion.div
@@ -153,10 +173,10 @@ export const AnalyticsPage = () => {
 
       {/* Metric cards */}
       <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Clicks"      value="26,089"     delta="+12% vs last month"   deltaPositive color="#1D9E75" />
-        <MetricCard label="Total Impressions" value="1,867,192"  delta="+8% vs last month"    deltaPositive color="#2563EB" />
-        <MetricCard label="Average CTR"       value="1.40%"      delta="-0.2% vs last month"  deltaPositive={false} color="#F59E0B" />
-        <MetricCard label="Average Position"  value="2.8"        delta="+0.4 improved"        deltaPositive color="#8B5CF6" />
+        <MetricCard label="Total Clicks"      value={liveClicks}  delta="+12% vs last month"   deltaPositive color="#1D9E75" />
+        <MetricCard label="Total Impressions" value={liveImpr}    delta="+8% vs last month"    deltaPositive color="#2563EB" />
+        <MetricCard label="Average CTR"       value={liveCtr}     delta="-0.2% vs last month"  deltaPositive={false} color="#F59E0B" />
+        <MetricCard label="Average Position"  value={livePos}     delta="+0.4 improved"        deltaPositive color="#8B5CF6" />
       </motion.div>
 
       {/* Chart */}

@@ -1,23 +1,37 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { authApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { ArrowLeft, CheckCircle, Mail } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Mail, AlertCircle } from 'lucide-react';
 import { Logo } from '../../components/public/Logo';
 
 export const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSubmitted(true);
-    setIsLoading(false);
+    try {
+      await authApi.forgotPassword(email);
+      setSubmitted(true);
+    } catch (err) {
+      // Many APIs return success even for unknown emails to prevent enumeration.
+      // If the API explicitly errors, surface it. Otherwise show success.
+      if (err?.status >= 500) {
+        setError(err.message || 'Server error. Please try again.');
+      } else {
+        setSubmitted(true);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -81,6 +95,13 @@ export const ForgotPasswordPage = () => {
                 >
                   {isLoading ? 'Sending...' : 'Send reset link'}
                 </Button>
+
+                {error && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-[#EF4444] text-sm" data-testid="forgot-error-message">
+                    <AlertCircle size={16} />
+                    <span>{error}</span>
+                  </div>
+                )}
               </form>
               
               <p className="text-center text-sm text-[#6B7280] mt-6">

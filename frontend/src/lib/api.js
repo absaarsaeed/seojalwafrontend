@@ -1,13 +1,19 @@
 /**
- * SEO Jalwa — API client
+ * SEO Jalwa — API client (v2, envelope-aware)
  *
- * Robust fetch wrapper with:
- *  - JWT access + refresh token flow for users (localStorage)
- *  - Hardcoded session token for admin (sessionStorage)
- *  - Automatic refresh-on-401 with single-flight queueing
- *  - JSON request/response handling and consistent ApiError
+ * Backend always returns:
+ *   success:  { success: true,  data: any, message?: string, pagination?: {...} }
+ *   failure:  { success: false, error: string, code: string, statusCode: number, details?: [] }
  *
- * Base URL comes from REACT_APP_BACKEND_URL.
+ * `request()` returns `data` directly on success. When pagination is present,
+ * it's attached as a `.pagination` property on the returned object/array.
+ * On failure (HTTP non-2xx or success:false), throws ApiError.
+ *
+ * Token storage:
+ *   - User:  access + refresh in localStorage  (keys: jalwa_access_token, jalwa_refresh_token)
+ *   - Admin: token in sessionStorage           (key:  jalwa_admin_token)
+ *
+ * 401 on user-authed requests triggers a single-flight refresh + retry.
  */
 
 const BASE_URL = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
@@ -23,9 +29,9 @@ const KEYS = {
 export const tokenStore = {
   getAccess: () => localStorage.getItem(KEYS.ACCESS),
   getRefresh: () => localStorage.getItem(KEYS.REFRESH),
-  setUserTokens: ({ access_token, refresh_token }) => {
-    if (access_token) localStorage.setItem(KEYS.ACCESS, access_token);
-    if (refresh_token) localStorage.setItem(KEYS.REFRESH, refresh_token);
+  setUserTokens: ({ accessToken, refreshToken }) => {
+    if (accessToken) localStorage.setItem(KEYS.ACCESS, accessToken);
+    if (refreshToken) localStorage.setItem(KEYS.REFRESH, refreshToken);
   },
   clearUser: () => {
     localStorage.removeItem(KEYS.ACCESS);
@@ -44,10 +50,11 @@ export const tokenStore = {
 // ---- Error type ------------------------------------------------------------
 
 export class ApiError extends Error {
-  constructor(message, { status = 0, data = null } = {}) {
+  constructor(message, { status = 0, code = '', data = null } = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.code = code;
     this.data = data;
   }
 }
@@ -59,26 +66,27 @@ let refreshPromise = null;
 async function refreshAccessToken() {
   if (refreshPromise) return refreshPromise;
 
-  const refresh = tokenStore.getRefresh();
-  if (!refresh) throw new ApiError('No refresh token', { status: 401 });
+  const refreshToken = tokenStore.getRefresh();
+  if (!refreshToken) throw new ApiError('No refresh token', { status: 401 });
 
   refreshPromise = (async () => {
     try {
       const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refresh }),
+        body: JSON.stringify({ refreshToken }),
       });
-      if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body?.success) {
         tokenStore.clearUser();
-        throw new ApiError('Refresh failed', { status: res.status });
+        throw new ApiError(body?.error || 'Refresh failed', { status: res.status });
       }
-      const data = await res.json();
+      const data = body.data || {};
       tokenStore.setUserTokens({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token || refresh,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken || refreshToken,
       });
-      return data.access_token;
+      return data.accessToken;
     } finally {
       refreshPromise = null;
     }
@@ -89,26 +97,17 @@ async function refreshAccessToken() {
 
 // ---- Core request ----------------------------------------------------------
 
-/**
- * @param {string} path - e.g. "/api/auth/login"
- * @param {object} opts
- *   - method: GET | POST | PUT | PATCH | DELETE
- *   - body: any JSON-serialisable value (auto-stringified)
- *   - auth: 'user' | 'admin' | 'none' (default: 'user' for protected calls; pass 'none' for public)
- *   - headers: extra headers
- *   - _retry: internal, marks a request that has already attempted refresh
- */
 async function request(path, opts = {}) {
   const {
     method = 'GET',
     body,
-    auth = 'user',
+    query,
+    auth = 'user', // 'user' | 'admin' | 'none'
     headers: extraHeaders = {},
     _retry = false,
   } = opts;
 
   const headers = { Accept: 'application/json', ...extraHeaders };
-
   if (body !== undefined && !(body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
@@ -121,9 +120,20 @@ async function request(path, opts = {}) {
     if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
   }
 
+  // Build URL with query string
+  let url = `${BASE_URL}${path}`;
+  if (query && typeof query === 'object') {
+    const qs = new URLSearchParams();
+    Object.entries(query).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.append(k, v);
+    });
+    const s = qs.toString();
+    if (s) url += (url.includes('?') ? '&' : '?') + s;
+  }
+
   let res;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
+    res = await fetch(url, {
       method,
       headers,
       body:
@@ -137,36 +147,64 @@ async function request(path, opts = {}) {
     throw new ApiError(err.message || 'Network error', { status: 0 });
   }
 
-  // Handle 401 with refresh (only for user-authed calls, only once)
+  // Auto-refresh on 401 for user-authed calls
   if (res.status === 401 && auth === 'user' && !_retry && tokenStore.getRefresh()) {
     try {
       await refreshAccessToken();
       return request(path, { ...opts, _retry: true });
     } catch {
       tokenStore.clearUser();
-      throw new ApiError('Session expired', { status: 401 });
+      throw new ApiError('Session expired', { status: 401, code: 'SESSION_EXPIRED' });
     }
   }
 
   // Parse body
   const text = await res.text();
-  let data = null;
+  let body_ = null;
   if (text) {
     try {
-      data = JSON.parse(text);
+      body_ = JSON.parse(text);
     } catch {
-      data = text;
+      body_ = text;
     }
   }
 
   if (!res.ok) {
     const msg =
-      (data && (data.detail || data.message || data.error)) ||
+      (body_ && (body_.error || body_.detail || body_.message)) ||
       `Request failed (${res.status})`;
-    throw new ApiError(msg, { status: res.status, data });
+    throw new ApiError(msg, {
+      status: res.status,
+      code: body_?.code || '',
+      data: body_,
+    });
   }
 
-  return data;
+  // Envelope handling
+  if (body_ && typeof body_ === 'object' && 'success' in body_) {
+    if (body_.success === false) {
+      throw new ApiError(body_.error || 'Request failed', {
+        status: res.status,
+        code: body_.code || '',
+        data: body_,
+      });
+    }
+    const data = body_.data;
+    if (body_.pagination && data && typeof data === 'object') {
+      try {
+        // Attach pagination as a property without mutating shape semantics.
+        Object.defineProperty(data, 'pagination', {
+          value: body_.pagination,
+          enumerable: false,
+        });
+      } catch {
+        // ignore (e.g., frozen)
+      }
+    }
+    return data;
+  }
+
+  return body_;
 }
 
 // ---- Convenience methods ---------------------------------------------------
@@ -179,14 +217,17 @@ export const api = {
   del: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
 };
 
-// ---- Endpoint wrappers (STEP 0 — 5 endpoints) ------------------------------
+// ---------------------------------------------------------------------------
+// Endpoint wrappers — discovered API surface
+// ---------------------------------------------------------------------------
 
 export const authApi = {
-  register: (payload) =>
-    api.post('/api/auth/register', payload, { auth: 'none' }),
-  login: (payload) =>
-    api.post('/api/auth/login', payload, { auth: 'none' }),
+  register: (payload) => api.post('/api/auth/register', payload, { auth: 'none' }),
+  login: (payload) => api.post('/api/auth/login', payload, { auth: 'none' }),
   me: () => api.get('/api/auth/me', { auth: 'user' }),
+  logout: () => api.post('/api/auth/logout', {}, { auth: 'user' }),
+  forgotPassword: (email) =>
+    api.post('/api/auth/forgot-password', { email }, { auth: 'none' }),
 };
 
 export const plansApi = {
@@ -196,6 +237,70 @@ export const plansApi = {
 export const adminAuthApi = {
   login: (payload) =>
     api.post('/api/admin/auth/login', payload, { auth: 'none' }),
+};
+
+// Public — STEP 1 ----------------------------------------------------------
+export const publicApi = {
+  blogList: (params = {}) => api.get('/api/blog', { auth: 'none', query: params }),
+  blogPost: (slug) => api.get(`/api/blog/${encodeURIComponent(slug)}`, { auth: 'none' }),
+  contact: (payload) => api.post('/api/contact', payload, { auth: 'none' }),
+  aiMirrorDemo: (url) => api.post('/api/ai-visibility/demo', { url }, { auth: 'none' }),
+};
+
+// Sites --------------------------------------------------------------------
+export const sitesApi = {
+  list: () => api.get('/api/sites'),
+  create: (payload) => api.post('/api/sites', payload),
+  get: (id) => api.get(`/api/sites/${id}`),
+  update: (id, payload) => api.put(`/api/sites/${id}`, payload),
+  remove: (id) => api.del(`/api/sites/${id}`),
+};
+
+// Dashboard ----------------------------------------------------------------
+export const growthApi = {
+  get: (siteId) => api.get('/api/growth-score', { query: { siteId } }),
+};
+
+export const analyticsApi = {
+  overview: (siteId, range = '30d') =>
+    api.get('/api/analytics/overview', { query: { siteId, range } }),
+};
+
+export const aiVisibilityApi = {
+  scans: (siteId) => api.get('/api/ai-visibility/scans', { query: { siteId } }),
+  scan: (payload) => api.post('/api/ai-visibility/scan', payload),
+};
+
+export const articlesApi = {
+  list: (params) => api.get('/api/articles', { query: params }),
+  get: (id) => api.get(`/api/articles/${id}`),
+  calendar: ({ siteId, year, month }) =>
+    api.get('/api/articles/calendar', { query: { siteId, year, month } }),
+  generate: (payload) => api.post('/api/articles/generate', payload),
+};
+
+export const socialApi = {
+  accounts: () => api.get('/api/social/accounts'),
+  posts: (params = {}) => api.get('/api/social/posts', { query: params }),
+};
+
+export const teamApi = {
+  list: () => api.get('/api/team'),
+};
+
+// Admin --------------------------------------------------------------------
+export const adminApi = {
+  dashboardStats: () => api.get('/api/admin/dashboard/stats', { auth: 'admin' }),
+  users: (params) => api.get('/api/admin/users', { auth: 'admin', query: params }),
+  user: (id) => api.get(`/api/admin/users/${id}`, { auth: 'admin' }),
+  plans: () => api.get('/api/admin/plans', { auth: 'admin' }),
+  updatePlan: (id, payload) =>
+    api.put(`/api/admin/plans/${id}`, payload, { auth: 'admin' }),
+  coupons: () => api.get('/api/admin/coupons', { auth: 'admin' }),
+  blog: () => api.get('/api/admin/blog', { auth: 'admin' }),
+  announcements: () => api.get('/api/admin/announcements', { auth: 'admin' }),
+  apiKeys: () => api.get('/api/admin/api-keys', { auth: 'admin' }),
+  settings: () => api.get('/api/admin/settings', { auth: 'admin' }),
 };
 
 export default api;

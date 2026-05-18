@@ -73,7 +73,7 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
     setTimeout(() => {
       setTesting(false);
       setDone(true);
-      onConnected();
+      onConnected({ url });
     }, 1800);
   };
 

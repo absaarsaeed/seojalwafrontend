@@ -192,7 +192,42 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 
 **Token storage:** access+refresh in localStorage (user); admin token in sessionStorage.
 
-**Live testing BLOCKED:** `api.seojalwa.com` does not resolve from preview environment yet — awaiting backend DNS/deployment.
+## Phase 7: Full Wiring — STEPS 1-3 (Feb 18, 2026)
+
+### Discovered API shapes
+- **Envelope** (every endpoint): `{ success, data, message?, pagination?, error?, code?, statusCode?, details? }`
+- **Register payload**: `{ fullName, email, password }` (note: `fullName` NOT `name`; `website` not accepted)
+- **Auth tokens**: `accessToken` / `refreshToken` (camelCase). Refresh uses `{ refreshToken }`.
+- **/api/auth/me data**: `{ user, subscription, sites }`
+- **/api/plans data**: array of `{ id, name, monthlyPrice, annualPrice (=yearly total), description, articlesPerMonth, ... }`
+- **Sites**: `{ id, name, url, platform }` — site creation requires `url` + valid `platform` (wordpress, shopify, ...). Frontend normalizes `url → domain` so legacy code keeps working.
+
+### STEP 1 (Public)
+- `BlogPage`, `BlogPostPage` → `GET /api/blog`, `GET /api/blog/:slug` with launch-state fallback to dummy posts
+- `ContactPage` → `POST /api/contact { name, email, subject, message }`
+- `HomePage` AI Mirror demo → `POST /api/ai-visibility/demo { url }` showing real per-model scores
+- `ForgotPasswordPage` → `POST /api/auth/forgot-password { email }`
+
+### STEP 2 (User Dashboard)
+- `DashboardHome` → overlay live `/api/growth-score` + `/api/analytics/overview` on header card + metric tiles
+- `GrowthScorePage` → live score + history from `/api/growth-score?siteId`
+- `PulsePage` (AI Visibility) → `/api/ai-visibility/scans?siteId` + working `POST /api/ai-visibility/scan` button
+- `WritePage` (AI Writer) → `POST /api/articles/generate` + `/api/articles?siteId` for library
+- `PublishPage` (Auto Publish) → `/api/articles/calendar?siteId&year&month` overlayed onto calendar grid
+- `AnalyticsPage` → live metric cards from `/api/analytics/overview`
+- `PostPage` (Social Autopilot) → `/api/social/accounts` + `/api/social/posts`
+- `TeamPage` → `/api/team` list
+- `ConnectionsPage` + `WordPressConnectModal` → creates site via `POST /api/sites` when connection succeeds
+- `ArticleViewPage` → `/api/articles/:id` with graceful fallback to demo content
+- `ArticleSettingsPage`, `SettingsPage` → no matching backend endpoints discovered; remain mocked with TODOs
+
+### STEP 3 (Admin)
+- `adminApi` wrappers added in `lib/api.js` for: dashboardStats, users, plans, coupons, blog, announcements, apiKeys, settings — all gated on admin token.
+- **BLOCKED**: live admin login fails — `jalwa/jalwaadmin` returns INVALID_CREDENTIALS on the live backend. Admin panel cannot be live-tested until correct admin credentials are seeded server-side.
+
+### 🔴 Critical blockers for live verification (Feb 18, 2026)
+1. **CORS**: `api.seojalwa.com` doesn't send `Access-Control-Allow-Origin` for `https://admin-seo-jalwa.preview.emergentagent.com`. All browser requests fail with CORS errors. Backend must whitelist that origin (and any custom prod domain). Curl tests confirm the wiring is otherwise correct.
+2. **Admin credentials**: Backend admin seed uses different password than the legacy `jalwa/jalwaadmin`. User must share the correct admin login.
 
 ### P2 (Nice to Have)
 - Export CSV from admin

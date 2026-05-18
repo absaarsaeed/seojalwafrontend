@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
+import { growthApi, analyticsApi } from '../../lib/api';
 import { DASHBOARD_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink } from 'lucide-react';
@@ -39,6 +41,31 @@ export const DashboardHome = () => {
   const { user } = useUser();
   const { activeSite } = useSite();
   const data = DASHBOARD_DATA;
+
+  // Live data overlay
+  const [growth, setGrowth] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const g = await growthApi.get(activeSite.id);
+        if (!cancelled) setGrowth(g);
+      } catch {}
+      try {
+        const a = await analyticsApi.overview(activeSite.id, '30d');
+        if (!cancelled) setAnalytics(a);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
+
+  const liveScore = growth?.latest?.score;
+  const liveScoreChange = growth?.latest?.change ?? growth?.latest?.weeklyChange;
+  const displayScore = liveScore ?? data.jalwaScore;
+  const displayChange = liveScoreChange ?? data.jalwaScoreChange;
 
   // Build this week's strip (Mon-Sun starting from this week's Monday)
   const today = new Date();
@@ -81,7 +108,7 @@ export const DashboardHome = () => {
           <div className="relative">
             <div className="w-32 h-32 rounded-full border-8 border-[#1D9E75] flex items-center justify-center">
               <div className="text-center">
-                <span className="font-syne text-4xl font-bold text-[#0A0A0A]">{data.jalwaScore}</span>
+                <span className="font-syne text-4xl font-bold text-[#0A0A0A]" data-testid="dashboard-growth-score">{displayScore}</span>
                 <span className="text-lg text-[#6B7280]">/100</span>
               </div>
             </div>
@@ -90,7 +117,7 @@ export const DashboardHome = () => {
             <h2 className="font-syne text-2xl font-bold text-[#0A0A0A] mb-1">Your Growth Score</h2>
             <div className="flex items-center justify-center md:justify-start gap-2 text-[#1D9E75]">
               <ArrowUp size={16} />
-              <span className="font-medium">+{data.jalwaScoreChange} this week</span>
+              <span className="font-medium">+{displayChange} this week</span>
             </div>
             <Link to="/dashboard/growth-score" className="inline-flex items-center gap-1 mt-3 text-sm text-[#1D9E75] hover:underline">
               View full score breakdown <ArrowRight size={14} />
@@ -102,10 +129,10 @@ export const DashboardHome = () => {
       {/* Metrics Grid */}
       <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'AI Visibility', value: `${data.aiVisibility}%`, change: `+${data.aiVisibilityChange}%`, icon: Eye },
+          { label: 'AI Visibility', value: `${growth?.latest?.aiVisibility ?? data.aiVisibility}%`, change: `+${data.aiVisibilityChange}%`, icon: Eye },
           { label: 'Articles This Month', value: data.articlesThisMonth, change: null, icon: FileText },
           { label: 'Social Posts Scheduled', value: data.socialPostsScheduled, change: null, icon: Share2 },
-          { label: 'Traffic Change', value: `+${data.trafficChange}%`, change: 'this month', icon: TrendingUp }
+          { label: 'Total Clicks (30d)', value: analytics?.totalClicks?.toLocaleString() ?? `+${data.trafficChange}%`, change: analytics ? 'live' : 'this month', icon: TrendingUp }
         ].map((metric, i) => (
           <div key={metric.label} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
             <div className="flex items-start justify-between mb-2">

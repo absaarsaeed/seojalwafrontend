@@ -1,18 +1,14 @@
 /**
- * UserContext (bridge)
+ * UserContext (bridge) — exposes legacy `useUser` API powered by AuthContext.
  *
- * Wraps AuthProvider and exposes the legacy `useUser` API so existing pages
- * keep working without changes:
- *   { isAuthenticated, user, login, signup, logout, updateUser,
- *     cookieConsent, acceptCookies, getPricing }
+ * Live /api/plans → array of { id, name, monthlyPrice, annualPrice, ... }.
+ * We normalise into legacy key-shape ({ starter, growth, agency }) AND expose
+ * the raw array as `plans` so newer code can use it directly.
  *
- * - Auth state now flows from AuthContext (real backend).
- * - `login` / `signup` remain async; existing pages should await them.
- * - `getPricing` is a synchronous accessor returning the most recently fetched
- *   /api/plans payload (normalised). It falls back to DEFAULT_PRICING until the
- *   first successful fetch (kicked off on mount).
+ * Signup form sends { name, email, password, website } — we remap `name` to
+ * `fullName` for the live API.
  */
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 import { plansApi } from '../lib/api';
 
@@ -24,31 +20,33 @@ const DEFAULT_PRICING = {
   agency: { name: 'Agency', monthlyPrice: 499, annualPrice: 416 },
 };
 
-// Normalise a /api/plans response into the legacy { starter, growth, agency } shape.
+const POPULAR_KEY = 'growth';
+
 const normalisePlans = (data) => {
-  if (!data) return DEFAULT_PRICING;
+  if (!data) return { keyed: DEFAULT_PRICING, list: [] };
 
-  // Already keyed: { starter: {...}, growth: {...}, agency: {...} }
-  if (!Array.isArray(data) && (data.starter || data.growth || data.agency)) {
-    return { ...DEFAULT_PRICING, ...data };
-  }
+  const list = Array.isArray(data) ? data : Array.isArray(data?.plans) ? data.plans : [];
+  if (!list.length) return { keyed: DEFAULT_PRICING, list: [] };
 
-  // Array of plan objects from the API.
-  const list = Array.isArray(data) ? data : data.plans || [];
-  if (!list.length) return DEFAULT_PRICING;
-
-  const byKey = {};
+  const keyed = {};
   for (const p of list) {
-    const key = (p.key || p.slug || p.id || p.name || '').toString().toLowerCase();
-    if (!key) continue;
-    byKey[key] = {
-      name: p.name || key.charAt(0).toUpperCase() + key.slice(1),
-      monthlyPrice: p.monthly_price ?? p.monthlyPrice ?? p.price_monthly ?? 0,
-      annualPrice: p.annual_price ?? p.annualPrice ?? p.price_annual ?? 0,
-      popular: !!(p.popular ?? p.is_popular),
+    const k = (p.name || p.key || p.slug || p.id || '').toString().toLowerCase();
+    if (!k) continue;
+    const monthly = p.monthlyPrice ?? p.monthly_price ?? p.price_monthly ?? 0;
+    const annual = p.annualPrice ?? p.annual_price ?? p.price_annual ?? 0;
+    // Live API returns annual as the YEARLY total (e.g. 790 = 79*10) — derive monthly equivalent.
+    const annualMonthly = annual && annual > monthly * 6 ? Math.round((annual / 12) * 100) / 100 : annual;
+    keyed[k] = {
+      id: p.id,
+      name: p.name || k.charAt(0).toUpperCase() + k.slice(1),
+      monthlyPrice: monthly,
+      annualPrice: annualMonthly,
+      annualTotal: annual,
+      popular: !!(p.popular ?? p.is_popular ?? (k === POPULAR_KEY)),
+      raw: p,
     };
   }
-  return { ...DEFAULT_PRICING, ...byKey };
+  return { keyed: { ...DEFAULT_PRICING, ...keyed }, list };
 };
 
 const LegacyUserContext = createContext(null);
@@ -65,18 +63,19 @@ const UserBridge = ({ children }) => {
   });
 
   const [pricing, setPricing] = useState(DEFAULT_PRICING);
-  const pricingRef = useRef(pricing);
-  pricingRef.current = pricing;
+  const [plansList, setPlansList] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await plansApi.list();
+        const data = await plansApi.list();
         if (cancelled) return;
-        setPricing(normalisePlans(res));
+        const { keyed, list } = normalisePlans(data);
+        setPricing(keyed);
+        setPlansList(list);
       } catch {
-        // Silent fallback to defaults — surface in PricingPage if needed.
+        // Keep defaults silently.
       }
     })();
     return () => {
@@ -91,16 +90,17 @@ const UserBridge = ({ children }) => {
     setCookieConsent(true);
   }, []);
 
-  // Legacy sync login/signup signatures kept for backwards compatibility,
-  // but now return promises. Existing pages should `await` them.
   const login = useCallback((email, password) => auth.login({ email, password }), [auth]);
+
   const signup = useCallback(
     (formData) =>
       auth.signup({
-        name: formData?.name,
+        // Live API requires `fullName`
+        fullName: formData?.fullName || formData?.name || '',
         email: formData?.email,
         password: formData?.password,
-        website: formData?.website,
+        // `website` is intentionally not sent (the live register endpoint
+        // doesn't accept it and would 422). User can add a site after signup.
       }),
     [auth],
   );
@@ -109,14 +109,17 @@ const UserBridge = ({ children }) => {
     isAuthenticated: auth.isAuthenticated,
     isLoading: auth.isLoading,
     user: auth.user,
+    subscription: auth.subscription,
     login,
     signup,
     logout: auth.logout,
     updateUser: auth.updateUser,
+    refresh: auth.refresh,
     cookieConsent,
     acceptCookies,
     pricing,
-    getPricing: () => pricingRef.current,
+    plans: plansList,
+    getPricing: () => pricing,
   };
 
   return <LegacyUserContext.Provider value={value}>{children}</LegacyUserContext.Provider>;

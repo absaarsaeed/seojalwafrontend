@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
@@ -19,6 +19,7 @@ import {
 import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
+import { articlesApi } from '../../lib/api';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { PUBLISH_DATA } from '../../data/publicData';
 
@@ -136,6 +137,45 @@ export const PublishPage = () => {
   const [addTab, setAddTab] = useState('terms');
   const [keywords, setKeywords] = useState('');
   const [aiAuto, setAiAuto] = useState(true);
+  const [liveCalendar, setLiveCalendar] = useState(null);
+
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cal = await articlesApi.calendar({
+          siteId: activeSite.id,
+          year,
+          month: month + 1,
+        });
+        if (!cancelled) setLiveCalendar(cal);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id, year, month]);
+
+  // Merge live calendar by day-number when present
+  const cellsToRender = useMemo(() => {
+    if (!liveCalendar || typeof liveCalendar !== 'object') return cells;
+    return cells.map((c) => {
+      if (!c) return c;
+      const liveEntry = liveCalendar[String(c.day)] || liveCalendar[c.day];
+      if (liveEntry) {
+        const article = Array.isArray(liveEntry) ? liveEntry[0] : liveEntry;
+        return {
+          ...c,
+          article: {
+            id: article.id || c.article?.id || `${year}-${month}-${c.day}`,
+            title: article.title || c.article?.title,
+            searchTerm: article.searchTerm || article.keyword || c.article?.searchTerm,
+            status: (article.status || c.article?.status || 'SCHEDULED').toUpperCase(),
+          },
+        };
+      }
+      return c;
+    });
+  }, [cells, liveCalendar, year, month]);
 
   const handleSaveTerms = () => {
     setAddOpen(false);
@@ -200,7 +240,7 @@ export const PublishPage = () => {
               {WEEKDAYS.map((d) => (
                 <div key={d} className="bg-[#F9FAFB] p-2 text-xs font-semibold text-[#6B7280] text-center">{d}</div>
               ))}
-              {cells.map((cell, i) => {
+              {cellsToRender.map((cell, i) => {
                 if (!cell) return <div key={i} className="bg-white min-h-[110px]" />;
                 return (
                   <div key={i} className="bg-white min-h-[110px] p-2 relative">

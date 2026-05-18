@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { publicApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
@@ -21,15 +22,29 @@ export const ContactPage = () => {
     message: ''
   });
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       toast.error('Please fill in all required fields');
       return;
     }
-    setSubmitted(true);
-    toast.success('Message sent successfully!');
+    setIsSubmitting(true);
+    try {
+      await publicApi.contact({
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject || 'general',
+        message: formData.message,
+      });
+      setSubmitted(true);
+      toast.success('Message sent successfully!');
+    } catch (err) {
+      toast.error(err?.message || 'Could not send your message. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -158,8 +173,8 @@ export const ContactPage = () => {
                     />
                   </div>
                   
-                  <Button type="submit" className="w-full bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="contact-submit-btn">
-                    Send message
+                  <Button type="submit" disabled={isSubmitting} className="w-full bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="contact-submit-btn">
+                    {isSubmitting ? 'Sending...' : 'Send message'}
                   </Button>
                 </form>
               )}

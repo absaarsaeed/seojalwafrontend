@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
+import { teamApi } from '../../lib/api';
 import { Users } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,6 +22,18 @@ export const TeamPage = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [selectedSites, setSelectedSites] = useState({});
   const [allowBilling, setAllowBilling] = useState(false);
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await teamApi.list();
+        if (!cancelled) setMembers(Array.isArray(list) ? list : []);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleSite = (id) => {
     setSelectedSites((s) => ({ ...s, [id]: !s[id] }));
@@ -87,7 +100,7 @@ export const TeamPage = () => {
               {sites.map((s) => (
                 <label key={s.id} className="flex items-center gap-2 cursor-pointer pl-6">
                   <Checkbox checked={!!selectedSites[s.id]} onCheckedChange={() => toggleSite(s.id)} />
-                  <span className="text-sm text-[#0A0A0A]">{s.domain}</span>
+                  <span className="text-sm text-[#0A0A0A]">{s.domain || s.url || s.name}</span>
                 </label>
               ))}
             </div>
@@ -110,7 +123,7 @@ export const TeamPage = () => {
       {/* Team members */}
       <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="team-members-card">
         <h3 className="font-syne text-lg font-bold text-[#0A0A0A] mb-1">My Team</h3>
-        <p className="text-sm text-[#6B7280] mb-4">{activeSite?.domain}</p>
+        <p className="text-sm text-[#6B7280] mb-4">{activeSite?.domain || activeSite?.url}</p>
 
         <div className="space-y-3">
           <div className="flex items-center gap-4 p-4 bg-[#F9FAFB] rounded-lg">
@@ -124,14 +137,29 @@ export const TeamPage = () => {
             <span className="px-3 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-semibold rounded-full">Owner</span>
           </div>
 
-          {/* Empty state */}
-          <div className="flex flex-col items-center justify-center py-12 text-center bg-[#F9FAFB] rounded-lg border-2 border-dashed border-[#F0F0F0]">
-            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-3">
-              <Users size={24} className="text-[#6B7280]" />
+          {/* Team members from API */}
+          {members.map((m) => (
+            <div key={m.id || m.email} className="flex items-center gap-4 p-4 bg-[#F9FAFB] rounded-lg" data-testid={`team-member-${m.id || m.email}`}>
+              <div className="w-12 h-12 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-semibold">{(m.fullName || m.email || '?').split(' ').map((n) => n[0]).join('').slice(0, 2)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-[#0A0A0A]">{m.fullName || m.name || m.email}</p>
+                <p className="text-sm text-[#6B7280] truncate">{m.email}</p>
+              </div>
+              <span className="px-3 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-semibold rounded-full">{m.role || 'Member'}</span>
             </div>
-            <p className="font-medium text-[#0A0A0A]">No other team members yet</p>
-            <p className="text-sm text-[#6B7280] mt-1">Invite someone above to collaborate on your sites.</p>
-          </div>
+          ))}
+
+          {members.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 text-center bg-[#F9FAFB] rounded-lg border-2 border-dashed border-[#F0F0F0]">
+              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center mb-3">
+                <Users size={24} className="text-[#6B7280]" />
+              </div>
+              <p className="font-medium text-[#0A0A0A]">No other team members yet</p>
+              <p className="text-sm text-[#6B7280] mt-1">Invite someone above to collaborate on your sites.</p>
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
