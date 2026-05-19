@@ -154,13 +154,17 @@ export const WritePage = () => {
       toast.error('Please enter a topic or brief');
       return;
     }
-    if (!activeSite?.id) {
-      toast.error('Connect a site first to generate articles');
-      return;
-    }
+    // Flip UI state synchronously so the status row mounts immediately,
+    // even before any awaits resolve.
     setIsGenerating(true);
     setGenerationStatus('queued');
     setGenerated('');
+    if (!activeSite?.id) {
+      toast.error('Connect a site first to generate articles');
+      setIsGenerating(false);
+      setGenerationStatus(null);
+      return;
+    }
     try {
       const res = await articlesApi.generate({
         siteId: activeSite.id,

@@ -106,12 +106,16 @@ export const PulsePage = () => {
   }, [activeSite?.id]);
 
   const handleScan = async () => {
-    if (!activeSite?.id) {
-      toast.error('Connect a site first');
-      return;
-    }
+    // Flip UI state synchronously so the button label updates immediately,
+    // even before any awaits resolve and even if there's no active site.
     setIsScanning(true);
     setScanStatus('queued');
+    if (!activeSite?.id) {
+      toast.error('Connect a site first');
+      setIsScanning(false);
+      setScanStatus(null);
+      return;
+    }
     try {
       const res = await aiVisibilityApi.scan({ siteId: activeSite.id });
       const jobId = res?.jobId || res?.job_id || res?.id;

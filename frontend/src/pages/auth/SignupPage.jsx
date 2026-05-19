@@ -54,6 +54,16 @@ export const SignupPage = () => {
     setGeneralError('');
     setFieldErrors({});
     setEmailTaken(false);
+    // Client-side required checks — the live API only validates email + password,
+    // but we want a friendly inline error for an empty name field too.
+    const clientErrors = {};
+    if (!formData.name?.trim()) clientErrors.name = 'Full name is required';
+    if (!formData.email?.trim()) clientErrors.email = 'Email is required';
+    if (!formData.password) clientErrors.password = 'Password is required';
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      return;
+    }
     setIsLoading(true);
     try {
       await signup(formData);

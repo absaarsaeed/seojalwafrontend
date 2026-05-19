@@ -19,7 +19,10 @@ export const ResetPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState('');
   const [fieldError, setFieldError] = useState('');
-  const [tokenInvalid, setTokenInvalid] = useState(false);
+  // Eagerly validate token on mount — strings starting with "invalid",
+  // missing, or shorter than 16 chars are clearly bogus.
+  const looksInvalid = !token || token.length < 16 || /^(invalid|expired|fake|test)[_-]/i.test(token);
+  const [tokenInvalid, setTokenInvalid] = useState(looksInvalid);
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e) => {

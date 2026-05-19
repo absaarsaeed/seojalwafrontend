@@ -284,7 +284,12 @@ const PlatformCard = ({ name, method, description, connected, onConnect, onDisco
           </button>
         </>
       ) : (
-        <Button onClick={onConnect} size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full">
+        <Button
+          onClick={onConnect}
+          size="sm"
+          className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full"
+          data-testid={`${testid}-connect-btn`}
+        >
           Connect
         </Button>
       )}

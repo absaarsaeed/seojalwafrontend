@@ -1,0 +1,36 @@
+{
+  "summary": "Phase-1 retest of 6 fixes. 4 of 6 fully PASS (FIX3 reset-token-invalid, FIX4 global-error toasts for network/5xx/403, FIX5 signup empty-form name+email+password errors, FIX6 WordPress connect-btn testid + modal + wp-no-site state). 2 of 6 still FAIL (FIX1 run-scan-btn label, FIX2 generation-status mount) — root cause is React 18 state batching: setIsScanning(true) followed by setIsScanning(false) in the same synchronous handler when no active site is present collapses into a single 'false' commit, so the button label never visibly flips to 'Scanning...'/'Queued...' and <p data-testid=generation-status> never mounts. The 'flip BEFORE activeSite check' claim doesn't hold under React's auto-batching.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PulsePage / Run Scan", "issue": "FIX1 still failing for no-site user. handleScan calls setIsScanning(true) then setIsScanning(false) within the same sync event handler (when !activeSite). React 18 batches both updates → only the final 'false' commits, no intermediate render. Wrap the first setIsScanning(true)+setScanStatus('queued') in flushSync from 'react-dom', OR run the activeSite check inside a microtask/setTimeout(0) so React commits the 'true' state first. Verified at ~150ms after click: button text was still 'Run new scan'.", "selector": "[data-testid=run-scan-btn]", "priority": "HIGH"},
+      {"component": "WritePage / Generate Article", "issue": "FIX2 still failing for no-site user. Same root cause as FIX1 — setIsGenerating(true) then setIsGenerating(false) batch into one commit; [data-testid=generation-status] is gated on isGenerating which never becomes true visually. Use flushSync(() => { setIsGenerating(true); setGenerationStatus('queued'); }) before the activeSite check, OR move the no-site early return into a microtask. Verified at ~300ms after click: no node with data-testid=generation-status.", "selector": "[data-testid=generation-status]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard pages with sparkline cards", "issues": ["Recharts ResponsiveContainer still emits 8+ 'width(-1) and height(-1)' warnings on first paint — flagged in iterations 1, 5, 6. Still unresolved. Add minWidth/minHeight or render after layout measurement."]},
+      {"screen": "WordPressConnectModal wp-no-site state", "issues": ["Radix Dialog console errors: 'DialogContent requires a DialogTitle for the component to be accessible'. The wp-no-site branch renders its own custom layout without a <DialogTitle>; add a visually-hidden DialogTitle to satisfy a11y requirements."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "PulsePage.jsx handleScan: import { flushSync } from 'react-dom' and wrap the initial setIsScanning(true)+setScanStatus('queued') in flushSync(() => { ... }) BEFORE the activeSite check. This forces a synchronous commit so the button label flips even when the no-site branch immediately resets state.",
+    "WritePage.jsx handleGenerate: same pattern — flushSync(() => { setIsGenerating(true); setGenerationStatus('queued'); setGenerated(''); }) before the activeSite check, so [data-testid=generation-status] mounts even when the no-site early return fires.",
+    "Alternative for both: keep the synchronous setState but move the !activeSite early return into setTimeout(() => { ... }, 0) or queueMicrotask(() => { ... }), giving React one tick to commit the 'true' state and render the new label before the reset.",
+    "Add a visually-hidden DialogTitle to the wp-no-site branch of WordPressConnectModal to silence Radix a11y errors.",
+    "(Carry-over) Silence Recharts width(-1) warnings by giving ResponsiveContainer a minHeight or rendering after measure."
+  ],
+  "critical_code_review_comments": [
+    "FIX1/FIX2 PR description claims 'state flip is now synchronous' — true at JS level, but React 18 automatic batching means consecutive setState calls in the same event handler still produce a single commit. Without flushSync, the user never sees the intermediate state. This is a recurring misunderstanding worth documenting in the team's frontend playbook.",
+    "Recharts width(-1) warnings have been flagged across iterations 1, 5, 6, and 7 — still unaddressed.",
+    "WordPressConnectModal wp-no-site path violates Radix Dialog a11y contract (no DialogTitle in that branch)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "4/6 fixes PASS, 2/6 FAIL (FIX1 run-scan label, FIX2 generation-status mount)"},
+  "test_credentials": "Created fresh end-user test_1779190922@jalwa.com / TestPassword123! on this run. Admin jalwa/jalwaisadmin available.",
+  "seed_data_creation": "1 new test user created on the live api.seojalwa.com backend; no cleanup performed.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After FIX1/FIX2 are reworked with flushSync (or microtask deferral of the no-site check), re-run the same single-page Playwright script: navigate as a fresh signup (no site connected), click [data-testid=run-scan-btn] and assert inner text contains 'Scanning' or 'Queued' within 500ms; click [data-testid=generate-article-btn] after filling the textarea and assert [data-testid=generation-status] is in the DOM within 500ms. FIX3/4/5/6 are confirmed solid and need no re-test.",
+  "rca_of_the_issues": "FIX1 and FIX2 both rely on the assumption that 'setState(true) executed BEFORE the early-return setState(false) in a single sync event handler' will produce a visible intermediate render. Under React 18's automatic batching, all setState calls in a single event handler are batched into ONE commit — only the LAST value wins. So when activeSite is missing, the no-site branch immediately calls setIsScanning(false)/setIsGenerating(false), and React collapses both updates into a single 'false' commit. The button/status row never re-renders with the 'true' value. Fixes: (a) wrap the initial true-setters in flushSync from 'react-dom' to force a synchronous commit-and-paint cycle, or (b) defer the no-site early return via setTimeout(...,0) / queueMicrotask so React commits 'true' first, paints, then runs the reset."
+}
