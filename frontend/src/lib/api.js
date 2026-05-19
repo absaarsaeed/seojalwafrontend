@@ -287,6 +287,10 @@ export const authApi = {
     api.post('/api/auth/forgot-password', { email }, { auth: 'none' }),
   resetPassword: ({ token, newPassword }) =>
     api.post('/api/auth/reset-password', { token, newPassword }, { auth: 'none' }),
+  changePassword: ({ currentPassword, newPassword }) =>
+    api.put('/api/user/password', { currentPassword, newPassword }, { auth: 'user' }),
+  // Google OAuth — redirect-only. Backend should set redirect params on /auth/google/callback.
+  googleStartUrl: () => `${BASE_URL}/api/auth/google`,
 };
 
 export const plansApi = {
@@ -345,6 +349,18 @@ export const articlesApi = {
     api.get('/api/articles/calendar', { query: { siteId, year, month } }),
   generate: (payload) => api.post('/api/articles/generate', payload),
   job: (jobId) => api.get(`/api/articles/job/${jobId}`),
+  publish: (id, payload) => api.post(`/api/articles/${id}/publish`, payload),
+};
+
+// Search terms (content topics) ------------------------------------------
+export const searchTermsApi = {
+  list: (siteId) => api.get('/api/search-terms', { query: { siteId } }),
+  create: ({ siteId, terms }) => api.post('/api/search-terms', { siteId, terms }),
+};
+
+// Public plugin metadata --------------------------------------------------
+export const pluginApi = {
+  version: () => api.get('/api/plugin/version', { auth: 'none' }),
 };
 
 export const socialApi = {
@@ -380,6 +396,29 @@ export const adminApi = {
   testApiKey: (key) =>
     api.post(`/api/admin/api-keys/${encodeURIComponent(key)}/test`, {}, { auth: 'admin' }),
   settings: () => api.get('/api/admin/settings', { auth: 'admin' }),
+  updateSettings: (payload) => api.put('/api/admin/settings', payload, { auth: 'admin' }),
+  // Plugin upload uses multipart/form-data — bypass the JSON helper.
+  uploadPlugin: async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const doFetch = (typeof window !== 'undefined' && window.__nativeFetch) || fetch;
+    const adminToken = tokenStore.getAdmin();
+    const res = await doFetch(`${BASE_URL}/api/admin/plugin/upload`, {
+      method: 'POST',
+      headers: adminToken ? { 'X-Admin-Token': adminToken } : {},
+      body: fd,
+    });
+    let body = null;
+    try { body = await res.json(); } catch {}
+    if (!res.ok || body?.success === false) {
+      throw new ApiError(body?.error || `Upload failed (${res.status})`, {
+        status: res.status,
+        code: body?.code || '',
+        data: body,
+      });
+    }
+    return body?.data || body;
+  },
 };
 
 // AI Visibility (extended) -------------------------------------------------

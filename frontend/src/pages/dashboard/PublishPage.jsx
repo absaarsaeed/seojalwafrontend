@@ -19,7 +19,7 @@ import {
 import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
-import { articlesApi } from '../../lib/api';
+import { articlesApi, searchTermsApi } from '../../lib/api';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { PUBLISH_DATA } from '../../data/publicData';
 
@@ -177,10 +177,27 @@ export const PublishPage = () => {
     });
   }, [cells, liveCalendar, year, month]);
 
-  const handleSaveTerms = () => {
-    setAddOpen(false);
-    setKeywords('');
-    toast.success('Added to your calendar');
+  const handleSaveTerms = async () => {
+    if (!activeSite?.id) {
+      toast.error('Connect a site first');
+      return;
+    }
+    const terms = keywords
+      .split('\n')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (terms.length === 0) {
+      toast.error('Enter at least one search term');
+      return;
+    }
+    try {
+      await searchTermsApi.create({ siteId: activeSite.id, terms });
+      toast.success('Added to your calendar');
+      setAddOpen(false);
+      setKeywords('');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save search terms');
+    }
   };
 
   return (

@@ -13,7 +13,7 @@ import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { Check, Copy, ChevronDown, Download, Loader2, AlertCircle, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
-import { sitesApi } from '../../lib/api';
+import { sitesApi, pluginApi } from '../../lib/api';
 
 const StepDot = ({ idx, status, label }) => {
   let bg = 'bg-[#F0F0F0] text-[#6B7280]';
@@ -55,6 +55,38 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
   const [testing, setTesting] = useState(false);
   const [done, setDone] = useState(false);
   const [verifyError, setVerifyError] = useState('');
+  const [pluginMeta, setPluginMeta] = useState(null); // { version, download_url }
+
+  // Load plugin metadata when the modal opens.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await pluginApi.version();
+        if (!cancelled) setPluginMeta(data || null);
+      } catch {
+        if (!cancelled) setPluginMeta(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
+
+  const handlePluginDownload = async () => {
+    let url = pluginMeta?.download_url || pluginMeta?.downloadUrl;
+    if (!url) {
+      try {
+        const data = await pluginApi.version();
+        url = data?.download_url || data?.downloadUrl;
+        if (data) setPluginMeta(data);
+      } catch {}
+    }
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      toast.error('Plugin download not available yet. Contact hello@seojalwa.com');
+    }
+  };
 
   // Pre-fill URL whenever the modal opens and an active site exists.
   useEffect(() => {
@@ -214,8 +246,15 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
                       <div className="bg-[#F9FAFB] border border-[#F0F0F0] rounded-lg p-4">
                         <p className="font-semibold text-[#0A0A0A] mb-2 mt-6">Option B — Manual</p>
                         <p className="text-xs text-[#6B7280] mb-3">Download and upload the plugin file</p>
-                        <Button variant="outline" size="sm" className="border-[#F0F0F0] mb-3" onClick={() => toast.success('seojalwa-plugin.zip download started')}>
-                          <Download size={14} className="mr-1.5" /> Download Plugin (.zip)
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-[#F0F0F0] mb-3"
+                          onClick={handlePluginDownload}
+                          data-testid="wp-download-plugin"
+                        >
+                          <Download size={14} className="mr-1.5" />
+                          Download Plugin (.zip){pluginMeta?.version ? ` — v${pluginMeta.version}` : ''}
                         </Button>
                         <Collapsible>
                           <CollapsibleTrigger asChild>

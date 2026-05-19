@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { userApi } from '../../lib/api';
+import { userApi, authApi } from '../../lib/api';
 import { SETTINGS_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -104,13 +104,39 @@ export const SettingsPage = () => {
     }
   };
 
-  const handleChangePassword = () => {
-    if (passwords.new !== passwords.confirm) {
-      toast.error('Passwords do not match');
+  const [passwordError, setPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    if (!passwords.current) {
+      setPasswordError('Enter your current password');
       return;
     }
-    toast.success('Password changed');
-    setPasswords({ current: '', new: '', confirm: '' });
+    if (passwords.new !== passwords.confirm) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    if ((passwords.new || '').length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await authApi.changePassword({
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+      });
+      toast.success('Password updated');
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (err) {
+      if (err?.code === 'INVALID_CREDENTIALS' || err?.status === 401) {
+        setPasswordError('Current password is incorrect');
+      } else {
+        toast.error(err?.message || 'Could not change password');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSendInvite = () => {
@@ -195,7 +221,14 @@ export const SettingsPage = () => {
                   </div>
                 </div>
               ))}
-              <Button onClick={handleChangePassword} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Change Password</Button>
+              <Button onClick={handleChangePassword} disabled={isChangingPassword} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="settings-change-password-btn">
+                {isChangingPassword ? 'Updating...' : 'Change Password'}
+              </Button>
+              {passwordError && (
+                <p className="flex items-start gap-1 mt-2 text-xs text-[#EF4444]" data-testid="settings-password-error">
+                  <span>{passwordError}</span>
+                </p>
+              )}
             </div>
           </motion.div>
 

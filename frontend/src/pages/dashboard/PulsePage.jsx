@@ -141,7 +141,23 @@ export const PulsePage = () => {
         try {
           const job = await aiVisibilityApi.scanJob(jobId);
           const status = (job?.status || '').toLowerCase();
-          setScanStatus(status || 'in_progress');
+          // Stage label — backend may send `currentStep` or `progress`.
+          const STAGES = [
+            'Generating brand queries...',
+            'Scanning ChatGPT...',
+            'Scanning Perplexity...',
+            'Scanning Gemini...',
+            'Scanning Claude...',
+            'Analyzing results...',
+          ];
+          let stage = status || 'in_progress';
+          if (job?.currentStep) {
+            stage = job.currentStep;
+          } else if (typeof job?.progress === 'number') {
+            const idx = Math.min(STAGES.length - 1, Math.floor((job.progress / 100) * STAGES.length));
+            stage = STAGES[idx];
+          }
+          setScanStatus(stage);
           if (status === 'completed' || status === 'success') {
             clearInterval(scanJobRef.current);
             scanJobRef.current = null;
@@ -196,10 +212,15 @@ export const PulsePage = () => {
           </div>
           <Button onClick={handleScan} disabled={isScanning} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
             <RefreshCw size={16} className={`mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-            {isScanning ? (scanStatus === 'queued' ? 'Queued...' : 'Scanning...') : 'Run new scan'}
+            {isScanning ? (scanStatus && scanStatus !== 'queued' && scanStatus !== 'in_progress' ? scanStatus : 'Scanning...') : 'Run new scan'}
           </Button>
         </div>
       </motion.div>
+      {isScanning && (
+        <p className="text-xs text-[#6B7280] -mt-3" data-testid="scan-status">
+          {scanStatus && scanStatus !== 'queued' && scanStatus !== 'in_progress' ? scanStatus : 'Queued — this can take 30–90 seconds.'}
+        </p>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">

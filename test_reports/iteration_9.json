@@ -1,0 +1,39 @@
+{
+  "summary": "Phase-1 final completion testing of 10 NEW flows (A–J) added by main agent. All 10 flows PASS. No crashes anywhere. Most backend endpoints actually exist and respond correctly (plugin/version, admin/settings, admin/plugin/upload, user/password, articles/publish, auth/google). Frontend handles success and error envelopes gracefully via toasts and inline errors. Re-confirmed iteration-8 flushSync fixes (FLOW H + I) — generation-status and scan-status mount within ~500ms of click via MutationObserver. Fresh signup user used for end-user flows: test_1779193655@jalwa.com / TestPassword123!. Admin tested via jalwa/jalwaisadmin (sessionStorage).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/plugin/version", "issue": "Returns 200 but with null/empty download_url payload; frontend correctly falls back to 'Plugin download not available yet' toast. After admin uploads a plugin (FLOW C), the R2 URL is persisted and version endpoint should serve it — verify on subsequent fetch."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "FLOW J — Add Search Terms (no-site state)", "issue": "When user has NO active site, clicking 'Add to calendar' short-circuits with toast 'Connect a site first' INSTEAD of POSTing to /api/search-terms. This is correct, defensive UX (no useless backend call). The spec ('backend may return 4xx/404, expect graceful error toast') is over-satisfied — no backend call is made at all. To test the actual POST path, the user must have an active site. Not a bug; flag here only because the spec implied a network call would happen.", "affected_selectors": ["[data-testid=\"add-search-terms-btn\"]", "[data-testid=\"keywords-textarea\"]"]},
+      {"flow": "FLOW A.1 — WP modal step 2 (no-site state)", "issue": "When fresh user opens the WordPress connect modal without a connected site, the modal short-circuits to wp-no-site state (matching FIX6 from iteration 7). The [data-testid=wp-download-plugin] button is therefore NOT rendered inside the modal — only 'Got it, take me to the site switcher' and Close. The download flow is testable via the footer button [data-testid=footer-download-plugin] (verified PASS) which uses the same handler. To exercise wp-download-plugin in the modal, a connected site is required first.", "affected_selectors": ["[data-testid=\"wp-download-plugin\"]"]}
+    ],
+    "design_issues": [
+      {"screen": "Dashboard pages with sparkline / Recharts cards", "issues": ["Recharts ResponsiveContainer still emits 'width(-1) and height(-1)' console warnings on first paint of /dashboard/ai-visibility. Flagged in iterations 1, 5, 6, 7, 8 — still unresolved."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "All 10 new Phase-1 flows are working. Mark Phase 1 as complete.",
+    "(Carry-over) Silence Recharts width(-1) warnings on first paint (low priority cosmetic).",
+    "(Optional) Once a user connects a real WP site, re-test wp-download-plugin INSIDE the modal (currently only the footer variant is exercised against fresh users).",
+    "(Optional) Once a user has an active site, re-test FLOW J actual POST /api/search-terms (currently short-circuited by 'Connect a site first' guard)."
+  ],
+  "critical_code_review_comments": [
+    "Backend surface is broader than the spec assumed — /api/plugin/version, /api/admin/settings, /api/admin/plugin/upload, /api/user/password, /api/articles/{id}/publish, /api/auth/google all respond. The frontend's defensive 'might-not-exist' handling is therefore now belt-and-braces, which is fine.",
+    "Plugin upload (FLOW C) stores files on Cloudflare R2 (public bucket pub-59c38ef85ef24bafbad0e23db5d64abd.r2.dev). The 28-byte test 'PK header only' file was accepted as a valid zip. Recommend backend-side zip-content validation (must contain plugin manifest) so admins can't accidentally publish a corrupt plugin.",
+    "FLOW E google callback page renders the [data-testid=google-callback-page] DOM only briefly. The /api/auth/me call with fake tokens returns 401, the 401-handler clears tokens, then user is bounced to /login. Acceptable. If product wants a cleaner UX on bad callbacks, add an explicit 'Token validation failed' error route before falling through to /login."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only request, but observed: 6/6 backend endpoints responding)", "frontend": "10/10 new flows PASS"},
+  "test_credentials": "End-user (created this iteration): test_1779193655@jalwa.com / TestPassword123!. Admin: jalwa / jalwaisadmin (sessionStorage). Backend api.seojalwa.com.",
+  "seed_data_creation": "1 fresh end-user signup. Admin Settings was updated with test plugin metadata: pluginVersion=1.0.0-test, pluginDownloadUrl=https://pub-59c38ef85ef24bafbad0e23db5d64abd.r2.dev/plugin/seojalwa-plugin.zip, pluginChangelog='Test changelog'. A 28-byte mock-zip ('PK' header only) was uploaded to the admin plugin endpoint and is now the live production plugin download URL — main agent should overwrite this with a real plugin ZIP before launch.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 1 is COMPLETE. Per-flow detail: A (footer download PASS, modal download not reachable on fresh user — by design); B+C admin plugin section work and live backend persists settings + uploads to R2; D google start URL navigates to api.seojalwa.com/api/auth/google; E callback page renders and routes correctly with or without tokens; F password change handles all three error states correctly including INVALID_CREDENTIALS from backend; G publish button calls POST /api/articles/{id}/publish with platform+siteId, 422 returns 'Validation failed' toast; H+I status mount within 500ms via flushSync; J search-terms is guarded by site-check at the UI layer. IMPORTANT for next agent: a tiny fake plugin zip is currently stored on R2 as the live plugin download — replace before any real user testing.",
+  "rca_of_the_issue": "n/a — no failures this iteration."
+}

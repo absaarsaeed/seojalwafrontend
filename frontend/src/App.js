@@ -36,6 +36,7 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
+import { GoogleCallbackPage } from "./pages/auth/GoogleCallbackPage";
 
 // Dashboard
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -88,6 +89,7 @@ function App() {
               <Route path="/signup" element={<AuthRedirect><SignupPage /></AuthRedirect>} />
               <Route path="/forgot-password" element={<AuthRedirect><ForgotPasswordPage /></AuthRedirect>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
 
               {/* User Dashboard (DashboardLayout itself enforces auth) */}
               <Route path="/dashboard" element={<DashboardLayout />}>

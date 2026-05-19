@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { useSite } from '../../context/SiteContext';
 import { articlesApi } from '../../lib/api';
 import {
   ArrowLeft, ExternalLink, Edit2, RotateCw, Check, X as XIcon, AlertTriangle, Play,
-  TrendingUp, TrendingDown,
+  TrendingUp, TrendingDown, Loader2, Send,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -99,6 +100,7 @@ export const ArticleViewPage = () => {
   const { activeSite } = useSite();
   const { id } = useParams();
   const [article, setArticle] = useState(null);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -113,6 +115,26 @@ export const ArticleViewPage = () => {
     })();
     return () => { cancelled = true; };
   }, [id]);
+
+  const handlePublish = async () => {
+    if (!id) return;
+    setIsPublishing(true);
+    try {
+      const res = await articlesApi.publish(id, {
+        platform: 'wordpress',
+        siteId: activeSite?.id,
+      });
+      toast.success('Published to WordPress!');
+      setArticle((prev) => ({
+        ...(prev || {}),
+        status: res?.status || 'PUBLISHED',
+      }));
+    } catch (err) {
+      toast.error(err?.message || 'Publish failed');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   const title = article?.title || '5 SEO Mistakes That Are Killing Your Rankings in 2026 (And How to Fix Them)';
   const excerpt = article?.excerpt || article?.summary || 'Most businesses make these SEO errors without even knowing it. Here\'s how to identify and fix each one fast.';
@@ -151,8 +173,20 @@ export const ArticleViewPage = () => {
           <Button variant="ghost" size="sm" className="text-[#6B7280]" onClick={() => window.open('https://example.com/blog/5-seo-mistakes-2026', '_blank')}>
             <ExternalLink size={14} className="mr-1.5" />View Live
           </Button>
-          <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="republish-btn">
-            <RotateCw size={14} className="mr-1.5" />Republish
+          <Button
+            size="sm"
+            onClick={handlePublish}
+            disabled={isPublishing}
+            className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+            data-testid="article-publish-btn"
+          >
+            {isPublishing ? (
+              <><Loader2 size={14} className="mr-1.5 animate-spin" />Publishing...</>
+            ) : status === 'PUBLISHED' ? (
+              <><RotateCw size={14} className="mr-1.5" />Republish</>
+            ) : (
+              <><Send size={14} className="mr-1.5" />Publish</>
+            )}
           </Button>
         </div>
       </motion.div>

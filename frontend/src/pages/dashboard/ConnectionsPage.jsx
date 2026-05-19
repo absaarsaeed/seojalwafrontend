@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -17,6 +17,7 @@ import { Check, Copy, X as XIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { WordPressConnectModal } from '../../components/dashboard/WordPressConnectModal';
 import { useSite } from '../../context/SiteContext';
+import { pluginApi } from '../../lib/api';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -371,6 +372,31 @@ export const ConnectionsPage = () => {
     }
   };
 
+  // Plugin metadata for footer download button
+  const [pluginMeta, setPluginMeta] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await pluginApi.version();
+        if (!cancelled) setPluginMeta(data || null);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const handlePluginDownload = async () => {
+    let url = pluginMeta?.download_url || pluginMeta?.downloadUrl;
+    if (!url) {
+      try {
+        const data = await pluginApi.version();
+        url = data?.download_url || data?.downloadUrl;
+        if (data) setPluginMeta(data);
+      } catch {}
+    }
+    if (url) window.open(url, '_blank');
+    else toast.error('Plugin download not available yet. Contact hello@seojalwa.com');
+  };
+
   return (
     <motion.div
       initial="hidden"
@@ -431,10 +457,15 @@ export const ConnectionsPage = () => {
       <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6 flex flex-wrap items-center justify-between gap-4" data-testid="download-plugin-section">
         <div>
           <p className="font-medium text-[#0A0A0A]">Prefer to install manually?</p>
-          <p className="text-xs text-[#6B7280]">Latest version: v1.0.0 · Filename: seojalwa-plugin.zip</p>
+          <p className="text-xs text-[#6B7280]">Latest version: v{pluginMeta?.version || '—'} · Filename: seojalwa-plugin.zip</p>
         </div>
-        <Button onClick={() => toast.success('seojalwa-plugin.zip download started')} variant="outline" className="border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE]">
-          <Download size={14} className="mr-2" /> Download Plugin (.zip)
+        <Button
+          onClick={handlePluginDownload}
+          variant="outline"
+          className="border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE]"
+          data-testid="footer-download-plugin"
+        >
+          <Download size={14} className="mr-2" /> Download Plugin (.zip){pluginMeta?.version ? ` — v${pluginMeta.version}` : ''}
         </Button>
       </motion.div>
 

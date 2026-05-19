@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Logo } from '../../components/public/Logo';
+import { authApi } from '../../lib/api';
 
 // Map a Pydantic validation detail → form field name + message.
 const detailToFieldError = (d) => {
@@ -40,6 +41,10 @@ export const SignupPage = () => {
   const [emailTaken, setEmailTaken] = useState(false);
   const { signup } = useUser();
   const navigate = useNavigate();
+
+  const handleGoogleSignIn = () => {
+    window.location.href = authApi.googleStartUrl();
+  };
 
   const setFormField = (key, value) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -259,7 +264,9 @@ export const SignupPage = () => {
             <Button
               type="button"
               variant="outline"
+              onClick={handleGoogleSignIn}
               className="w-full h-11 border-[#F0F0F0]"
+              data-testid="signup-google-btn"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

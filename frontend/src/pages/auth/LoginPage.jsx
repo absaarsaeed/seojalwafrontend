@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
@@ -7,6 +7,7 @@ import { Logo } from '../../components/public/Logo';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
+import { authApi } from '../../lib/api';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -18,7 +19,13 @@ export const LoginPage = () => {
   const { login } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const from = location.state?.from?.pathname || '/dashboard';
+  const googleFailed = searchParams.get('error') === 'google_failed';
+
+  const handleGoogleSignIn = () => {
+    window.location.href = authApi.googleStartUrl();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,6 +90,13 @@ export const LoginPage = () => {
           
           <h1 className="font-syne text-3xl font-bold text-[#0A0A0A] mb-2">Welcome back</h1>
           <p className="text-[#6B7280] mb-8">Sign in to your account to continue.</p>
+
+          {googleFailed && (
+            <div className="flex items-center gap-2 p-3 mb-5 rounded-lg bg-red-50 text-[#EF4444] text-sm" data-testid="login-google-failed" role="alert">
+              <AlertCircle size={16} />
+              <span>Google sign in failed. Please try again or use email and password.</span>
+            </div>
+          )}
 
           {/* General error banner — top of form */}
           {generalError && (
@@ -172,7 +186,9 @@ export const LoginPage = () => {
             <Button
               type="button"
               variant="outline"
+              onClick={handleGoogleSignIn}
               className="w-full h-11 border-[#F0F0F0]"
+              data-testid="login-google-btn"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

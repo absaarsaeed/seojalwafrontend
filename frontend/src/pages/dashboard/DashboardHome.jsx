@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { growthApi, analyticsApi } from '../../lib/api';
+import { growthApi, analyticsApi, searchTermsApi, aiVisibilityLatestApi } from '../../lib/api';
 import { DASHBOARD_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink, Globe, X as XIcon, Check } from 'lucide-react';
@@ -42,15 +42,40 @@ export const DashboardHome = () => {
   const { activeSite, sites } = useSite();
   const data = DASHBOARD_DATA;
 
-  // Onboarding checklist — persistence + computed completion.
-  const ONBOARDING_KEY = 'jalwa_onboarding_dismissed';
-  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
-    try { return localStorage.getItem(ONBOARDING_KEY) === '1'; } catch { return false; }
-  });
+  // Onboarding checklist — persistence keyed per-site, recomputed below.
+  const onboardingKey = `jalwa_onboarding_dismissed_${activeSite?.id || 'none'}`;
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  useEffect(() => {
+    try { setOnboardingDismissed(localStorage.getItem(onboardingKey) === '1'); } catch {}
+  }, [onboardingKey]);
   const dismissOnboarding = () => {
-    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch {}
+    try { localStorage.setItem(onboardingKey, '1'); } catch {}
     setOnboardingDismissed(true);
   };
+
+  // Live signals for onboarding step completion.
+  const [hasSearchTerms, setHasSearchTerms] = useState(false);
+  const [hasLatestScan, setHasLatestScan] = useState(false);
+  useEffect(() => {
+    if (!activeSite?.id) {
+      setHasSearchTerms(false);
+      setHasLatestScan(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const terms = await searchTermsApi.list(activeSite.id);
+        const list = Array.isArray(terms) ? terms : terms?.items || terms?.terms || [];
+        if (!cancelled) setHasSearchTerms(list.length > 0);
+      } catch { if (!cancelled) setHasSearchTerms(false); }
+      try {
+        const latest = await aiVisibilityLatestApi.latest(activeSite.id);
+        if (!cancelled) setHasLatestScan(!!latest && (latest?.overallScore != null || latest?.id));
+      } catch { if (!cancelled) setHasLatestScan(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [activeSite?.id]);
 
   // Live data overlay
   const [growth, setGrowth] = useState(null);
@@ -80,16 +105,14 @@ export const DashboardHome = () => {
   // Compute onboarding step completion from real signals.
   const onboardingSteps = useMemo(() => {
     const hasSite = Array.isArray(sites) && sites.length > 0;
-    const siteConnected = !!(activeSite && (activeSite.isConnected ?? activeSite.connected ?? activeSite.status === 'connected'));
-    const hasArticles = (data?.articlesThisMonth || 0) > 0; // backend may overlay later
-    const isPaid = !!(subscription && (subscription.status === 'active' || subscription.plan));
+    const siteConnected = !!(activeSite && (activeSite.wordpressConnected || activeSite.isConnected || activeSite.connected || activeSite.status === 'connected'));
     return [
-      { id: 'add-site',   label: 'Add your first website',           done: hasSite,        to: '/dashboard/connections', cta: 'Add site' },
-      { id: 'connect',    label: 'Connect WordPress (install plugin)', done: siteConnected,  to: '/dashboard/connections', cta: 'Connect' },
-      { id: 'first-article', label: 'Generate your first article',    done: hasArticles,    to: '/dashboard/ai-writer',   cta: 'Generate' },
-      { id: 'upgrade',    label: 'Upgrade to start daily publishing', done: isPaid,         to: '/dashboard/settings',    cta: 'Upgrade' },
+      { id: 'connect',     label: 'Connect your website',          done: hasSite && siteConnected, to: '/dashboard/connections',     cta: hasSite ? 'Connect' : 'Add site' },
+      { id: 'preferences', label: 'Set up article preferences',    done: false /* requires backend */, to: '/dashboard/article-settings', cta: 'Set up' },
+      { id: 'topics',      label: 'Add content topics',            done: hasSearchTerms,           to: '/dashboard/auto-publish',    cta: 'Add topics' },
+      { id: 'first-scan',  label: 'Run your first AI scan',        done: hasLatestScan,            to: '/dashboard/ai-visibility',   cta: 'Run scan' },
     ];
-  }, [sites, activeSite, data?.articlesThisMonth, subscription]);
+  }, [sites, activeSite, hasSearchTerms, hasLatestScan]);
   const onboardingDone = onboardingSteps.every((s) => s.done);
   const completedCount = onboardingSteps.filter((s) => s.done).length;
   const showOnboarding = !onboardingDismissed && !onboardingDone;

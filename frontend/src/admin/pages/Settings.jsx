@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAdmin } from '../context/AdminContext';
 import { FormSkeleton } from '../components/SkeletonLoaders';
 import { Button } from '../../components/ui/button';
@@ -7,7 +7,8 @@ import { Textarea } from '../../components/ui/textarea';
 import { Switch } from '../../components/ui/switch';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
-import { Save, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Save, AlertTriangle, Eye, EyeOff, Upload, ExternalLink, Loader2 } from 'lucide-react';
+import { adminApi } from '../../lib/api';
 
 export const Settings = () => {
   const { settings, updateSettings } = useAdmin();
@@ -23,6 +24,79 @@ export const Settings = () => {
     new: false,
     confirm: false
   });
+
+  // Plugin section state
+  const [plugin, setPlugin] = useState({
+    pluginVersion: '',
+    pluginDownloadUrl: '',
+    pluginChangelog: '',
+  });
+  const [uploadingPlugin, setUploadingPlugin] = useState(false);
+  const [savingPlugin, setSavingPlugin] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Hydrate plugin fields from backend admin settings.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminApi.settings();
+        if (cancelled) return;
+        const flat = data?.settings || data || {};
+        setPlugin({
+          pluginVersion: flat.pluginVersion || flat.plugin_version || '',
+          pluginDownloadUrl: flat.pluginDownloadUrl || flat.plugin_download_url || '',
+          pluginChangelog: flat.pluginChangelog || flat.plugin_changelog || '',
+        });
+      } catch {
+        // Endpoint may not be present — keep empty fields.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleSavePlugin = async (override) => {
+    const payload = {
+      pluginVersion: (override?.pluginVersion ?? plugin.pluginVersion) || '',
+      pluginDownloadUrl: (override?.pluginDownloadUrl ?? plugin.pluginDownloadUrl) || '',
+      pluginChangelog: (override?.pluginChangelog ?? plugin.pluginChangelog) || '',
+    };
+    setSavingPlugin(true);
+    try {
+      await adminApi.updateSettings(payload);
+      setPlugin(payload);
+      toast.success('Plugin settings saved');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save plugin settings');
+    } finally {
+      setSavingPlugin(false);
+    }
+  };
+
+  const handleUploadPlugin = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!/\.zip$/i.test(file.name)) {
+      toast.error('Please upload a .zip file');
+      e.target.value = '';
+      return;
+    }
+    setUploadingPlugin(true);
+    toast.message(`Uploading ${file.name}...`);
+    try {
+      const data = await adminApi.uploadPlugin(file);
+      const url = data?.download_url || data?.downloadUrl || data?.url || '';
+      const version = data?.version || plugin.pluginVersion;
+      toast.success('Plugin uploaded successfully');
+      // Auto-save the returned URL/version
+      await handleSavePlugin({ pluginDownloadUrl: url, pluginVersion: version });
+    } catch (err) {
+      toast.error(err?.message || 'Plugin upload failed');
+    } finally {
+      setUploadingPlugin(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 800);
@@ -298,6 +372,94 @@ export const Settings = () => {
           <Button onClick={handleChangePassword} className="admin-btn-primary" data-testid="change-password-btn">
             Change Password
           </Button>
+        </div>
+      </div>
+
+      {/* WordPress Plugin */}
+      <div className="admin-card p-6" data-testid="settings-plugin-section">
+        <h3 className="text-lg font-semibold text-[#09090B] mb-4">WordPress Plugin</h3>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Plugin Version</Label>
+            <Input
+              value={plugin.pluginVersion}
+              onChange={(e) => setPlugin((p) => ({ ...p, pluginVersion: e.target.value }))}
+              placeholder="1.0.0"
+              className="admin-input"
+              data-testid="settings-plugin-version"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Plugin Download URL</Label>
+            <Input
+              value={plugin.pluginDownloadUrl}
+              onChange={(e) => setPlugin((p) => ({ ...p, pluginDownloadUrl: e.target.value }))}
+              placeholder="https://cdn.seojalwa.com/plugin/seojalwa-plugin-1.0.0.zip"
+              className="admin-input"
+              data-testid="settings-plugin-download-url"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Changelog</Label>
+            <Textarea
+              rows={4}
+              value={plugin.pluginChangelog}
+              onChange={(e) => setPlugin((p) => ({ ...p, pluginChangelog: e.target.value }))}
+              placeholder="• Improved connection reliability&#10;• Added Gutenberg block support"
+              className="admin-input"
+              data-testid="settings-plugin-changelog"
+            />
+          </div>
+
+          {plugin.pluginDownloadUrl && (
+            <div className="text-sm text-[#71717A]">
+              Current download URL:{' '}
+              <a
+                href={plugin.pluginDownloadUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[#1D9E75] hover:underline inline-flex items-center gap-1"
+                data-testid="settings-plugin-current-url"
+              >
+                {plugin.pluginDownloadUrl}
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button
+              onClick={() => handleSavePlugin()}
+              disabled={savingPlugin}
+              className="admin-btn-primary"
+              data-testid="save-plugin-btn"
+            >
+              {savingPlugin ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
+              Save plugin settings
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".zip,application/zip"
+              onChange={handleUploadPlugin}
+              className="hidden"
+              data-testid="settings-plugin-file-input"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPlugin}
+              className="border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE]"
+              data-testid="upload-plugin-btn"
+            >
+              {uploadingPlugin ? (
+                <><Loader2 size={14} className="animate-spin mr-2" />Uploading...</>
+              ) : (
+                <><Upload size={14} className="mr-2" />Upload new plugin ZIP</>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 

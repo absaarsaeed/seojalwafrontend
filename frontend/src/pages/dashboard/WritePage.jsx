@@ -196,8 +196,18 @@ export const WritePage = () => {
         try {
           const job = await articlesApi.job(jobId);
           const status = (job?.status || '').toLowerCase();
-          setGenerationStatus(status || 'in_progress');
-          if (status === 'completed' || status === 'success') {
+          const progress = typeof job?.progress === 'number' ? job.progress : null;
+          // Map progress → stage label.
+          let stage = status || 'in_progress';
+          if (progress !== null) {
+            if (progress < 30) stage = 'Researching your topic...';
+            else if (progress < 60) stage = 'Writing your article...';
+            else if (progress < 85) stage = 'Creating hero image...';
+            else if (progress < 100) stage = 'Publishing to your site...';
+            else stage = 'Done!';
+          }
+          setGenerationStatus(stage);
+          if (status === 'completed' || status === 'success' || progress === 100) {
             clearInterval(articleJobRef.current);
             articleJobRef.current = null;
             const content = job?.content || job?.result?.content || job?.article?.content || '';
