@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import { WRITE_DATA } from '../../data/publicData';
 import { useSite } from '../../context/SiteContext';
@@ -154,11 +155,13 @@ export const WritePage = () => {
       toast.error('Please enter a topic or brief');
       return;
     }
-    // Flip UI state synchronously so the status row mounts immediately,
-    // even before any awaits resolve.
-    setIsGenerating(true);
-    setGenerationStatus('queued');
-    setGenerated('');
+    // Force a synchronous commit so the status row mounts immediately,
+    // even if the no-site branch resets state on the very next tick.
+    flushSync(() => {
+      setIsGenerating(true);
+      setGenerationStatus('queued');
+      setGenerated('');
+    });
     if (!activeSite?.id) {
       toast.error('Connect a site first to generate articles');
       setIsGenerating(false);

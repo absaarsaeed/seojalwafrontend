@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Dialog, DialogContent,
+  Dialog, DialogContent, DialogTitle,
 } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -158,6 +158,7 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-3xl p-0 overflow-hidden" data-testid="wordpress-connect-modal">
+        <DialogTitle className="sr-only">Connect Your WordPress Site</DialogTitle>
         <div className="bg-white">
           <div className="p-6 border-b border-[#F0F0F0] flex items-center gap-3">
             <PlatformLogo name="WordPress" size={40} />

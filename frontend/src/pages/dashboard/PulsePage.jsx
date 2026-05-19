@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PULSE_DATA } from '../../data/publicData';
@@ -106,10 +107,12 @@ export const PulsePage = () => {
   }, [activeSite?.id]);
 
   const handleScan = async () => {
-    // Flip UI state synchronously so the button label updates immediately,
-    // even before any awaits resolve and even if there's no active site.
-    setIsScanning(true);
-    setScanStatus('queued');
+    // Force a synchronous commit so the button label flips immediately,
+    // even if the no-site branch resets state on the very next tick.
+    flushSync(() => {
+      setIsScanning(true);
+      setScanStatus('queued');
+    });
     if (!activeSite?.id) {
       toast.error('Connect a site first');
       setIsScanning(false);
