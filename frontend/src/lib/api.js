@@ -16,7 +16,14 @@
  * 401 on user-authed requests triggers a single-flight refresh + retry.
  */
 
-const BASE_URL = (process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
+const BASE_URL = (
+  process.env.REACT_APP_API_BASE_URL ||
+  // Production external backend. REACT_APP_BACKEND_URL is reserved by the
+  // Emergent platform and points to the preview host, which has no /api routes —
+  // so we prefer REACT_APP_API_BASE_URL when present, falling back to the
+  // known SEO Jalwa Railway deployment.
+  'https://api.seojalwa.com'
+).replace(/\/$/, '');
 
 // ---- Token storage ---------------------------------------------------------
 
@@ -300,7 +307,39 @@ export const adminApi = {
   blog: () => api.get('/api/admin/blog', { auth: 'admin' }),
   announcements: () => api.get('/api/admin/announcements', { auth: 'admin' }),
   apiKeys: () => api.get('/api/admin/api-keys', { auth: 'admin' }),
+  updateApiKey: (key, fields) =>
+    api.put(`/api/admin/api-keys/${encodeURIComponent(key)}`, { fields }, { auth: 'admin' }),
+  testApiKey: (key) =>
+    api.post(`/api/admin/api-keys/${encodeURIComponent(key)}/test`, {}, { auth: 'admin' }),
   settings: () => api.get('/api/admin/settings', { auth: 'admin' }),
+};
+
+// AI Visibility (extended) -------------------------------------------------
+export const aiVisibilityLatestApi = {
+  latest: (siteId) => api.get('/api/ai-visibility/latest', { query: { siteId } }),
+};
+
+// Analytics — Google Search Console ----------------------------------------
+export const gscApi = {
+  // Spec: GET /api/analytics/gsc/connect → { authUrl }. Falls back to POST if GET unavailable.
+  connect: async () => {
+    try {
+      return await api.get('/api/analytics/gsc/connect');
+    } catch (err) {
+      if (err.status === 405) {
+        return api.post('/api/analytics/gsc/connect', {});
+      }
+      throw err;
+    }
+  },
+  sync: (siteId) => api.post('/api/analytics/sync', { siteId }),
+};
+
+// Brand voice --------------------------------------------------------------
+export const brandVoiceApi = {
+  train: (payload) => api.post('/api/brand-voice/train', payload),
+  job: (jobId) => api.get(`/api/brand-voice/job/${jobId}`),
+  get: (siteId) => api.get('/api/brand-voice', { query: { siteId } }),
 };
 
 export default api;

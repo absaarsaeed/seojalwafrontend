@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { PULSE_DATA } from '../../data/publicData';
 import { useSite } from '../../context/SiteContext';
-import { aiVisibilityApi } from '../../lib/api';
+import { aiVisibilityApi, aiVisibilityLatestApi } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible';
 import { Progress } from '../../components/ui/progress';
-import { RefreshCw, Plus, ArrowRight, TrendingUp, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Plus, ArrowRight, ChevronDown, MessageSquareText } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const fadeInUp = {
@@ -30,14 +32,31 @@ const StatusBadge = ({ status }) => {
 };
 
 const DifficultyBadge = ({ difficulty }) => {
+  const key = (difficulty || '').toString().toLowerCase();
   const colors = {
-    Easy: 'bg-[#1D9E75]/10 text-[#1D9E75]',
-    Medium: 'bg-[#F59E0B]/10 text-[#F59E0B]',
-    Hard: 'bg-[#EF4444]/10 text-[#EF4444]'
+    easy: 'bg-[#1D9E75]/10 text-[#1D9E75]',
+    medium: 'bg-[#F59E0B]/10 text-[#F59E0B]',
+    hard: 'bg-[#EF4444]/10 text-[#EF4444]',
   };
+  const label = difficulty ? difficulty[0].toUpperCase() + difficulty.slice(1) : 'Easy';
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[difficulty]}`}>
-      {difficulty}
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[key] || colors.easy}`}>
+      {label}
+    </span>
+  );
+};
+
+const ImpactBadge = ({ impact }) => {
+  const key = (impact || '').toString().toLowerCase();
+  const colors = {
+    low: 'bg-[#71717A]/10 text-[#71717A]',
+    medium: 'bg-[#2563EB]/10 text-[#2563EB]',
+    high: 'bg-[#1D9E75]/10 text-[#1D9E75]',
+  };
+  const label = `${key ? key[0].toUpperCase() + key.slice(1) : 'Low'} impact`;
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[key] || colors.low}`}>
+      {label}
     </span>
   );
 };
@@ -60,6 +79,8 @@ export const PulsePage = () => {
   const [newCompetitor, setNewCompetitor] = useState('');
   const [simulatorQuery, setSimulatorQuery] = useState('');
   const [scans, setScans] = useState([]);
+  const [latest, setLatest] = useState(null);
+  const [queriesOpen, setQueriesOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
@@ -69,6 +90,10 @@ export const PulsePage = () => {
       try {
         const list = await aiVisibilityApi.scans(activeSite.id);
         if (!cancelled) setScans(Array.isArray(list) ? list : []);
+      } catch {}
+      try {
+        const data = await aiVisibilityLatestApi.latest(activeSite.id);
+        if (!cancelled) setLatest(data || null);
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -84,6 +109,10 @@ export const PulsePage = () => {
       await aiVisibilityApi.scan({ siteId: activeSite.id });
       const list = await aiVisibilityApi.scans(activeSite.id);
       setScans(Array.isArray(list) ? list : []);
+      try {
+        const data = await aiVisibilityLatestApi.latest(activeSite.id);
+        setLatest(data || null);
+      } catch {}
       toast.success('New AI visibility scan completed');
     } catch (err) {
       toast.error(err?.message || 'Could not run scan');
@@ -92,8 +121,10 @@ export const PulsePage = () => {
     }
   };
 
-  const liveScore = scans?.[0]?.overallScore;
+  const liveScore = latest?.overallScore ?? scans?.[0]?.overallScore;
   const displayScore = liveScore ?? data.overallScore;
+  const liveRecs = Array.isArray(latest?.recommendations) ? latest.recommendations : null;
+  const liveQueries = Array.isArray(latest?.queries) ? latest.queries : null;
 
   return (
     <motion.div
@@ -131,6 +162,37 @@ export const PulsePage = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Queries tested — collapsible, only shown when backend supplied them */}
+          {liveQueries && liveQueries.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="queries-section">
+              <Collapsible open={queriesOpen} onOpenChange={setQueriesOpen}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between"
+                    data-testid="queries-toggle"
+                  >
+                    <div className="flex items-center gap-2 text-left">
+                      <MessageSquareText size={16} className="text-[#1D9E75]" />
+                      <div>
+                        <h3 className="font-semibold text-[#0A0A0A]">Queries tested</h3>
+                        <p className="text-xs text-[#6B7280]">We asked these {liveQueries.length} questions to each AI model</p>
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className={`text-[#6B7280] transition-transform ${queriesOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <ol className="list-decimal pl-6 space-y-1.5 text-sm text-[#0A0A0A]">
+                    {liveQueries.map((q, i) => (
+                      <li key={i}>{q}</li>
+                    ))}
+                  </ol>
+                </CollapsibleContent>
+              </Collapsible>
+            </motion.div>
+          )}
+
           {/* Score Over Time */}
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
             <h3 className="font-semibold text-[#0A0A0A] mb-4">Visibility Score Over Time</h3>
@@ -217,24 +279,68 @@ export const PulsePage = () => {
         </TabsContent>
 
         <TabsContent value="recommendations" className="space-y-6">
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="recommendations-card">
             <h3 className="font-semibold text-[#0A0A0A] mb-4">Improvement Recommendations</h3>
-            <div className="space-y-4">
-              {data.recommendations.map((rec, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <DifficultyBadge difficulty={rec.difficulty} />
-                    <span className="text-sm text-[#0A0A0A]">{rec.text}</span>
+            {liveRecs === null ? (
+              <div className="space-y-4">
+                {data.recommendations.map((rec, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <DifficultyBadge difficulty={rec.difficulty} />
+                      <span className="text-sm text-[#0A0A0A]">{rec.text}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-[#1D9E75] font-medium">+{rec.impact} pts</span>
+                      <Button size="sm" variant="ghost" className="text-[#1D9E75]">
+                        Start <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-[#1D9E75] font-medium">+{rec.impact} pts</span>
-                    <Button size="sm" variant="ghost" className="text-[#1D9E75]">
-                      Start <ArrowRight size={14} className="ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : liveRecs.length === 0 ? (
+              <div className="py-12 text-center text-sm text-[#6B7280]" data-testid="recommendations-empty">
+                Run a scan to get recommendations.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {liveRecs.map((rec, i) => {
+                  const action = rec.action || rec.text || '';
+                  const isWriteArticle = /write\s+an?\s+article/i.test(action);
+                  return (
+                    <div
+                      key={i}
+                      className="flex flex-wrap items-start justify-between gap-3 p-4 bg-[#F9FAFB] rounded-lg"
+                      data-testid={`recommendation-${i}`}
+                    >
+                      <div className="flex-1 min-w-[240px] space-y-2">
+                        <p className="text-sm text-[#0A0A0A]">{action}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <DifficultyBadge difficulty={rec.difficulty} />
+                          <ImpactBadge impact={rec.expectedImpact || rec.impact} />
+                          {rec.category && (
+                            <span className="px-2 py-0.5 rounded text-xs text-[#71717A] bg-white border border-[#F0F0F0]">
+                              {rec.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isWriteArticle ? (
+                        <Link to="/dashboard/ai-writer">
+                          <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid={`recommendation-write-${i}`}>
+                            Write now <ArrowRight size={14} className="ml-1" />
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button size="sm" variant="ghost" className="text-[#1D9E75]">
+                          Start <ArrowRight size={14} className="ml-1" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         </TabsContent>
       </Tabs>

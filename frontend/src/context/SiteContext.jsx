@@ -94,7 +94,8 @@ export const SiteProvider = ({ children }) => {
     const payload = {
       name,
       url: url || domain,
-      platform: (platform || 'wordpress').toLowerCase(),
+      // Live API requires UPPERCASE enum values: WORDPRESS, SHOPIFY, ...
+      platform: (platform || 'wordpress').toUpperCase(),
     };
     const created = await sitesApi.create(payload);
     const site = normaliseSite(created?.id ? created : created?.site || created);

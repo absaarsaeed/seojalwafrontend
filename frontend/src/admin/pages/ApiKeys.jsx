@@ -1,272 +1,382 @@
-import { useState, useEffect } from 'react';
-import { useAdmin } from '../context/AdminContext';
-import { CardSkeleton } from '../components/SkeletonLoaders';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { toast } from 'sonner';
-import { 
-  Brain, Cpu, Sparkles, Search, CreditCard, Mail, BarChart3, HardDrive,
-  Instagram, Linkedin, Twitter, Youtube, MapPin, Layout, FileText, Target,
-  CheckCircle2, XCircle, Clock, Info, Eye, EyeOff, Plug
+import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from '../../components/ui/collapsible';
+import { CardSkeleton } from '../components/SkeletonLoaders';
+import {
+  Eye, EyeOff, Check, Save, Loader2, AlertCircle, ChevronDown,
+  Clock, ExternalLink, KeyRound,
 } from 'lucide-react';
+import { adminApi } from '../../lib/api';
+import { adaptService, SECTIONS, SECTION_COLORS, SERVICE_CATALOG } from '../data/serviceCatalog';
 
-const iconMap = {
-  'brain': Brain,
-  'cpu': Cpu,
-  'sparkles': Sparkles,
-  'search': Search,
-  'credit-card': CreditCard,
-  'mail': Mail,
-  'bar-chart': BarChart3,
-  'hard-drive': HardDrive,
-  'instagram': Instagram,
-  'linkedin': Linkedin,
-  'twitter': Twitter,
-  'youtube': Youtube,
-  'pin': MapPin,
-  'layout': Layout,
-  'file-text': FileText,
-  'target': Target
+// ── Helpers ────────────────────────────────────────────────────────────────
+const STATUS_META = {
+  connected: { label: 'Connected', cls: 'bg-[#1D9E75]/10 text-[#1D9E75]' },
+  not_connected: { label: 'Not connected', cls: 'bg-[#71717A]/10 text-[#71717A]' },
+  error: { label: 'Error', cls: 'bg-[#EF4444]/10 text-[#EF4444]' },
+  pending_review: { label: 'Pending review', cls: 'bg-[#F59E0B]/10 text-[#F59E0B]' },
+};
+
+const relativeTime = (iso) => {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diffSec = Math.max(0, Math.round((Date.now() - then) / 1000));
+  if (diffSec < 30) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const m = Math.round(diffSec / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hour${h > 1 ? 's' : ''} ago`;
+  const d = Math.round(h / 24);
+  return `${d} day${d > 1 ? 's' : ''} ago`;
 };
 
 const StatusBadge = ({ status }) => {
-  const config = {
-    connected: { icon: CheckCircle2, text: 'Connected', color: 'text-[#1D9E75] bg-[#1D9E75]/10' },
-    not_connected: { icon: XCircle, text: 'Not connected', color: 'text-[#71717A] bg-[#71717A]/10' },
-    pending: { icon: Clock, text: 'Pending review', color: 'text-[#F59E0B] bg-[#F59E0B]/10' }
-  };
-  const { icon: Icon, text, color } = config[status] || config.not_connected;
-  
+  const meta = STATUS_META[status] || STATUS_META.not_connected;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-      <Icon size={12} />
-      {text}
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.cls}`}
+      data-testid={`service-status-${status}`}
+    >
+      {meta.label}
     </span>
   );
 };
 
-const ApiKeyCard = ({ service, section, onSave }) => {
-  const [values, setValues] = useState({});
-  const [showValues, setShowValues] = useState({});
-  const [isEditing, setIsEditing] = useState(false);
+const LogoSquare = ({ section, label }) => {
+  const colour = SECTION_COLORS[section] || '#1D9E75';
+  const initials = (label || '?').split(' ').filter(Boolean).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  return (
+    <div
+      className="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs font-semibold"
+      style={{ backgroundColor: colour }}
+    >
+      {initials}
+    </div>
+  );
+};
 
-  const Icon = iconMap[service.icon] || Plug;
+// ── Per-service card ───────────────────────────────────────────────────────
+const ServiceCard = ({ service, onSaved, onTested }) => {
+  const [values, setValues] = useState(() => {
+    // Seed inputs with masked backend value (empty string if not yet set).
+    const v = {};
+    for (const f of service.fields) v[f.name] = '';
+    return v;
+  });
+  const [showSecret, setShowSecret] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
+  const [nowTick, setNowTick] = useState(0);
 
-  const handleSave = () => {
-    onSave(section, service.id, values);
-    setIsEditing(false);
-    toast.success(`${service.name} configuration saved`);
+  // Live-relative "last tested" — re-render every 30s.
+  useEffect(() => {
+    if (!service.last_tested) return;
+    const id = setInterval(() => setNowTick((x) => x + 1), 30_000);
+    return () => clearInterval(id);
+  }, [service.last_tested]);
+
+  const handleField = (name, val) => setValues((v) => ({ ...v, [name]: val }));
+
+  const handleSave = async () => {
+    // Only send non-empty fields — empty means "don't change" so we don't blank
+    // out an existing secret.
+    const fieldsPayload = {};
+    for (const f of service.fields) {
+      const val = values[f.name];
+      if (val !== '' && val !== undefined) fieldsPayload[f.name] = val;
+    }
+    if (Object.keys(fieldsPayload).length === 0) {
+      toast.error('Enter a value before saving');
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await adminApi.updateApiKey(service.key, fieldsPayload);
+      toast.success(`${service.label} saved`);
+      // Clear inputs after save so the user knows they were sent.
+      const cleared = {};
+      for (const f of service.fields) cleared[f.name] = '';
+      setValues(cleared);
+      onSaved?.(adaptService(updated || { key: service.key, status: 'connected' }));
+    } catch (err) {
+      toast.error(err?.message || 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleTest = () => {
-    toast.success(`Connection test successful for ${service.name}`);
+  const handleTest = async () => {
+    setTesting(true);
+    try {
+      const res = await adminApi.testApiKey(service.key);
+      const ok = res?.success !== false;
+      const ms = res?.latency_ms ?? res?.latencyMs;
+      const msg = res?.message || (ok ? 'Connected' : 'Connection failed');
+      if (ok) {
+        toast.success(`✓ ${msg}${ms != null ? ` (${ms}ms)` : ''}`);
+      } else {
+        toast.error(`✗ ${msg}`);
+      }
+      onTested?.({
+        key: service.key,
+        status: ok ? 'connected' : 'error',
+        test_status: ok ? 'success' : 'failed',
+        last_tested: res?.tested_at || new Date().toISOString(),
+      });
+    } catch (err) {
+      toast.error(`✗ ${err?.message || 'Connection failed'}`);
+      onTested?.({
+        key: service.key,
+        status: 'error',
+        test_status: 'failed',
+        last_tested: new Date().toISOString(),
+      });
+    } finally {
+      setTesting(false);
+    }
   };
-
-  const toggleShowValue = (key) => {
-    setShowValues(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  // OAuth only card
-  if (service.isOAuth) {
-    return (
-      <div className="admin-card p-5" data-testid={`api-key-card-${service.id}`}>
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-[#FAFAFA] flex items-center justify-center flex-shrink-0">
-            <Icon size={20} className="text-[#71717A]" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-semibold text-[#09090B]">{service.name}</h4>
-            </div>
-            <p className="text-sm text-[#71717A]">{service.description}</p>
-            <div className="mt-3 p-3 bg-[#FAFAFA] rounded-lg">
-              <p className="text-xs text-[#71717A] flex items-center gap-1">
-                <Info size={12} />
-                No configuration needed - users connect their own accounts via OAuth
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="admin-card p-5" data-testid={`api-key-card-${service.id}`}>
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-lg bg-[#E8F5F1] flex items-center justify-center flex-shrink-0">
-          <Icon size={20} className="text-[#1D9E75]" />
+    <div
+      className="admin-card p-5 space-y-4"
+      data-testid={`service-card-${service.key}`}
+      data-tick={nowTick}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <LogoSquare section={service.section} label={service.label} />
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[#09090B] truncate">{service.label}</h3>
+            {service.description && (
+              <p className="text-xs text-[#71717A] mt-0.5 line-clamp-2">{service.description}</p>
+            )}
+          </div>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-[#09090B]">{service.name}</h4>
-              <StatusBadge status={service.status} />
-            </div>
-          </div>
-          <p className="text-sm text-[#71717A] mb-4">{service.description}</p>
+        <StatusBadge status={service.status} />
+      </div>
 
-          {/* Fields */}
-          <div className="space-y-3 mb-4">
-            {service.fields?.map((field) => (
-              <div key={field.key} className="space-y-1">
-                <Label className="text-xs text-[#71717A]">{field.label}</Label>
-                <div className="relative">
-                  <Input
-                    type={field.type === 'password' && !showValues[field.key] ? 'password' : 'text'}
-                    value={values[field.key] || ''}
-                    onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                    placeholder={service.status === 'connected' && service.maskedValue ? service.maskedValue : `Enter ${field.label.toLowerCase()}`}
-                    className="admin-input pr-10"
-                    disabled={!isEditing && service.status === 'connected'}
-                    data-testid={`input-${service.id}-${field.key}`}
-                  />
-                  {field.type === 'password' && (
-                    <button
-                      type="button"
-                      onClick={() => toggleShowValue(field.key)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#27272A]"
-                    >
-                      {showValues[field.key] ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  )}
-                </div>
+      {/* Fields */}
+      <div className="space-y-3">
+        {service.fields.map((f) => {
+          const isPwd = f.type === 'password';
+          const shown = showSecret[f.name];
+          return (
+            <div key={f.name} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-[#71717A]">{f.label}{f.required && <span className="text-[#EF4444]"> *</span>}</Label>
+                {f.isSet && <span className="text-[10px] text-[#1D9E75]"><Check size={10} className="inline mr-0.5" />Set</span>}
               </div>
-            ))}
-          </div>
+              <div className="relative">
+                <Input
+                  type={isPwd && !shown ? 'password' : f.type === 'password' ? 'text' : f.type}
+                  placeholder={f.value ? f.value : f.placeholder}
+                  value={values[f.name] || ''}
+                  onChange={(e) => handleField(f.name, e.target.value)}
+                  className="admin-input pr-9"
+                  data-testid={`service-${service.key}-field-${f.name}`}
+                />
+                {isPwd && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret((s) => ({ ...s, [f.name]: !s[f.name] }))}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#71717A] hover:text-[#09090B]"
+                    aria-label="Toggle visibility"
+                  >
+                    {shown ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-          {/* Instructions */}
-          {service.instructions && (
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-[#71717A] mb-2">How to get this key:</p>
-              <ol className="text-xs text-[#71717A] space-y-1 list-decimal list-inside">
-                {service.instructions.map((step, i) => (
-                  <li key={i}>{step}</li>
+      {/* How to get this key */}
+      {service.instructions && (
+        <Collapsible open={howToOpen} onOpenChange={setHowToOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-[#1D9E75] hover:underline"
+              data-testid={`service-${service.key}-howto-toggle`}
+            >
+              <KeyRound size={12} />
+              {service.instructions.title || 'How to get this key'}
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${howToOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 p-3 bg-[#FAFAFA] rounded-md space-y-2 border border-[#F0F0F0]">
+            {service.instructions.steps?.length > 0 && (
+              <ol className="text-xs text-[#27272A] space-y-1 list-decimal pl-4">
+                {service.instructions.steps.map((s, i) => (
+                  <li key={i}>{s}</li>
                 ))}
               </ol>
-            </div>
-          )}
-
-          {/* Note */}
-          {service.note && (
-            <p className="text-xs text-[#F59E0B] mb-4 flex items-center gap-1">
-              <Info size={12} />
-              {service.note}
-            </p>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            {service.status === 'connected' && !isEditing ? (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="admin-btn-secondary h-8"
-                onClick={() => setIsEditing(true)}
-              >
-                Edit
-              </Button>
-            ) : (
-              <Button 
-                size="sm" 
-                className="admin-btn-primary h-8"
-                onClick={handleSave}
-                data-testid={`save-${service.id}`}
-              >
-                Save
-              </Button>
             )}
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="admin-btn-secondary h-8"
-              onClick={handleTest}
-              data-testid={`test-${service.id}`}
-            >
-              Test connection
-            </Button>
-          </div>
-        </div>
+            {service.instructions.url && (
+              <a
+                href={service.instructions.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1 text-xs text-[#1D9E75] hover:underline"
+                data-testid={`service-${service.key}-howto-link`}
+              >
+                Open platform <ExternalLink size={12} />
+              </a>
+            )}
+            {service.instructions.note && (
+              <p className="text-[11px] text-[#71717A] italic">{service.instructions.note}</p>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-2 border-t border-[#F0F0F0]">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saving}
+          className="admin-btn-primary h-8"
+          data-testid={`service-${service.key}-save-btn`}
+        >
+          {saving ? <Loader2 size={14} className="animate-spin mr-1.5" /> : <Save size={14} className="mr-1.5" />}
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleTest}
+          disabled={testing}
+          className="admin-btn-secondary h-8"
+          data-testid={`service-${service.key}-test-btn`}
+        >
+          {testing ? (
+            <><Loader2 size={14} className="animate-spin mr-1.5" />Testing...</>
+          ) : (
+            <>Test connection</>
+          )}
+        </Button>
+        {service.last_tested && (
+          <span className="text-xs text-[#71717A] ml-auto flex items-center gap-1">
+            <Clock size={12} />
+            Last tested: {relativeTime(service.last_tested)}
+          </span>
+        )}
       </div>
     </div>
   );
 };
 
+// ── Page ──────────────────────────────────────────────────────────────────
 export const ApiKeys = () => {
-  const { apiKeys, updateApiKey } = useAdmin();
-  const [isLoading, setIsLoading] = useState(true);
+  const [services, setServices] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await adminApi.apiKeys();
+        if (cancelled) return;
+        const arr = Array.isArray(list) ? list : list?.services || [];
+        // Adapt + dedupe by key (backend may include catalog entries we don't recognise).
+        const adapted = arr.map(adaptService);
+        // If backend doesn't include some catalog entries, surface them with default not_connected state.
+        const seen = new Set(adapted.map((s) => s.key));
+        for (const [k, meta] of Object.entries(SERVICE_CATALOG)) {
+          if (!seen.has(k)) {
+            adapted.push(adaptService({ key: k, ...meta, status: 'not_connected' }));
+          }
+        }
+        setServices(adapted);
+      } catch (err) {
+        if (!cancelled) setError(err?.message || 'Could not load API keys');
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  const sections = [
-    { key: 'ai', title: 'AI Models', description: 'Configure AI providers for content generation' },
-    { key: 'payments', title: 'Payments', description: 'Payment processing and billing' },
-    { key: 'email', title: 'Email', description: 'Email delivery services' },
-    { key: 'seo', title: 'SEO Data', description: 'SEO and keyword research providers' },
-    { key: 'analytics', title: 'Analytics & Search Data', description: 'Google Search Console and analytics-related integrations' },
-    { key: 'storage', title: 'File Storage', description: 'Object storage for media files' },
-    { key: 'social', title: 'Social Media OAuth Apps', description: 'Platform-level developer credentials for social integrations' },
-    { key: 'cms', title: 'CMS Integrations', description: 'Content management system connections' }
-  ];
+  const onCardUpdated = (updated) => {
+    setServices((prev) => prev?.map((s) => (s.key === updated.key ? { ...s, ...updated } : s)) || prev);
+  };
 
-  if (isLoading) {
+  const grouped = useMemo(() => {
+    if (!services) return null;
+    const map = {};
+    for (const s of services) {
+      const sec = s.section || 'Other';
+      map[sec] = map[sec] || [];
+      map[sec].push(s);
+    }
+    return map;
+  }, [services]);
+
+  if (!services) {
     return (
-      <div className="space-y-8">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="space-y-4">
-            <div className="h-6 w-32 bg-[#F0F0F0] rounded skeleton-pulse" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CardSkeleton />
-              <CardSkeleton />
-            </div>
-          </div>
-        ))}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((i) => <CardSkeleton key={i} />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="admin-card p-6 flex items-center gap-3 text-[#EF4444]" data-testid="api-keys-error">
+        <AlertCircle size={20} />
+        <span className="text-sm">{error}</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-8" data-testid="api-keys-page">
-      {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-[#09090B]">API Keys & Integrations</h2>
+        <h2 className="text-xl font-semibold text-[#09090B]">API Keys &amp; Integrations</h2>
         <p className="text-sm text-[#71717A] mt-1">
-          Add your API keys here. All keys are encrypted. Changes take effect immediately without any code deployment.
+          Configure third-party services that power SEO Jalwa. {services.length} services configured.
         </p>
       </div>
 
-      {/* Sections */}
-      {sections.map((section) => (
-        <div key={section.key}>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-[#09090B]">{section.title}</h3>
-            <p className="text-sm text-[#71717A]">{section.description}</p>
-          </div>
-          
-          {section.key === 'social' && (
-            <div className="mb-4 p-3 bg-[#FAFAFA] border border-[#F0F0F0] rounded-lg">
-              <p className="text-xs text-[#71717A]">
-                <strong>Note:</strong> These are your developer app credentials. Set these up once and all your users can connect their social accounts.
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {apiKeys[section.key]?.map((service) => (
-              <ApiKeyCard
-                key={service.id}
-                service={service}
-                section={section.key}
-                onSave={updateApiKey}
+      {SECTIONS.map((sectionName) => {
+        const list = grouped[sectionName];
+        if (!list || list.length === 0) return null;
+        return (
+          <section key={sectionName} className="space-y-4" data-testid={`api-keys-section-${sectionName.toLowerCase().replace(/\s+/g, '-')}`}>
+            <div className="flex items-center gap-3">
+              <span
+                className="w-1.5 h-5 rounded-full"
+                style={{ backgroundColor: SECTION_COLORS[sectionName] }}
               />
-            ))}
-          </div>
-        </div>
-      ))}
+              <h3 className="text-sm font-semibold text-[#09090B]">{sectionName}</h3>
+              <span className="text-xs text-[#71717A]">({list.length})</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {list.map((service) => (
+                <ServiceCard
+                  key={service.key}
+                  service={service}
+                  onSaved={onCardUpdated}
+                  onTested={onCardUpdated}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 };

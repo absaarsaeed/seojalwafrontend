@@ -96,14 +96,14 @@ const Hero = () => (
           className="font-bricolage tracking-tight leading-[0.95] text-[#0A0A0A] mb-6"
           style={{ fontSize: 'clamp(40px, 7.5vw, 80px)' }}
         >
-          <div>Get Found. Get Recommended.</div>
-          <div>By Google, <span className="text-[#1D9E75]">ChatGPT, Perplexity</span></div>
-          <div>And Your Next 1,000 Customers.</div>
+          <div>Your Website. Your Social.</div>
+          <div>Your SEO.</div>
+          <div>All on <span className="text-[#1D9E75]">Autopilot</span>.</div>
         </motion.h1>
 
         {/* Subhead */}
         <motion.p variants={fadeUp} className="text-lg md:text-xl text-[#6B7280] max-w-3xl mx-auto mb-8 leading-relaxed">
-          SEO Jalwa writes and publishes 1 expert article to your website every day, grows your AI search visibility, and posts to all your social media — completely automatically. Set it up once.
+          We publish 1 SEO article to your website every day, post to all your social media automatically, track your Google rankings, and make sure AI recommends your business — not your competitors.
         </motion.p>
 
         {/* CTAs */}
@@ -121,6 +121,25 @@ const Hero = () => (
               See how it works ↓
             </Button>
           </a>
+        </motion.div>
+
+        {/* Feature pills — 4 capabilities at a glance */}
+        <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-2 mb-6" data-testid="hero-feature-pills">
+          {[
+            { icon: '📝', label: 'Daily articles' },
+            { icon: '📱', label: 'Social autopilot' },
+            { icon: '🔍', label: 'AI visibility' },
+            { icon: '📊', label: 'Google rankings' },
+          ].map((pill) => (
+            <span
+              key={pill.label}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#1D9E75]/20 text-sm text-[#0A0A0A] shadow-sm"
+              data-testid={`hero-pill-${pill.label.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              <span className="text-base leading-none">{pill.icon}</span>
+              <span>{pill.label}</span>
+            </span>
+          ))}
         </motion.div>
 
         {/* Trust row */}

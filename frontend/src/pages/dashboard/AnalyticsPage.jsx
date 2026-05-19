@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import {
@@ -8,12 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Check, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
+import { Check, ArrowUp, ArrowDown, ExternalLink, Loader2 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
 import { useSite } from '../../context/SiteContext';
-import { analyticsApi } from '../../lib/api';
+import { analyticsApi, gscApi } from '../../lib/api';
+import { toast } from 'sonner';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -105,8 +107,28 @@ const MetricCard = ({ label, value, delta, deltaPositive, color }) => (
 
 export const AnalyticsPage = () => {
   const { activeSite } = useSite();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [range, setRange] = useState('30d');
   const [overview, setOverview] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [gscConnecting, setGscConnecting] = useState(false);
+  const [gscSyncing, setGscSyncing] = useState(false);
+
+  // Detect ?connected=true after OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('connected') === 'true') {
+      toast.success('Google Search Console connected!');
+      params.delete('connected');
+      const newSearch = params.toString();
+      navigate(
+        `${location.pathname}${newSearch ? `?${newSearch}` : ''}`,
+        { replace: true },
+      );
+      setReloadKey((k) => k + 1);
+    }
+  }, [location.search, location.pathname, navigate]);
 
   useEffect(() => {
     if (!activeSite?.id) return;
@@ -118,13 +140,47 @@ export const AnalyticsPage = () => {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [activeSite?.id, range]);
+  }, [activeSite?.id, range, reloadKey]);
 
   const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
   const liveClicks = overview ? fmt(overview.totalClicks) : '26,089';
   const liveImpr = overview ? fmt(overview.totalImpressions) : '1,867,192';
   const liveCtr = overview ? `${(overview.avgCTR * 100).toFixed(2)}%` : '1.40%';
   const livePos = overview ? overview.avgPosition?.toFixed(1) : '2.8';
+
+  const handleGscConnect = async () => {
+    setGscConnecting(true);
+    try {
+      const res = await gscApi.connect();
+      const authUrl = res?.authUrl || res?.auth_url;
+      if (authUrl) {
+        window.location.href = authUrl;
+        return; // navigation will discard component
+      }
+      toast.error('Could not start Google Search Console connection');
+    } catch (err) {
+      toast.error(err?.message || 'Could not connect Google Search Console');
+    } finally {
+      setGscConnecting(false);
+    }
+  };
+
+  const handleSyncNow = async () => {
+    if (!activeSite?.id) {
+      toast.error('Connect a site first');
+      return;
+    }
+    setGscSyncing(true);
+    try {
+      await gscApi.sync(activeSite.id);
+      toast.success('Analytics synced');
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err?.message || 'Sync failed');
+    } finally {
+      setGscSyncing(false);
+    }
+  };
 
   return (
     <motion.div
@@ -165,8 +221,27 @@ export const AnalyticsPage = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="border-[#F0F0F0] bg-white">Select Property</Button>
-          <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Sync Now</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleGscConnect}
+            disabled={gscConnecting}
+            className="border-[#F0F0F0] bg-white"
+            data-testid="gsc-connect-btn"
+          >
+            {gscConnecting ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+            Connect Google Search Console
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSyncNow}
+            disabled={gscSyncing}
+            className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+            data-testid="gsc-sync-btn"
+          >
+            {gscSyncing ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+            {gscSyncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
           <Button size="sm" variant="ghost" className="text-[#6B7280]">Disconnect</Button>
         </div>
       </motion.div>

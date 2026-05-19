@@ -236,6 +236,42 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 2. ✅ **Admin credentials** — confirmed `jalwa / jalwaisadmin`.
 3. ✅ **Made with Emergent badge** — removed from `public/index.html`.
 
+## Phase 8: Phase-1 Backend Updates Wiring (Feb 19, 2026)
+
+### Discovered live-API quirks
+- **Admin auth header**: `X-Admin-Token` (NOT `Authorization: Bearer`).
+- **`REACT_APP_BACKEND_URL` is platform-managed** and resets to the preview host — so `lib/api.js` reads `REACT_APP_API_BASE_URL` first and falls back to a hard-coded `https://api.seojalwa.com`.
+- **Site platform enum** must be UPPERCASE (`WORDPRESS`, `SHOPIFY`, ...).
+- **Sites response** uses `url` → frontend `SiteContext` derives `domain` from URL for legacy components.
+- **`/api/admin/api-keys`** currently returns the OLD slim shape `{ key, maskedValue, isActive, testStatus, lastTestedAt }`. Frontend has a `serviceCatalog.js` that merges the slim response with rich client-side metadata (label / section / description / fields / instructions) so the new-shape spec works today and tomorrow.
+- **GSC connect** spec'd as `GET /api/analytics/gsc/connect → { authUrl }`; live API answers GET with `405`. `gscApi.connect()` tries GET first and transparently falls back to POST.
+
+### What landed in this phase
+1. **Homepage hero rewritten** to the 3-line copy + 4-icon pill row (Daily articles / Social autopilot / AI visibility / Google rankings).
+2. **Admin API Keys page completely dynamic** — `ApiKeys.jsx` rebuilt from scratch:
+   - Loads `/api/admin/api-keys`; merges with client `serviceCatalog.js` so labels/sections/fields/instructions are always present.
+   - Groups cards by section (AI Models / Email / SEO / Storage / Google / Social OAuth / Payments) with section accent bar + count.
+   - Each card: colored logo square, status badge (4 states), description, dynamic fields (password show/hide, masked placeholder), collapsible "How to get this key" with steps + platform link + optional note, Save / Test buttons, "Last tested: X ago" relative time auto-updating every 30s.
+   - **Save** → `PUT /api/admin/api-keys/{key}` — only sends non-empty fields so existing secrets aren't blanked.
+   - **Test connection** → `POST /api/admin/api-keys/{key}/test` — shows latency, updates card status to connected/error.
+3. **Article view page** picks up new optional fields: `keyTakeaways`, `faqSchema` (renders FAQ section at the bottom), `estimatedReadTime`, `seoScore` (with red/orange/green ring color), `suggestedTags` (pill row), `metaTitle` + `metaDescription` (preview in SEO sidebar). All null/empty cases hide the corresponding section.
+4. **AI Visibility (`PulsePage`)**:
+   - Fetches `/api/ai-visibility/latest` for live `overallScore`, `recommendations`, `queries`.
+   - Recommendations tab: real difficulty (easy/medium/hard), expected-impact, category badges. "Write an article…" recs get a "Write now →" button linking to the AI Writer. Empty state when backend has no recs.
+   - Overview tab: new collapsible "Queries tested" section showing the 20 generated questions.
+5. **Analytics page GSC flow**:
+   - "Connect Google Search Console" → real OAuth bounce via `GET /api/analytics/gsc/connect` (POST fallback) → `window.location.href = authUrl`.
+   - Detect `?connected=true` on mount → green toast + clean URL + refetch.
+   - "Sync Now" → `POST /api/analytics/sync` with `siteId` + loading state + refetch.
+6. **Brand voice (AI Writer Voice tab)**:
+   - On mount: `GET /api/brand-voice?siteId` to hydrate existing profile.
+   - "Retrain voice model" → `POST /api/brand-voice/train`; polls `/api/brand-voice/job/{id}` every 3s until completed/failed.
+   - Result `profile`: maps `formality / playfulness / technicality` onto the three sliders, shows `tone` description, `writingPersona` as italic blockquote, `characteristicPhrases` as green pills, `thingsToAvoid` as red pills.
+
+### Verified end-to-end
+- `/` hero: 3-line headline + 4 pills rendered correctly.
+- Admin login → `/api-keys`: 29 services configured across 7 sections, 14 cards visible above fold, OpenAI test connection returned "✓ READY", card status auto-updated to "Connected" + "Last tested: just now".
+
 ### P2 (Nice to Have)
 - Export CSV from admin
 - Rich text editor for blog (TipTap/Lexical)

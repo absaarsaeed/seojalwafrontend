@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { WRITE_DATA } from '../../data/publicData';
 import { useSite } from '../../context/SiteContext';
-import { articlesApi } from '../../lib/api';
+import { articlesApi, brandVoiceApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -43,6 +43,87 @@ export const WritePage = () => {
   const [generated, setGenerated] = useState('');
   const [tones, setTones] = useState(data.toneSettings);
   const [library, setLibrary] = useState(data.library);
+  const [voiceProfile, setVoiceProfile] = useState(null);
+  const [isTraining, setIsTraining] = useState(false);
+  const pollRef = useRef(null);
+
+  // Fetch an existing brand-voice profile if the backend has one.
+  useEffect(() => {
+    if (!activeSite?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await brandVoiceApi.get(activeSite.id);
+        if (cancelled || !profile) return;
+        const p = profile.profile || profile;
+        if (p && typeof p === 'object') applyProfile(p);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [activeSite?.id]);
+
+  const applyProfile = (profile) => {
+    if (!profile) return;
+    setVoiceProfile(profile);
+    setTones((prev) => ({
+      ...prev,
+      formalCasual: typeof profile.formality === 'number' ? profile.formality : prev.formalCasual,
+      seriousPlayful: typeof profile.playfulness === 'number' ? profile.playfulness : prev.seriousPlayful,
+      simpleTechnical: typeof profile.technicality === 'number' ? profile.technicality : prev.simpleTechnical,
+    }));
+  };
+
+  const handleRetrainVoice = async () => {
+    if (!activeSite?.id) {
+      toast.error('Connect a site first');
+      return;
+    }
+    setIsTraining(true);
+    try {
+      const websiteUrl = activeSite.url || (activeSite.domain ? `https://${activeSite.domain}` : null);
+      const res = await brandVoiceApi.train({
+        siteId: activeSite.id,
+        websiteUrl,
+      });
+      const jobId = res?.jobId || res?.job_id;
+      if (!jobId) {
+        // Job ran synchronously — apply the profile directly.
+        const p = res?.profile || res?.result?.profile;
+        if (p) applyProfile(p);
+        toast.success('Brand voice trained');
+        setIsTraining(false);
+        return;
+      }
+      // Poll the job.
+      pollRef.current = setInterval(async () => {
+        try {
+          const job = await brandVoiceApi.job(jobId);
+          const status = (job?.status || '').toLowerCase();
+          if (status === 'completed' || status === 'success') {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            const p = job?.result?.profile || job?.profile;
+            if (p) applyProfile(p);
+            toast.success('Brand voice trained');
+            setIsTraining(false);
+          } else if (status === 'failed' || status === 'error') {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+            toast.error(job?.error || 'Training failed');
+            setIsTraining(false);
+          }
+        } catch {
+          // keep polling; transient errors are OK
+        }
+      }, 3000);
+    } catch (err) {
+      toast.error(err?.message || 'Could not start training');
+      setIsTraining(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeSite?.id) return;
@@ -132,8 +213,44 @@ export const WritePage = () => {
             
             <div className="p-4 bg-[#F9FAFB] rounded-lg mb-6">
               <p className="text-sm text-[#6B7280] mb-1">Your brand voice:</p>
-              <p className="text-[#0A0A0A]">{data.voiceDescription}</p>
+              <p className="text-[#0A0A0A]" data-testid="brand-voice-tone">{voiceProfile?.tone || data.voiceDescription}</p>
             </div>
+
+            {/* Writing persona (live) */}
+            {voiceProfile?.writingPersona && (
+              <blockquote
+                className="my-4 px-5 py-4 rounded-lg bg-[#E1F5EE] border-l-4 border-[#1D9E75] text-[#0A0A0A] italic"
+                data-testid="brand-voice-persona"
+              >
+                "{voiceProfile.writingPersona}"
+              </blockquote>
+            )}
+
+            {/* Characteristic phrases & avoidances */}
+            {(voiceProfile?.characteristicPhrases?.length || voiceProfile?.thingsToAvoid?.length) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {voiceProfile?.characteristicPhrases?.length > 0 && (
+                  <div data-testid="brand-voice-phrases">
+                    <p className="text-xs font-medium text-[#6B7280] mb-2 uppercase tracking-wide">Phrases we'll use</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {voiceProfile.characteristicPhrases.map((p, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-[#E1F5EE] text-[#1D9E75]">{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {voiceProfile?.thingsToAvoid?.length > 0 && (
+                  <div data-testid="brand-voice-avoid">
+                    <p className="text-xs font-medium text-[#6B7280] mb-2 uppercase tracking-wide">Phrases we'll avoid</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {voiceProfile.thingsToAvoid.map((p, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs bg-[#EF4444]/10 text-[#EF4444]">{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-6 mb-6">
               <div>
@@ -164,9 +281,9 @@ export const WritePage = () => {
                 <p className="text-sm text-[#6B7280]">Voice consistency score</p>
                 <p className="text-2xl font-bold text-[#1D9E75]">{data.voiceScore}/100</p>
               </div>
-              <Button variant="outline" className="border-[#1D9E75] text-[#1D9E75]">
-                <RefreshCw size={16} className="mr-2" />
-                Retrain voice model
+              <Button onClick={handleRetrainVoice} disabled={isTraining} variant="outline" className="border-[#1D9E75] text-[#1D9E75]" data-testid="retrain-voice-btn">
+                <RefreshCw size={16} className={`mr-2 ${isTraining ? 'animate-spin' : ''}`} />
+                {isTraining ? 'Training...' : 'Retrain voice model'}
               </Button>
             </div>
           </motion.div>
