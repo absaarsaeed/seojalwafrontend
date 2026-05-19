@@ -29,21 +29,70 @@ import { toast } from 'sonner';
 
 const PLATFORMS = ['WordPress', 'Shopify', 'Webflow', 'Ghost', 'Wix', 'Squarespace', 'Other'];
 
+const normaliseUrl = (raw) => {
+  let v = (raw || '').trim();
+  if (!v) return '';
+  if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
+  return v;
+};
+
 export const SiteSwitcher = () => {
   const { sites, activeSite, setActiveSiteId, addSite } = useSite();
   const [openDialog, setOpenDialog] = useState(false);
-  const [form, setForm] = useState({ domain: '', name: '', platform: 'WordPress' });
+  const [form, setForm] = useState({ url: '', name: '', platform: 'WordPress' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleAdd = () => {
-    if (!form.domain.trim() || !form.name.trim()) {
+  const handleAdd = async () => {
+    const url = normaliseUrl(form.url);
+    const name = form.name.trim();
+    if (!url || !name) {
       toast.error('Please fill all fields');
       return;
     }
-    addSite(form);
-    setOpenDialog(false);
-    setForm({ domain: '', name: '', platform: 'WordPress' });
-    toast.success('Site added! Go to Connect Site to set up your integration.');
+    setIsSubmitting(true);
+    try {
+      await addSite({
+        name,
+        url,
+        // SiteContext upper-cases platform for backend enum (WORDPRESS, SHOPIFY, ...).
+        platform: form.platform,
+      });
+      setOpenDialog(false);
+      setForm({ url: '', name: '', platform: 'WordPress' });
+      toast.success('Site added! Go to Connect Site to set up your integration.');
+    } catch (err) {
+      toast.error(err?.message || 'Could not add site');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  // Display fallback: when SiteContext is still empty, show a friendly prompt
+  // instead of an empty button — clicking it opens the Add Site dialog.
+  if (!activeSite) {
+    return (
+      <>
+        <button
+          onClick={() => setOpenDialog(true)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-dashed border-[#1D9E75]/40 hover:border-[#1D9E75] hover:bg-[#E1F5EE]/40 transition-colors text-left"
+          data-testid="site-switcher-empty"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Plus size={16} className="text-[#1D9E75] flex-shrink-0" />
+            <span className="text-sm font-medium text-[#1D9E75] truncate">Add your first website</span>
+          </div>
+        </button>
+        <AddSiteDialog
+          open={openDialog}
+          onOpenChange={setOpenDialog}
+          form={form}
+          setForm={setForm}
+          isSubmitting={isSubmitting}
+          onSubmit={handleAdd}
+        />
+      </>
+    );
+  }
 
   return (
     <>
@@ -53,9 +102,11 @@ export const SiteSwitcher = () => {
             className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border border-[#F0F0F0] hover:border-[#1D9E75] hover:bg-[#F9FAFB] transition-colors"
             data-testid="site-switcher-trigger"
           >
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 text-left">
               <Globe size={16} className="text-[#1D9E75] flex-shrink-0" />
-              <span className="text-sm font-medium text-[#0A0A0A] truncate">{activeSite?.domain}</span>
+              <span className="text-sm font-medium text-[#0A0A0A] truncate">
+                {activeSite.name || activeSite.domain}
+              </span>
             </div>
             <ChevronDown size={14} className="text-[#6B7280] flex-shrink-0" />
           </button>
@@ -69,7 +120,7 @@ export const SiteSwitcher = () => {
               data-testid={`site-option-${site.id}`}
             >
               <span className={`w-2 h-2 rounded-full mr-2 ${site.id === activeSite?.id ? 'bg-[#1D9E75]' : 'bg-[#F0F0F0]'}`} />
-              <span className="flex-1 truncate">{site.domain}</span>
+              <span className="flex-1 truncate">{site.name || site.domain}</span>
               {site.id === activeSite?.id && <Check size={14} className="text-[#1D9E75]" />}
             </DropdownMenuItem>
           ))}
@@ -85,58 +136,74 @@ export const SiteSwitcher = () => {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent data-testid="add-site-dialog">
-          <DialogHeader>
-            <DialogTitle>Add a new site</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="add-site-url">Website URL</Label>
-              <Input
-                id="add-site-url"
-                placeholder="example.com"
-                value={form.domain}
-                onChange={(e) => setForm({ ...form, domain: e.target.value })}
-                className="border-[#F0F0F0]"
-                data-testid="add-site-url"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-site-name">Website name</Label>
-              <Input
-                id="add-site-name"
-                placeholder="My Awesome Site"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="border-[#F0F0F0]"
-                data-testid="add-site-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Platform</Label>
-              <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
-                <SelectTrigger className="border-[#F0F0F0]" data-testid="add-site-platform">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PLATFORMS.map((p) => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenDialog(false)} className="border-[#F0F0F0]">
-              Cancel
-            </Button>
-            <Button onClick={handleAdd} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="add-site-submit">
-              Add site
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddSiteDialog
+        open={openDialog}
+        onOpenChange={setOpenDialog}
+        form={form}
+        setForm={setForm}
+        isSubmitting={isSubmitting}
+        onSubmit={handleAdd}
+      />
     </>
   );
 };
+
+const AddSiteDialog = ({ open, onOpenChange, form, setForm, isSubmitting, onSubmit }) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent data-testid="add-site-dialog">
+      <DialogHeader>
+        <DialogTitle>Add a new website</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="add-site-name">Website name</Label>
+          <Input
+            id="add-site-name"
+            placeholder="My Awesome Site"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border-[#F0F0F0]"
+            data-testid="add-site-name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="add-site-url">Website URL</Label>
+          <Input
+            id="add-site-url"
+            placeholder="https://example.com"
+            value={form.url}
+            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            className="border-[#F0F0F0]"
+            data-testid="add-site-url"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Platform</Label>
+          <Select value={form.platform} onValueChange={(v) => setForm({ ...form, platform: v })}>
+            <SelectTrigger className="border-[#F0F0F0]" data-testid="add-site-platform">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PLATFORMS.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#F0F0F0]" disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button
+          onClick={onSubmit}
+          disabled={isSubmitting}
+          className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+          data-testid="add-site-submit"
+        >
+          {isSubmitting ? 'Adding…' : 'Add website'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+);

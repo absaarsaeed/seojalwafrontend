@@ -51,13 +51,23 @@ export const SiteProvider = ({ children }) => {
     try {
       const data = await sitesApi.list();
       const list = Array.isArray(data) ? data : data?.sites || [];
-      setSites(list.map(normaliseSite));
+      if (list.length) {
+        setSites(list.map(normaliseSite));
+      } else if (Array.isArray(authSites) && authSites.length) {
+        // /api/sites empty — fall back to whatever /api/auth/me returned.
+        setSites(authSites.map(normaliseSite));
+      } else {
+        setSites([]);
+      }
     } catch (err) {
       setError(err);
+      if (Array.isArray(authSites) && authSites.length) {
+        setSites(authSites.map(normaliseSite));
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authSites]);
 
   // Initial hydration from /api/auth/me sites
   useEffect(() => {
@@ -112,6 +122,7 @@ export const SiteProvider = ({ children }) => {
     addSite,
     refresh,
     isLoading,
+    isEmpty: !isLoading && sites.length === 0,
     error,
   };
 

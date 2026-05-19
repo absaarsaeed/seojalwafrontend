@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
+import { useSite } from '../../context/SiteContext';
 import { SETTINGS_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -18,12 +19,36 @@ const fadeInUp = {
 
 export const SettingsPage = () => {
   const { user, updateUser } = useUser();
+  const { sites } = useSite();
   const data = SETTINGS_DATA;
+
+  // Resolve the user's website URL — prefer the explicit field from /auth/me,
+  // fall back to the first connected site's URL so the field is never empty
+  // when at least one site exists.
+  const resolvedWebsite =
+    user?.websiteUrl ||
+    user?.website ||
+    sites?.[0]?.url ||
+    sites?.[0]?.domain ||
+    '';
+
   const [profile, setProfile] = useState({
-    name: user?.name || '',
+    name: user?.fullName || user?.name || '',
     email: user?.email || '',
-    website: user?.website || ''
+    website: resolvedWebsite,
   });
+
+  // Hydrate the form as auth/sites finish loading so the website doesn't
+  // appear blank on the first render.
+  useEffect(() => {
+    setProfile((prev) => ({
+      ...prev,
+      name: prev.name || user?.fullName || user?.name || '',
+      email: prev.email || user?.email || '',
+      website: prev.website || resolvedWebsite,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, sites?.length]);
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPasswords, setShowPasswords] = useState({});
   const [notifications, setNotifications] = useState({
@@ -98,7 +123,13 @@ export const SettingsPage = () => {
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Website URL</Label>
-                <Input value={profile.website} onChange={(e) => setProfile(p => ({ ...p, website: e.target.value }))} className="border-[#F0F0F0]" />
+                <Input
+                  value={profile.website}
+                  onChange={(e) => setProfile((p) => ({ ...p, website: e.target.value }))}
+                  placeholder="https://yourwebsite.com"
+                  className="border-[#F0F0F0]"
+                  data-testid="settings-website-input"
+                />
               </div>
             </div>
             <Button onClick={handleSaveProfile} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Save</Button>

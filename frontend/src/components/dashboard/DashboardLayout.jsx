@@ -32,15 +32,26 @@ const navItems = [
 ];
 
 export const DashboardLayout = () => {
-  const { isAuthenticated, user, logout } = useUser();
+  const { isAuthenticated, isLoading, user, logout } = useUser();
   const { activeSite } = useSite();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const isLoggingOutRef = useRef(false);
 
+  // Wait for auth bootstrap before deciding to redirect — otherwise direct
+  // deep-links (e.g. /dashboard/settings) bounce to /login, then /login's
+  // AuthRedirect sends the user to /dashboard and the original path is lost.
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" data-testid="dashboard-loading">
+        <div className="w-8 h-8 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAuthenticated && !isLoggingOutRef.current) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
   const handleLogout = () => {
