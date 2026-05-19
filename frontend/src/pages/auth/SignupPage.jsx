@@ -8,23 +8,77 @@ import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { Logo } from '../../components/public/Logo';
 
+// Map a Pydantic validation detail → form field name + message.
+const detailToFieldError = (d) => {
+  const loc = Array.isArray(d?.loc) ? d.loc : [];
+  // loc looks like ["body", "email"] — take the last meaningful segment.
+  const field = loc.slice(-1)[0];
+  return { field, message: d?.msg || 'Invalid value' };
+};
+
+const FieldError = ({ id, msg, extra }) =>
+  msg ? (
+    <p
+      id={id}
+      className="flex items-start gap-1 mt-1 text-xs text-[#EF4444]"
+      data-testid={id}
+    >
+      <AlertCircle size={12} className="mt-[2px] flex-shrink-0" />
+      <span>
+        {msg}
+        {extra && <> {extra}</>}
+      </span>
+    </p>
+  ) : null;
+
 export const SignupPage = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', website: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({}); // { name, email, password, website }
+  const [emailTaken, setEmailTaken] = useState(false);
   const { signup } = useUser();
   const navigate = useNavigate();
 
+  const setFormField = (key, value) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    // Clear field-specific error as user types
+    if (fieldErrors[key]) setFieldErrors((prev) => ({ ...prev, [key]: '' }));
+    if (key === 'email' && emailTaken) setEmailTaken(false);
+    if (generalError) setGeneralError('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setGeneralError('');
+    setFieldErrors({});
+    setEmailTaken(false);
     setIsLoading(true);
     try {
       await signup(formData);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err?.message || 'Unable to create account. Please try again.');
+      const code = err?.code;
+      if (code === 'EMAIL_TAKEN' || err?.status === 409) {
+        setEmailTaken(true);
+      } else if (code === 'VALIDATION_ERROR' || err?.status === 422) {
+        const next = {};
+        for (const d of err.details || []) {
+          const { field, message } = detailToFieldError(d);
+          // Map backend field name → local form field. Backend uses `fullName`
+          // for our `name` field — handle it explicitly.
+          const localField = field === 'fullName' ? 'name' : field;
+          if (localField && !next[localField]) next[localField] = message;
+        }
+        if (Object.keys(next).length === 0) {
+          setGeneralError(err.message || 'Please check the fields and try again.');
+        } else {
+          setFieldErrors(next);
+        }
+      } else {
+        setGeneralError(err?.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -68,36 +122,70 @@ export const SignupPage = () => {
               <Logo height={36} />
             </Link>
           </div>
-          
+
           <h1 className="font-syne text-3xl font-bold text-[#0A0A0A] mb-2">Create your account</h1>
           <p className="text-[#6B7280] mb-8">Start your 14-day free trial. No credit card required.</p>
-          
-          <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* General error banner — top of form */}
+          {generalError && (
+            <div
+              className="flex items-center gap-2 p-3 mb-5 rounded-lg bg-red-50 text-[#EF4444] text-sm"
+              data-testid="signup-error-message"
+              role="alert"
+            >
+              <AlertCircle size={16} />
+              <span>{generalError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div className="space-y-2">
               <Label htmlFor="name">Full name</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormField('name', e.target.value)}
                 placeholder="John Doe"
-                className="h-11 border-[#F0F0F0]"
+                aria-invalid={!!fieldErrors.name}
+                aria-describedby={fieldErrors.name ? 'signup-name-error' : undefined}
+                className={`h-11 ${fieldErrors.name ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                 data-testid="signup-name-input"
               />
+              <FieldError id="signup-name-error" msg={fieldErrors.name} />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => setFormField('email', e.target.value)}
                 placeholder="you@example.com"
-                className="h-11 border-[#F0F0F0]"
+                aria-invalid={!!fieldErrors.email || emailTaken}
+                aria-describedby={(fieldErrors.email || emailTaken) ? 'signup-email-error' : undefined}
+                className={`h-11 ${(fieldErrors.email || emailTaken) ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                 data-testid="signup-email-input"
               />
+              {emailTaken ? (
+                <p
+                  id="signup-email-error"
+                  className="flex items-start gap-1 mt-1 text-xs text-[#EF4444]"
+                  data-testid="signup-email-taken-error"
+                >
+                  <AlertCircle size={12} className="mt-[2px] flex-shrink-0" />
+                  <span>
+                    An account with this email already exists.{' '}
+                    <Link to="/login" className="font-medium underline hover:text-[#0F6E56]" data-testid="signup-signin-link">
+                      Sign in instead?
+                    </Link>
+                  </span>
+                </p>
+              ) : (
+                <FieldError id="signup-email-error" msg={fieldErrors.email} />
+              )}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -105,34 +193,41 @@ export const SignupPage = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  onChange={(e) => setFormField('password', e.target.value)}
                   placeholder="Create a password"
-                  className="h-11 border-[#F0F0F0] pr-10"
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={fieldErrors.password ? 'signup-password-error' : undefined}
+                  className={`h-11 pr-10 ${fieldErrors.password ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                   data-testid="signup-password-input"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+                  aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <FieldError id="signup-password-error" msg={fieldErrors.password} />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="website">Website URL</Label>
               <Input
                 id="website"
                 type="url"
                 value={formData.website}
-                onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
+                onChange={(e) => setFormField('website', e.target.value)}
                 placeholder="https://yoursite.com"
-                className="h-11 border-[#F0F0F0]"
+                aria-invalid={!!fieldErrors.website}
+                aria-describedby={fieldErrors.website ? 'signup-website-error' : undefined}
+                className={`h-11 ${fieldErrors.website ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                 data-testid="signup-website-input"
               />
+              <FieldError id="signup-website-error" msg={fieldErrors.website} />
             </div>
-            
+
             <Button
               type="submit"
               disabled={isLoading}
@@ -142,16 +237,6 @@ export const SignupPage = () => {
               {isLoading ? 'Creating account...' : 'Create account'}
             </Button>
 
-            {error && (
-              <div
-                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-[#EF4444] text-sm"
-                data-testid="signup-error-message"
-              >
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
-            
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#F0F0F0]" />
@@ -160,7 +245,7 @@ export const SignupPage = () => {
                 <span className="bg-white px-4 text-sm text-[#6B7280]">or</span>
               </div>
             </div>
-            
+
             <Button
               type="button"
               variant="outline"
@@ -175,7 +260,7 @@ export const SignupPage = () => {
               Continue with Google
             </Button>
           </form>
-          
+
           <p className="text-center text-sm text-[#6B7280] mt-6">
             Already have an account?{' '}
             <Link to="/login" className="text-[#1D9E75] font-medium hover:underline">

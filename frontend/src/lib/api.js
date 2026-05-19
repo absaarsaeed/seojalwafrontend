@@ -63,6 +63,9 @@ export class ApiError extends Error {
     this.status = status;
     this.code = code;
     this.data = data;
+    // Convenience: surface validation details directly on the error
+    // (backend shape: { details: [{ loc:["body","email"], msg, type, ... }] }).
+    this.details = Array.isArray(data?.details) ? data.details : null;
   }
 }
 
@@ -78,12 +81,21 @@ async function refreshAccessToken() {
 
   refreshPromise = (async () => {
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
+      const doFetch =
+        (typeof window !== 'undefined' && window.__nativeFetch) || fetch;
+      const res = await doFetch(`${BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      const body = await res.json().catch(() => null);
+      // Read via clone so external fetch wrappers (PostHog, etc.) can't
+      // race-consume the stream first.
+      let body = null;
+      try {
+        body = await res.clone().json();
+      } catch {
+        try { body = await res.json(); } catch {}
+      }
       if (!res.ok || !body?.success) {
         tokenStore.clearUser();
         throw new ApiError(body?.error || 'Refresh failed', { status: res.status });
@@ -138,9 +150,17 @@ async function request(path, opts = {}) {
     if (s) url += (url.includes('?') ? '&' : '?') + s;
   }
 
+  // Prefer the un-wrapped native fetch reference captured before any 3rd-party
+  // script (e.g. emergent-main.js, PostHog) could monkey-patch window.fetch
+  // to consume response bodies for telemetry — that breaks our error handling
+  // with "body stream already read". Falls back to the (possibly wrapped)
+  // global fetch if the pin is missing.
+  const doFetch =
+    (typeof window !== 'undefined' && window.__nativeFetch) || fetch;
+
   let res;
   try {
-    res = await fetch(url, {
+    res = await doFetch(url, {
       method,
       headers,
       body:
@@ -165,8 +185,20 @@ async function request(path, opts = {}) {
     }
   }
 
-  // Parse body
-  const text = await res.text();
+  // Parse body. We read once via .text() and parse JSON ourselves. We try
+  // .clone().text() first so that any fetch interceptor (e.g. PostHog) that
+  // has already consumed the original stream doesn't break us.
+  let text = '';
+  try {
+    text = await res.text();
+  } catch {
+    // Body was already read by an interceptor — try once more on a clone.
+    try {
+      text = await res.clone().text();
+    } catch {
+      text = '';
+    }
+  }
   let body_ = null;
   if (text) {
     try {
@@ -235,6 +267,8 @@ export const authApi = {
   logout: () => api.post('/api/auth/logout', {}, { auth: 'user' }),
   forgotPassword: (email) =>
     api.post('/api/auth/forgot-password', { email }, { auth: 'none' }),
+  resetPassword: ({ token, newPassword }) =>
+    api.post('/api/auth/reset-password', { token, newPassword }, { auth: 'none' }),
 };
 
 export const plansApi = {

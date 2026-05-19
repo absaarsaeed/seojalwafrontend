@@ -34,6 +34,7 @@ import { PrivacyPage, TermsPage, CookiesPage } from "./pages/legal/LegalPages";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 
 // Dashboard
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -84,6 +85,7 @@ function App() {
               <Route path="/login" element={<AuthRedirect><LoginPage /></AuthRedirect>} />
               <Route path="/signup" element={<AuthRedirect><SignupPage /></AuthRedirect>} />
               <Route path="/forgot-password" element={<AuthRedirect><ForgotPasswordPage /></AuthRedirect>} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* User Dashboard (DashboardLayout itself enforces auth) */}
               <Route path="/dashboard" element={<DashboardLayout />}>

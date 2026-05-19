@@ -18,20 +18,20 @@ export const ForgotPasswordPage = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    // Always show success — never reveal if the email exists. We swallow all
+    // errors except server outages (5xx) so the UI doesn't leak account info.
     try {
       await authApi.forgotPassword(email);
-      setSubmitted(true);
     } catch (err) {
-      // Many APIs return success even for unknown emails to prevent enumeration.
-      // If the API explicitly errors, surface it. Otherwise show success.
       if (err?.status >= 500) {
-        setError(err.message || 'Server error. Please try again.');
-      } else {
-        setSubmitted(true);
+        setError('We could not process the request right now. Please try again in a moment.');
+        setIsLoading(false);
+        return;
       }
-    } finally {
-      setIsLoading(false);
+      // Validation / 404 / 4xx — pretend it succeeded.
     }
+    setSubmitted(true);
+    setIsLoading(false);
   };
 
   return (
@@ -47,13 +47,13 @@ export const ForgotPasswordPage = () => {
           </Link>
           
           {submitted ? (
-            <div className="text-center">
+            <div className="text-center" data-testid="forgot-success">
               <div className="w-16 h-16 rounded-full bg-[#E1F5EE] flex items-center justify-center mx-auto mb-4">
                 <CheckCircle size={32} className="text-[#1D9E75]" />
               </div>
               <h1 className="font-syne text-2xl font-bold text-[#0A0A0A] mb-2">Check your email</h1>
               <p className="text-[#6B7280] mb-6">
-                We've sent a password reset link to <strong>{email}</strong>
+                If an account exists for <strong>{email}</strong>, you will receive a password reset link shortly.
               </p>
               <Link to="/login">
                 <Button variant="outline" className="w-full">

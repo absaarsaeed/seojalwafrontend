@@ -13,7 +13,8 @@ export const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [generalError, setGeneralError] = useState('');
+  const [credentialError, setCredentialError] = useState('');
   const { login } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,13 +22,21 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setGeneralError('');
+    setCredentialError('');
     setIsLoading(true);
     try {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err?.message || 'Unable to sign in. Please try again.');
+      const code = err?.code;
+      if (code === 'INVALID_CREDENTIALS' || err?.status === 401) {
+        setCredentialError('Invalid email or password');
+      } else if (code === 'VALIDATION_ERROR' || err?.status === 422) {
+        setGeneralError('Please enter a valid email and password.');
+      } else {
+        setGeneralError(err?.message || 'Something went wrong. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -74,21 +83,34 @@ export const LoginPage = () => {
           
           <h1 className="font-syne text-3xl font-bold text-[#0A0A0A] mb-2">Welcome back</h1>
           <p className="text-[#6B7280] mb-8">Sign in to your account to continue.</p>
-          
-          <form onSubmit={handleSubmit} className="space-y-5">
+
+          {/* General error banner — top of form */}
+          {generalError && (
+            <div
+              className="flex items-center gap-2 p-3 mb-5 rounded-lg bg-red-50 text-[#EF4444] text-sm"
+              data-testid="login-error-message"
+              role="alert"
+            >
+              <AlertCircle size={16} />
+              <span>{generalError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); if (credentialError) setCredentialError(''); if (generalError) setGeneralError(''); }}
                 placeholder="you@example.com"
-                className="h-11 border-[#F0F0F0]"
+                aria-invalid={!!credentialError}
+                className={`h-11 ${credentialError ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                 data-testid="login-email-input"
               />
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Password</Label>
@@ -101,21 +123,34 @@ export const LoginPage = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); if (credentialError) setCredentialError(''); }}
                   placeholder="Enter your password"
-                  className="h-11 border-[#F0F0F0] pr-10"
+                  aria-invalid={!!credentialError}
+                  aria-describedby={credentialError ? 'login-credential-error' : undefined}
+                  className={`h-11 pr-10 ${credentialError ? 'border-[#EF4444]' : 'border-[#F0F0F0]'}`}
                   data-testid="login-password-input"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]"
+                  aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {credentialError && (
+                <p
+                  id="login-credential-error"
+                  className="flex items-start gap-1 mt-1 text-xs text-[#EF4444]"
+                  data-testid="login-credential-error"
+                >
+                  <AlertCircle size={12} className="mt-[2px] flex-shrink-0" />
+                  <span>{credentialError}</span>
+                </p>
+              )}
             </div>
-            
+
             <Button
               type="submit"
               disabled={isLoading}
@@ -124,16 +159,6 @@ export const LoginPage = () => {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
-
-            {error && (
-              <div
-                className="flex items-center gap-2 p-3 rounded-lg bg-red-50 text-[#EF4444] text-sm"
-                data-testid="login-error-message"
-              >
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
             
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
