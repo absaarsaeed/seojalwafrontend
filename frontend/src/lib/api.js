@@ -307,8 +307,15 @@ export const adminApi = {
   blog: () => api.get('/api/admin/blog', { auth: 'admin' }),
   announcements: () => api.get('/api/admin/announcements', { auth: 'admin' }),
   apiKeys: () => api.get('/api/admin/api-keys', { auth: 'admin' }),
-  updateApiKey: (key, fields) =>
-    api.put(`/api/admin/api-keys/${encodeURIComponent(key)}`, { fields }, { auth: 'admin' }),
+  updateApiKey: (key, fields) => {
+    // Send both shapes so this works against the old backend (expects `value`)
+    // and the new backend (expects `fields`).
+    const body = {
+      fields,
+      value: fields?.api_key ?? Object.values(fields || {})[0],
+    };
+    return api.put(`/api/admin/api-keys/${encodeURIComponent(key)}`, body, { auth: 'admin' });
+  },
   testApiKey: (key) =>
     api.post(`/api/admin/api-keys/${encodeURIComponent(key)}/test`, {}, { auth: 'admin' }),
   settings: () => api.get('/api/admin/settings', { auth: 'admin' }),
