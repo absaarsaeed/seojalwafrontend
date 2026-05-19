@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -6,7 +6,7 @@ import { useSite } from '../../context/SiteContext';
 import { growthApi, analyticsApi } from '../../lib/api';
 import { DASHBOARD_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
-import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink } from 'lucide-react';
+import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink, Globe, X as XIcon, Check } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 const fadeInUp = {
@@ -38,9 +38,19 @@ const activityIcons = {
 };
 
 export const DashboardHome = () => {
-  const { user } = useUser();
-  const { activeSite } = useSite();
+  const { user, subscription } = useUser();
+  const { activeSite, sites } = useSite();
   const data = DASHBOARD_DATA;
+
+  // Onboarding checklist — persistence + computed completion.
+  const ONBOARDING_KEY = 'jalwa_onboarding_dismissed';
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => {
+    try { return localStorage.getItem(ONBOARDING_KEY) === '1'; } catch { return false; }
+  });
+  const dismissOnboarding = () => {
+    try { localStorage.setItem(ONBOARDING_KEY, '1'); } catch {}
+    setOnboardingDismissed(true);
+  };
 
   // Live data overlay
   const [growth, setGrowth] = useState(null);
@@ -66,6 +76,24 @@ export const DashboardHome = () => {
   const liveScoreChange = growth?.latest?.change ?? growth?.latest?.weeklyChange;
   const displayScore = liveScore ?? data.jalwaScore;
   const displayChange = liveScoreChange ?? data.jalwaScoreChange;
+
+  // Compute onboarding step completion from real signals.
+  const onboardingSteps = useMemo(() => {
+    const hasSite = Array.isArray(sites) && sites.length > 0;
+    const siteConnected = !!(activeSite && (activeSite.isConnected ?? activeSite.connected ?? activeSite.status === 'connected'));
+    const hasArticles = (data?.articlesThisMonth || 0) > 0; // backend may overlay later
+    const isPaid = !!(subscription && (subscription.status === 'active' || subscription.plan));
+    return [
+      { id: 'add-site',   label: 'Add your first website',           done: hasSite,        to: '/dashboard/connections', cta: 'Add site' },
+      { id: 'connect',    label: 'Connect WordPress (install plugin)', done: siteConnected,  to: '/dashboard/connections', cta: 'Connect' },
+      { id: 'first-article', label: 'Generate your first article',    done: hasArticles,    to: '/dashboard/ai-writer',   cta: 'Generate' },
+      { id: 'upgrade',    label: 'Upgrade to start daily publishing', done: isPaid,         to: '/dashboard/settings',    cta: 'Upgrade' },
+    ];
+  }, [sites, activeSite, data?.articlesThisMonth, subscription]);
+  const onboardingDone = onboardingSteps.every((s) => s.done);
+  const completedCount = onboardingSteps.filter((s) => s.done).length;
+  const showOnboarding = !onboardingDismissed && !onboardingDone;
+  const showWelcomeBanner = !activeSite;
 
   // Build this week's strip (Mon-Sun starting from this week's Monday)
   const today = new Date();
@@ -102,6 +130,75 @@ export const DashboardHome = () => {
       className="space-y-6"
       data-testid="user-dashboard-home"
     >
+      {/* Welcome banner — when no active site */}
+      {showWelcomeBanner && (
+        <motion.div variants={fadeInUp} className="bg-[#E1F5EE] border border-[#1D9E75]/30 rounded-xl p-5 flex flex-wrap items-center gap-4" data-testid="welcome-banner">
+          <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+            <Globe size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-[220px]">
+            <h2 className="font-syne text-lg font-bold text-[#0A0A0A]">Welcome to SEO Jalwa{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!</h2>
+            <p className="text-sm text-[#0A0A0A]/80">Add your first website to start tracking AI visibility and publishing articles.</p>
+          </div>
+          <Link to="/dashboard/connections">
+            <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="welcome-banner-cta">
+              Connect your site <ArrowRight size={14} className="ml-1.5" />
+            </Button>
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Onboarding checklist */}
+      {showOnboarding && (
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="onboarding-checklist">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-semibold text-[#0A0A0A]">Get started with SEO Jalwa</h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                {completedCount} of {onboardingSteps.length} complete — finish setup to unlock daily auto-publishing.
+              </p>
+            </div>
+            <button
+              onClick={dismissOnboarding}
+              className="text-[#6B7280] hover:text-[#0A0A0A]"
+              aria-label="Dismiss onboarding"
+              data-testid="onboarding-dismiss"
+            >
+              <XIcon size={16} />
+            </button>
+          </div>
+          <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden mb-4">
+            <div
+              className="h-full bg-[#1D9E75] transition-all"
+              style={{ width: `${(completedCount / onboardingSteps.length) * 100}%` }}
+            />
+          </div>
+          <ul className="space-y-2">
+            {onboardingSteps.map((s, i) => (
+              <li
+                key={s.id}
+                className="flex items-center justify-between gap-3 p-3 bg-[#F9FAFB] rounded-lg"
+                data-testid={`onboarding-step-${s.id}`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${s.done ? 'bg-[#1D9E75] text-white' : 'bg-white border-2 border-[#F0F0F0] text-[#6B7280]'}`}>
+                    {s.done ? <Check size={14} /> : <span className="text-xs font-semibold">{i + 1}</span>}
+                  </div>
+                  <span className={`text-sm ${s.done ? 'text-[#6B7280] line-through' : 'text-[#0A0A0A]'}`}>{s.label}</span>
+                </div>
+                {!s.done && (
+                  <Link to={s.to}>
+                    <Button size="sm" variant="ghost" className="text-[#1D9E75] hover:bg-[#E1F5EE] h-8" data-testid={`onboarding-cta-${s.id}`}>
+                      {s.cta} <ArrowRight size={12} className="ml-1" />
+                    </Button>
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        </motion.div>
+      )}
+
       {/* Growth Score */}
       <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
         <div className="flex flex-col md:flex-row items-center gap-6">

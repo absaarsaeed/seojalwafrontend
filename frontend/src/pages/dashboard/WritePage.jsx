@@ -41,6 +41,8 @@ export const WritePage = () => {
   const [brief, setBrief] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generated, setGenerated] = useState('');
+  const [generationStatus, setGenerationStatus] = useState(null); // 'queued' | 'in_progress' | 'completed' | 'failed'
+  const articleJobRef = useRef(null);
   const [tones, setTones] = useState(data.toneSettings);
   const [library, setLibrary] = useState(data.library);
   const [voiceProfile, setVoiceProfile] = useState(null);
@@ -157,21 +159,65 @@ export const WritePage = () => {
       return;
     }
     setIsGenerating(true);
+    setGenerationStatus('queued');
+    setGenerated('');
     try {
       const res = await articlesApi.generate({
         siteId: activeSite.id,
         searchTerm: brief,
         type: selectedType,
       });
-      const content = res?.content || res?.body || res?.article?.content || '';
-      setGenerated(content || `# ${brief}\n\nGenerated article — full content will appear once the AI Writer completes.`);
-      toast.success('Content generated!');
+      // Synchronous result (no polling needed).
+      const inlineContent = res?.content || res?.body || res?.article?.content;
+      if (inlineContent) {
+        setGenerated(inlineContent);
+        setGenerationStatus('completed');
+        setIsGenerating(false);
+        toast.success('Content generated!');
+        return;
+      }
+      const jobId = res?.jobId || res?.job_id || res?.id;
+      if (!jobId) {
+        toast.error('No job id returned from the server');
+        setIsGenerating(false);
+        setGenerationStatus('failed');
+        return;
+      }
+      // Poll every 3s.
+      if (articleJobRef.current) clearInterval(articleJobRef.current);
+      articleJobRef.current = setInterval(async () => {
+        try {
+          const job = await articlesApi.job(jobId);
+          const status = (job?.status || '').toLowerCase();
+          setGenerationStatus(status || 'in_progress');
+          if (status === 'completed' || status === 'success') {
+            clearInterval(articleJobRef.current);
+            articleJobRef.current = null;
+            const content = job?.content || job?.result?.content || job?.article?.content || '';
+            setGenerated(content || `# ${brief}\n\nGenerated.`);
+            setIsGenerating(false);
+            toast.success('Content generated!');
+          } else if (status === 'failed' || status === 'error') {
+            clearInterval(articleJobRef.current);
+            articleJobRef.current = null;
+            setIsGenerating(false);
+            toast.error(job?.error || job?.message || 'Generation failed');
+          }
+        } catch {
+          // Keep polling on transient errors
+        }
+      }, 3000);
     } catch (err) {
       toast.error(err?.message || 'Generation failed');
-    } finally {
       setIsGenerating(false);
+      setGenerationStatus('failed');
     }
   };
+
+  // Cleanup polling on unmount
+  useEffect(() => () => {
+    if (articleJobRef.current) clearInterval(articleJobRef.current);
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generated);
@@ -320,11 +366,12 @@ export const WritePage = () => {
               onClick={handleGenerate}
               disabled={isGenerating}
               className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+              data-testid="generate-article-btn"
             >
               {isGenerating ? (
                 <>
                   <RefreshCw size={16} className="mr-2 animate-spin" />
-                  Generating...
+                  {generationStatus === 'queued' ? 'Queued...' : generationStatus === 'in_progress' ? 'Generating...' : 'Generating...'}
                 </>
               ) : (
                 <>
@@ -333,6 +380,11 @@ export const WritePage = () => {
                 </>
               )}
             </Button>
+            {isGenerating && (
+              <p className="text-xs text-[#6B7280] mt-2" data-testid="generation-status">
+                Status: {generationStatus || 'queued'} — this can take 30–90 seconds.
+              </p>
+            )}
           </motion.div>
 
           {/* Generated Content */}

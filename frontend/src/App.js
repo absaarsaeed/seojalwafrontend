@@ -20,6 +20,7 @@ import { Settings as AdminSettings } from "./admin/pages/Settings";
 // Public
 import { UserProvider, useUser } from "./context/UserContext";
 import { SiteProvider } from "./context/SiteContext";
+import { AppErrorListener } from "./components/AppErrorListener";
 import { PublicLayout } from "./components/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
 import { FeaturesPage } from "./pages/public/FeaturesPage";
@@ -64,6 +65,7 @@ function App() {
       <AdminProvider>
         <UserProvider>
           <SiteProvider>
+            <AppErrorListener />
             <BrowserRouter>
             <Routes>
               {/* Public Marketing Site */}

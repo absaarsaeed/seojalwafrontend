@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { PULSE_DATA } from '../../data/publicData';
@@ -82,6 +82,12 @@ export const PulsePage = () => {
   const [latest, setLatest] = useState(null);
   const [queriesOpen, setQueriesOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState(null); // queued | in_progress | completed | failed
+  const scanJobRef = useRef(null);
+
+  useEffect(() => () => {
+    if (scanJobRef.current) clearInterval(scanJobRef.current);
+  }, []);
 
   useEffect(() => {
     if (!activeSite?.id) return;
@@ -105,19 +111,55 @@ export const PulsePage = () => {
       return;
     }
     setIsScanning(true);
+    setScanStatus('queued');
     try {
-      await aiVisibilityApi.scan({ siteId: activeSite.id });
-      const list = await aiVisibilityApi.scans(activeSite.id);
-      setScans(Array.isArray(list) ? list : []);
-      try {
-        const data = await aiVisibilityLatestApi.latest(activeSite.id);
-        setLatest(data || null);
-      } catch {}
-      toast.success('New AI visibility scan completed');
+      const res = await aiVisibilityApi.scan({ siteId: activeSite.id });
+      const jobId = res?.jobId || res?.job_id || res?.id;
+      // No job id → backend ran synchronously. Refresh immediately.
+      if (!jobId) {
+        const list = await aiVisibilityApi.scans(activeSite.id);
+        setScans(Array.isArray(list) ? list : []);
+        try {
+          const data = await aiVisibilityLatestApi.latest(activeSite.id);
+          setLatest(data || null);
+        } catch {}
+        toast.success('New AI visibility scan completed');
+        setIsScanning(false);
+        setScanStatus('completed');
+        return;
+      }
+      // Poll every 3s
+      if (scanJobRef.current) clearInterval(scanJobRef.current);
+      scanJobRef.current = setInterval(async () => {
+        try {
+          const job = await aiVisibilityApi.scanJob(jobId);
+          const status = (job?.status || '').toLowerCase();
+          setScanStatus(status || 'in_progress');
+          if (status === 'completed' || status === 'success') {
+            clearInterval(scanJobRef.current);
+            scanJobRef.current = null;
+            const list = await aiVisibilityApi.scans(activeSite.id);
+            setScans(Array.isArray(list) ? list : []);
+            try {
+              const data = await aiVisibilityLatestApi.latest(activeSite.id);
+              setLatest(data || null);
+            } catch {}
+            toast.success('New AI visibility scan completed');
+            setIsScanning(false);
+          } else if (status === 'failed' || status === 'error') {
+            clearInterval(scanJobRef.current);
+            scanJobRef.current = null;
+            toast.error(job?.error || 'Scan failed');
+            setIsScanning(false);
+          }
+        } catch {
+          // keep polling
+        }
+      }, 3000);
     } catch (err) {
       toast.error(err?.message || 'Could not run scan');
-    } finally {
       setIsScanning(false);
+      setScanStatus('failed');
     }
   };
 
@@ -147,7 +189,7 @@ export const PulsePage = () => {
           </div>
           <Button onClick={handleScan} disabled={isScanning} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
             <RefreshCw size={16} className={`mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-            {isScanning ? 'Scanning...' : 'Run new scan'}
+            {isScanning ? (scanStatus === 'queued' ? 'Queued...' : 'Scanning...') : 'Run new scan'}
           </Button>
         </div>
       </motion.div>

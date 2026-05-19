@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
+import { userApi } from '../../lib/api';
 import { SETTINGS_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -49,6 +50,26 @@ export const SettingsPage = () => {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, sites?.length]);
+
+  // Pre-fill from /api/user/profile when available (richer than /auth/me).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const p = await userApi.profile();
+        if (cancelled || !p) return;
+        const data = p?.user || p?.profile || p;
+        setProfile((prev) => ({
+          name: data.fullName || data.name || prev.name,
+          email: data.email || prev.email,
+          website: data.websiteUrl || data.website || prev.website,
+        }));
+      } catch {
+        // Endpoint not present yet — silently fall back to auth data.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
   const [showPasswords, setShowPasswords] = useState({});
   const [notifications, setNotifications] = useState({
@@ -59,9 +80,28 @@ export const SettingsPage = () => {
   });
   const [inviteEmail, setInviteEmail] = useState('');
 
-  const handleSaveProfile = () => {
-    updateUser(profile);
-    toast.success('Profile saved');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const handleSaveProfile = async () => {
+    setIsSavingProfile(true);
+    try {
+      try {
+        await userApi.updateProfile({
+          fullName: profile.name,
+          email: profile.email,
+          websiteUrl: profile.website,
+        });
+      } catch (err) {
+        // 404 → endpoint not yet implemented; keep local update.
+        if (err?.status && err.status !== 404) {
+          toast.error(err?.message || 'Could not save profile');
+          return;
+        }
+      }
+      updateUser(profile);
+      toast.success('Profile saved');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleChangePassword = () => {
@@ -132,7 +172,7 @@ export const SettingsPage = () => {
                 />
               </div>
             </div>
-            <Button onClick={handleSaveProfile} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Save</Button>
+            <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="settings-save-profile-btn">{isSavingProfile ? 'Saving...' : 'Save'}</Button>
           </motion.div>
 
           {/* Password */}

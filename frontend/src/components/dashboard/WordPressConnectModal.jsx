@@ -54,6 +54,7 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
   const [keyError, setKeyError] = useState('');
   const [testing, setTesting] = useState(false);
   const [done, setDone] = useState(false);
+  const [verifyError, setVerifyError] = useState('');
 
   // Pre-fill URL whenever the modal opens and an active site exists.
   useEffect(() => {
@@ -90,6 +91,7 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
     setDone(false);
     setApiKey('');
     setKeyError('');
+    setVerifyError('');
   };
 
   const handleClose = (open) => {
@@ -105,13 +107,32 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
     toast.success('API key copied');
   };
 
-  const handleTestAndConnect = () => {
+  const handleTestAndConnect = async () => {
+    if (!activeSite?.id) {
+      toast.error('No site selected');
+      return;
+    }
+    setVerifyError('');
     setTesting(true);
-    setTimeout(() => {
-      setTesting(false);
+    try {
+      const res = await sitesApi.verifyConnection(activeSite.id);
+      const ok = res?.success !== false && res?.connected !== false;
+      if (!ok) {
+        const msg = res?.message || res?.error || 'Could not reach your WordPress site. Please ensure the plugin is installed and the API key is correct.';
+        setVerifyError(msg);
+        toast.error(msg);
+        setTesting(false);
+        return;
+      }
       setDone(true);
-      onConnected?.({ url });
-    }, 1800);
+      onConnected?.({ url, site: res });
+    } catch (err) {
+      const msg = err?.message || 'Connection failed. Please verify the plugin is installed and the API key is pasted correctly in WordPress.';
+      setVerifyError(msg);
+      toast.error(msg);
+    } finally {
+      setTesting(false);
+    }
   };
 
   // ── No active site state ────────────────────────────────────────────────
@@ -261,6 +282,13 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
                         <li>Return here and click Connect</li>
                       </ol>
                     </div>
+
+                    {verifyError && (
+                      <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-red-50 text-[#EF4444] text-sm" data-testid="wp-verify-error">
+                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>{verifyError}</span>
+                      </div>
+                    )}
 
                     <div className="flex justify-between">
                       <Button variant="ghost" onClick={() => setStep(2)} className="text-[#6B7280]">← Back</Button>

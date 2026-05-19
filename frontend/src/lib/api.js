@@ -54,6 +54,17 @@ export const tokenStore = {
   },
 };
 
+// ---- Global error event bus ------------------------------------------------
+// Dispatches a window-level `jalwa:api-error` CustomEvent for cross-cutting
+// concerns (toasts on 403/429/5xx/network). UI listens once at app boot.
+const emitApiError = (payload) => {
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('jalwa:api-error', { detail: payload }));
+    }
+  } catch {}
+};
+
 // ---- Error type ------------------------------------------------------------
 
 export class ApiError extends Error {
@@ -171,7 +182,9 @@ async function request(path, opts = {}) {
           : JSON.stringify(body),
     });
   } catch (err) {
-    throw new ApiError(err.message || 'Network error', { status: 0 });
+    const e = new ApiError(err.message || 'Network error', { status: 0, code: 'NETWORK_ERROR' });
+    emitApiError({ status: 0, code: 'NETWORK_ERROR', message: 'Network error. Please check your connection.', path });
+    throw e;
   }
 
   // Auto-refresh on 401 for user-authed calls
@@ -212,9 +225,14 @@ async function request(path, opts = {}) {
     const msg =
       (body_ && (body_.error || body_.detail || body_.message)) ||
       `Request failed (${res.status})`;
+    const code = body_?.code || '';
+    // Emit cross-cutting toast for 403, 429, and 5xx — auth pages handle 401/422 inline.
+    if (res.status === 403 || res.status === 429 || res.status >= 500) {
+      emitApiError({ status: res.status, code, message: msg, path });
+    }
     throw new ApiError(msg, {
       status: res.status,
-      code: body_?.code || '',
+      code,
       data: body_,
     });
   }
@@ -295,6 +313,13 @@ export const sitesApi = {
   get: (id) => api.get(`/api/sites/${id}`),
   update: (id, payload) => api.put(`/api/sites/${id}`, payload),
   remove: (id) => api.del(`/api/sites/${id}`),
+  verifyConnection: (id) => api.post(`/api/sites/${id}/verify-connection`, {}),
+};
+
+// User profile -------------------------------------------------------------
+export const userApi = {
+  profile: () => api.get('/api/user/profile'),
+  updateProfile: (payload) => api.put('/api/user/profile', payload),
 };
 
 // Dashboard ----------------------------------------------------------------
@@ -310,6 +335,7 @@ export const analyticsApi = {
 export const aiVisibilityApi = {
   scans: (siteId) => api.get('/api/ai-visibility/scans', { query: { siteId } }),
   scan: (payload) => api.post('/api/ai-visibility/scan', payload),
+  scanJob: (jobId) => api.get(`/api/ai-visibility/scan/${jobId}`),
 };
 
 export const articlesApi = {
@@ -318,6 +344,7 @@ export const articlesApi = {
   calendar: ({ siteId, year, month }) =>
     api.get('/api/articles/calendar', { query: { siteId, year, month } }),
   generate: (payload) => api.post('/api/articles/generate', payload),
+  job: (jobId) => api.get(`/api/articles/job/${jobId}`),
 };
 
 export const socialApi = {
