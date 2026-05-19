@@ -304,6 +304,34 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 ### Open carry-over (P2)
 - Recharts `width(-1)` console warnings on first paint of dashboard sparklines — non-blocking, flagged across 5 iterations.
 
+## Phase 10: Final Phase-1 Completion — 15 More Fixes (Feb 19, 2026)
+
+### New endpoints wired in `api.js`
+- `pluginApi.version` → `GET /api/plugin/version`
+- `searchTermsApi.{list,create}` → `GET|POST /api/search-terms`
+- `articlesApi.publish` → `POST /api/articles/{id}/publish`
+- `authApi.changePassword` → `PUT /api/user/password`
+- `authApi.googleStartUrl()` → `${API_BASE}/api/auth/google`
+- `adminApi.updateSettings` → `PUT /api/admin/settings`
+- `adminApi.uploadPlugin(file)` → `POST /api/admin/plugin/upload` (multipart, bypasses JSON helper, X-Admin-Token)
+
+### UI changes
+- WordPress connect modal Step 2 **and** ConnectionsPage footer "Download Plugin" buttons now call `pluginApi.version()`; open returned `download_url` in a new tab or toast a fallback message. Show `— v{version}` next to the button.
+- Admin `/adminpanel/settings` gained a "WordPress Plugin" section: editable version / download URL / changelog, "Save plugin settings" PUTs `/api/admin/settings`, and an "Upload new plugin ZIP" button that multiparts to `/api/admin/plugin/upload`, then auto-saves the returned `download_url` + `version`.
+- New `/auth/google/callback` route + `GoogleCallbackPage` component. Reads `accessToken/refreshToken` from URL params, sets tokens, refreshes the user, routes to `/dashboard`. Bounces to `/login?error=google_failed` on missing tokens.
+- Login + Signup `Continue with Google` buttons wired (`window.location.href = authApi.googleStartUrl()`). Login surfaces a banner when `?error=google_failed`.
+- User Settings Account tab `Change Password` now PUTs `/api/user/password`; INVALID_CREDENTIALS → inline 'Current password is incorrect'; length/mismatch validations + toast on success.
+- ArticleViewPage now has a real `Publish/Republish` button calling `POST /api/articles/{id}/publish` (platform: wordpress, siteId). Status badge auto-updates.
+- WritePage article-generation polling maps `job.progress` → labeled stage ("Researching your topic...", "Writing your article...", "Creating hero image...", "Publishing to your site...").
+- PulsePage AI-visibility scan polling maps `job.currentStep` / `job.progress` → labeled stage ("Generating brand queries...", "Scanning ChatGPT/Perplexity/Gemini/Claude...", "Analyzing results..."). Status visible below the button.
+- PublishPage `Add Search Terms` dialog now POSTs `/api/search-terms` with `{ siteId, terms[] }`.
+- Dashboard onboarding checklist refined: per-site dismiss key (`jalwa_onboarding_dismissed_{siteId}`), live signals via `searchTermsApi.list` + `aiVisibilityLatestApi.latest` for steps 3 and 4. Step 1 combines add-site + WP-connect.
+
+### Verified end-to-end (iteration_9.json)
+- **10/10** new flows PASS against live `api.seojalwa.com`.
+- All 6 backend endpoints exist and respond correctly.
+- Frontend handles missing/4xx/5xx gracefully (toast or inline error, no crash).
+
 ## Test Credentials
 - **Admin**: username=`jalwa`, password=`jalwaadmin`
 - **User Dashboard**: any email/password works in dummy mode (e.g., test@jalwa.com / test1234)
