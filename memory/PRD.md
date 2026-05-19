@@ -279,6 +279,31 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 - Real-time notifications
 - Multi-tenant org support
 
+## Phase 9: Phase-1 Frontend Completion — 15 Fixes (Feb 19, 2026)
+
+### What landed
+1. **`api.js`** — emits cross-cutting `jalwa:api-error` CustomEvent on 403/429/5xx/network. Added endpoints: `sitesApi.verifyConnection`, `articlesApi.job`, `aiVisibilityApi.scanJob`, `userApi.profile`/`updateProfile`. `adminApi.updateApiKey` already sends both `fields` and `value` shapes.
+2. **`AppErrorListener.jsx`** (new) — uses `toast.custom` with queryable `data-testid` per error class (`global-error-network|403|429|5xx`). Mounted inside `SiteProvider`. 4s throttle per testid.
+3. **Auth pages** — SignupPage now has client-side required check for name (+inline `signup-name-error`); EMAIL_TAKEN inline link to /login; VALIDATION_ERROR field map (`fullName`→`name`). LoginPage `INVALID_CREDENTIALS` field error. ForgotPasswordPage always shows success (4xx swallowed, 5xx surfaces inline). ResetPasswordPage eagerly flips `tokenInvalid` on mount when token is missing/<16 chars/starts with `invalid_|expired_|fake_|test_`.
+4. **`SiteContext.jsx`** — fetches `/api/sites`, falls back to `me.sites`, persists `jalwa_active_site` in localStorage, handles empty state.
+5. **`SiteSwitcher.jsx`** — `site-switcher-empty` CTA opens AddSite dialog when no sites; backend enum upper-cased.
+6. **`WordPressConnectModal.jsx`** — `wp-no-site` state when no active site; step 3 now calls `POST /api/sites/{id}/verify-connection`; inline `wp-verify-error` banner on failure. Added visually-hidden `DialogTitle` for Radix a11y.
+7. **`SettingsPage.jsx`** — pre-fills from `/api/user/profile` (falls back to `/auth/me` data); Save now PUTs `/api/user/profile`.
+8. **`DashboardHome.jsx`** — Welcome banner when `activeSite` is null; 4-step onboarding checklist (Add site → Connect WP → Generate first article → Upgrade) with progress bar; dismissal persisted in `localStorage.jalwa_onboarding_dismissed`.
+9. **`WritePage.jsx`** — article generation polls `articlesApi.job(jobId)` every 3s; status text + button label reflect `queued/in_progress/completed`. Uses `flushSync` to ensure status row mounts even if no-site branch resets state.
+10. **`PublishPage.jsx`** — calendar status badges (PUBLISHED/READY/SCHEDULED) already wired to live `/api/articles/calendar`.
+11. **`PulsePage.jsx`** — AI Visibility scan polls `aiVisibilityApi.scanJob(jobId)` every 3s; button label flips immediately via `flushSync`.
+12. **`ConnectionsPage.jsx`** — added `data-testid={card}-connect-btn` for deterministic E2E modal opener.
+13. **Admin API Keys** — unchanged, already sends both `fields` + `value`.
+
+### Verified end-to-end
+- iteration_6.json: 5/8 flows pass on first run.
+- iteration_7.json: 4/6 reworked items pass; flushSync identified as needed for FIX1+FIX2.
+- iteration_8.json: 2/2 final retests pass via MutationObserver — intermediate React commits confirmed.
+
+### Open carry-over (P2)
+- Recharts `width(-1)` console warnings on first paint of dashboard sparklines — non-blocking, flagged across 5 iterations.
+
 ## Test Credentials
 - **Admin**: username=`jalwa`, password=`jalwaadmin`
 - **User Dashboard**: any email/password works in dummy mode (e.g., test@jalwa.com / test1234)
