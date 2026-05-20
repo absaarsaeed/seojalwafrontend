@@ -60,9 +60,9 @@ export const FeedbackForm = ({ onSubmitted, embedded = false }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" data-testid="feedback-form">
-      <div>
+      <div data-testid="feedback-rating">
         <Label className="mb-1.5 block text-sm">How are we doing?</Label>
-        <div className="flex gap-1">
+        <div className="flex gap-1" data-testid="feedback-rating-group">
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               type="button"
@@ -70,7 +70,7 @@ export const FeedbackForm = ({ onSubmitted, embedded = false }) => {
               onClick={() => setRating(n)}
               className="p-1"
               aria-label={`${n} stars`}
-              data-testid={`feedback-star-${n}`}
+              data-testid={`feedback-rating-${n}`}
             >
               <Star
                 size={26}

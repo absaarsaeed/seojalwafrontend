@@ -19,11 +19,21 @@ export const AuthProvider = ({ children }) => {
   const applyMe = (me) => {
     const rawUser = me?.user || null;
     // Backwards-compat: legacy UI code reads `user.name` / `user.plan` / `user.website`.
+    // The backend may return subscription.plan as either a plain string or a
+    // full Plan document — always extract a renderable string here.
+    const subPlan = me?.subscription?.plan;
+    const subPlanName = typeof subPlan === 'object' && subPlan
+      ? (subPlan.name || subPlan.id || '')
+      : (typeof subPlan === 'string' ? subPlan : '');
+    const rawPlan = rawUser?.plan;
+    const userPlanName = typeof rawPlan === 'object' && rawPlan
+      ? (rawPlan.name || rawPlan.id || '')
+      : (typeof rawPlan === 'string' ? rawPlan : '');
     const normalisedUser = rawUser
       ? {
           ...rawUser,
           name: rawUser.name || rawUser.fullName || '',
-          plan: rawUser.plan || me?.subscription?.planName || me?.subscription?.plan || 'Free',
+          plan: userPlanName || me?.subscription?.planName || subPlanName || 'Free',
           website: rawUser.website || (me?.sites?.[0]?.url || ''),
         }
       : null;

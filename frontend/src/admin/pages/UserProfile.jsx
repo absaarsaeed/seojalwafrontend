@@ -20,6 +20,8 @@ import { USERS_LIST, USER_DETAIL } from '../data/dummyData';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const PlanBadge = ({ plan }) => {
+  // Backend may send a Plan document instead of a string — render the name only.
+  const planName = typeof plan === 'object' && plan ? (plan.name || plan.id || 'Free') : (plan || 'Free');
   const colors = {
     Starter: 'bg-[#2563EB]/10 text-[#2563EB]',
     Growth: 'bg-[#1D9E75]/10 text-[#1D9E75]',
@@ -27,8 +29,8 @@ const PlanBadge = ({ plan }) => {
     Free: 'bg-[#71717A]/10 text-[#71717A]'
   };
   return (
-    <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[plan] || colors.Free}`}>
-      {plan}
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[planName] || colors.Free}`}>
+      {planName}
     </span>
   );
 };
@@ -220,7 +222,7 @@ export const UserProfile = () => {
                   <div className="flex items-center justify-between p-4 bg-[#FAFAFA] rounded-lg">
                     <div>
                       <p className="text-xs text-[#71717A] uppercase tracking-wide">Current Plan</p>
-                      <p className="text-lg font-semibold text-[#09090B]">{user.plan}</p>
+                      <p className="text-lg font-semibold text-[#09090B]">{typeof user.plan === 'object' && user.plan ? (user.plan.name || user.plan.id) : user.plan}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-[#71717A] uppercase tracking-wide">Next Billing</p>

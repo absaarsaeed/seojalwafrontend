@@ -1,0 +1,34 @@
+{
+  "summary": "Targeted retest after critical React-child regression fix. RETEST 1 PASS (fresh signup no longer crashes). RETEST 2 PARTIAL — feedback-rating-{n} testids now render correctly after a forced frontend supervisor restart (webpack-dev-server hadn't picked up the FeedbackPage.jsx change despite multiple 'Compiled successfully' lines; bundle still contained the old 'feedback-star-' literal until 'sudo supervisorctl restart frontend' was issued). However the happy-path still cannot complete because POST https://api.seojalwa.com/api/feedback returns 404 from the backend, so feedback-success never renders.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/feedback", "issue": "Returns 404 Not Found — endpoint missing. The public /feedback page (and the in-app FeedbackFAB) cannot complete submission. Blocks RETEST 2 happy-path because feedback-success only renders after a successful POST.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "RETEST 2 — Feedback happy path", "issue": "POST /api/feedback → 404 from api.seojalwa.com. UI shows the sonner 'Not Found' toast (correct error handling) but feedback-success is never reached.", "affected_selectors": ["[data-testid=feedback-success]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Implement POST /api/feedback on the backend (or verify the correct path/host). Frontend already sends {rating, category, message, email}; once endpoint exists feedback-success will render automatically.",
+    "(Informational, low priority) Webpack-dev-server hot-reload did not pick up the FeedbackPage.jsx testid change (feedback-rating-${n}) until 'sudo supervisorctl restart frontend' was run — main agent should be aware that, for changes that touch only JSX attribute literals, a restart may be required to refresh the served bundle if tests start seeing stale testids."
+  ],
+  "critical_code_review_comments": [
+    "AuthContext.applyMe correctly normalises plan to a string in all three code paths (subscription.plan object, subscription.plan string, user.plan object). Verified by zero '[object Object]' occurrences and zero 'Objects are not valid as a React child' errors across fresh-signup /dashboard, /dashboard/settings (Billing), /adminpanel/users, and /adminpanel/users/<id>.",
+    "UsersList & UserProfile PlanBadge extraction works — admin sees plan labels 'Free' (in list) and 'Growth' (on profile) as plain strings, not objects.",
+    "Feedback POST 404: confirm whether the backend route was ever shipped, or whether the FE base URL/path is wrong (`feedbackApi.submit` POSTs to /api/feedback)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not in scope (frontend-only request) — but the missing /api/feedback endpoint is a HIGH blocker discovered during FE testing", "frontend": "RETEST 1 — PASS. RETEST 2 — testid PASS (after FE restart), API integration FAIL due to backend 404."},
+  "test_credentials": "Fresh signup created: test_1779265489@jalwa.com / TestPassword123!. Admin: jalwa / jalwaisadmin.",
+  "seed_data_creation": "One fresh end-user (test_1779265489@jalwa.com) created during RETEST 1.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "RETEST 1 verified end-to-end: AuthContext.applyMe + PlanBadge in UsersList and UserProfile + Billing/SettingsPage all render plan as a string for fresh signups, existing users, and admin views. No more React-child overlay. RETEST 2 is now blocked on a backend issue (POST /api/feedback → 404) — once the endpoint is implemented, feedback-success will render. Note: webpack-dev-server needed 'sudo supervisorctl restart frontend' to ship the feedback-rating-{n} testid update; this is the second time this iteration's run that the dev-server had stale bundle despite 'Compiled successfully' logs.",
+  "rca_of_the_issue": "Fix verification: the previously reported 'Objects are not valid as a React child (found: object with keys {id, name, monthlyPrice,...})' is fully resolved. AuthContext.applyMe (lines 24-39 of /app/frontend/src/context/AuthContext.jsx) now coerces both me.subscription.plan and me.user.plan into renderable strings before storing them in context, and the admin PlanBadge components extract plan.name as well. Tested with brand-new signup → no overlay, no console errors, no '[object Object]'. New finding: POST /api/feedback returns 404 — independent of the React-child fix; main agent needs to add or expose this backend endpoint to unblock the feedback happy-path."
+}

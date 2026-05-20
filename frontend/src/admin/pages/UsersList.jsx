@@ -16,6 +16,7 @@ import {
 import { Search, Download, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PlanBadge = ({ plan }) => {
+  const planName = typeof plan === 'object' && plan ? (plan.name || plan.id || 'Free') : (plan || 'Free');
   const colors = {
     Starter: 'bg-[#2563EB]/10 text-[#2563EB]',
     Growth: 'bg-[#1D9E75]/10 text-[#1D9E75]',
@@ -23,8 +24,8 @@ const PlanBadge = ({ plan }) => {
     Free: 'bg-[#71717A]/10 text-[#71717A]'
   };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[plan] || colors.Free}`}>
-      {plan}
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[planName] || colors.Free}`}>
+      {planName}
     </span>
   );
 };
