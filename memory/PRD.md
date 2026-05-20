@@ -332,6 +332,35 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 - All 6 backend endpoints exist and respond correctly.
 - Frontend handles missing/4xx/5xx gracefully (toast or inline error, no crash).
 
+## Phase 11: Launch-Ready Batch (Feb 20, 2026)
+
+### Critical regression fix
+- **AuthContext.applyMe** + admin `PlanBadge` components now coerce `plan` to a string in all paths (was crashing fresh signups with "Objects are not valid as a React child" because backend started returning a full Plan document inline). Verified via iteration_11.
+
+### UX fixes
+- **Coming Soon** banners on all non-WordPress platforms across `/dashboard/connections`, `/dashboard/auto-publish` CMS tab, and `/dashboard/social-autopilot`. New `.coming-soon-card` CSS class reduces opacity + sets cursor: not-allowed.
+- **Auth button styling** — new `.auth-primary-btn` / `.auth-google-btn` CSS classes with `!important` rules so the submit buttons can never go transparent on hover (the `bg-primary` CSS variable conflict is now bypassed).
+- **WordPress modal troubleshooting tips** — collapsible "Not working?" panel with 4 bullets in Step 3.
+
+### New features
+- **Plan-limit upgrade modal** (`LimitReachedListener`) — listens for `jalwa:plan-limit` events emitted by api.js on `403 + LIMIT_REACHED`. Shows used/limit/plan + "View plans →" deep-link.
+- **Subscription display** real data via `billingApi.subscription/usage/invoices/cancel`. Status badges (Trialing/Active/Cancelled), trial-days-left line, next-billing-date, Upgrade button, dedicated Cancel dialog.
+- **Delete Account** dialog under Account → Danger Zone. Email confirmation (case-insensitive) + password gate; clears tokens + redirects to seojalwa.com on success.
+- **Activity tab** on `/dashboard/settings` shows the user's own activity log via `userApi.activity()`.
+- **Notifications bell + page** — `NotificationsBell` in dashboard header polls `/api/notifications/unread-count` every 60s, dropdown lists 10 most recent, "View all" → `/dashboard/notifications` full list page. Mark-all-read endpoint wired.
+- **Feedback** — public `/feedback` page with star rating + category + message, footer "Send feedback" link, floating dashboard `FeedbackFAB` (bottom-right). Submits to `feedbackApi.submit`.
+- **Article status badges + Retry** — calendar pills now include `DRAFT` (yellow), `PUBLISHING` (yellow animated pulse), `FAILED` (red). FAILED articles in `ArticleViewPage` get a Retry button calling `articlesApi.retry`.
+
+### Verified end-to-end
+- iteration_10.json: 8/10 PASS, 1 critical regression, 1 missing testid.
+- iteration_11.json: Critical regression PASS, feedback testid PASS. Only blocker is backend `POST /api/feedback` returning 404 (frontend handles gracefully via sonner toast).
+
+### Open carry-overs
+- ⚠️ Backend: `POST /api/feedback` returns 404. Needs to be implemented server-side (frontend already POSTs `{rating, category, message, email}`).
+- WordPress modal Step 3 troubleshooting tips + download button gated behind "connect a site first" (caveat carried from iteration 9 — tested via code review, not E2E because fresh users have no sites).
+- Recharts `width(-1)` console warnings (P2 cosmetic, flagged across iterations).
+- Phase-2 admin pages (FIX 3, 4, 12 from the most recent prompt) — not implemented yet (large scope, would need new backend endpoints).
+
 ## Test Credentials
 - **Admin**: username=`jalwa`, password=`jalwaadmin`
 - **User Dashboard**: any email/password works in dummy mode (e.g., test@jalwa.com / test1234)
