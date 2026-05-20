@@ -182,7 +182,7 @@ export const ResetPasswordPage = () => {
                 <Button
                   type="submit"
                   disabled={isLoading || !password || !confirm}
-                  className="w-full h-11 bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+                  className="auth-primary-btn w-full h-11"
                   data-testid="reset-submit-btn"
                 >
                   {isLoading ? 'Updating password...' : 'Update password'}

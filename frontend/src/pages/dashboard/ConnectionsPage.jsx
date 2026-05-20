@@ -25,15 +25,15 @@ const fadeInUp = {
 };
 
 const WEBSITE_PLATFORMS = [
-  { name: 'WordPress',   method: 'Plugin',  description: 'Install our free plugin, paste your API key', connected: false },
-  { name: 'Shopify',     method: 'App',     description: 'Install from Shopify App Store',              connected: false },
-  { name: 'Webflow',     method: 'OAuth',   description: 'mybrand.webflow.io',                          connected: true  },
-  { name: 'Ghost',       method: 'OAuth',   description: 'Connect via Admin API Key',                   connected: false },
-  { name: 'HubSpot',     method: 'OAuth',   description: 'One-click HubSpot CMS integration',           connected: false },
-  { name: 'Wix',         method: 'API Key', description: 'Generate an API key in Wix Dashboard',        connected: false },
-  { name: 'Squarespace', method: 'OAuth',   description: 'Connect your Squarespace blog',               connected: false },
-  { name: 'Notion',      method: 'OAuth',   description: 'Export drafts to your Notion workspace',      connected: false },
-  { name: 'Next.js',     method: 'Webhook', description: 'Custom webhook integration',                  connected: false },
+  { name: 'WordPress',   method: 'Plugin',  description: 'Install our free plugin, paste your API key', connected: false, comingSoon: false },
+  { name: 'Shopify',     method: 'App',     description: 'Install from Shopify App Store',              connected: false, comingSoon: true  },
+  { name: 'Webflow',     method: 'OAuth',   description: 'mybrand.webflow.io',                          connected: false, comingSoon: true  },
+  { name: 'Ghost',       method: 'OAuth',   description: 'Connect via Admin API Key',                   connected: false, comingSoon: true  },
+  { name: 'HubSpot',     method: 'OAuth',   description: 'One-click HubSpot CMS integration',           connected: false, comingSoon: true  },
+  { name: 'Wix',         method: 'API Key', description: 'Generate an API key in Wix Dashboard',        connected: false, comingSoon: true  },
+  { name: 'Squarespace', method: 'OAuth',   description: 'Connect your Squarespace blog',               connected: false, comingSoon: true  },
+  { name: 'Notion',      method: 'OAuth',   description: 'Export drafts to your Notion workspace',      connected: false, comingSoon: true  },
+  { name: 'Next.js',     method: 'Webhook', description: 'Custom webhook integration',                  connected: false, comingSoon: true  },
 ];
 
 const SOCIAL_BRAND_COLORS = {
@@ -260,8 +260,11 @@ const SocialModal = ({ platform, open, onClose, onConnect }) => {
   );
 };
 
-const PlatformCard = ({ name, method, description, connected, onConnect, onDisconnect, testid }) => (
-  <div className="bg-white rounded-xl border border-[#F0F0F0] p-5 flex flex-col" data-testid={testid}>
+const PlatformCard = ({ name, method, description, connected, comingSoon, onConnect, onDisconnect, testid }) => (
+  <div
+    className={`bg-white rounded-xl border border-[#F0F0F0] p-5 flex flex-col ${comingSoon ? 'coming-soon-card' : ''}`}
+    data-testid={testid}
+  >
     <div className="flex items-start gap-3 mb-3">
       <PlatformLogo name={name} size={40} />
       <div className="flex-1 min-w-0">
@@ -272,10 +275,20 @@ const PlatformCard = ({ name, method, description, connected, onConnect, onDisco
           </span>
         </div>
         <p className="text-xs text-[#6B7280] line-clamp-2">{description}</p>
+        {comingSoon && (
+          <p className="text-[10px] text-[#9CA3AF] mt-1.5">Available in v2</p>
+        )}
       </div>
     </div>
     <div className="mt-auto pt-3 flex items-center justify-between">
-      {connected ? (
+      {comingSoon ? (
+        <span
+          className="w-full text-center inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md"
+          data-testid={`${testid}-coming-soon`}
+        >
+          Coming Soon
+        </span>
+      ) : connected ? (
         <>
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
             <Check size={12} /> Connected
@@ -299,33 +312,22 @@ const PlatformCard = ({ name, method, description, connected, onConnect, onDisco
 );
 
 const SocialCard = ({ acc, onConnect, onDisconnect }) => (
-  <div className="bg-white rounded-xl border border-[#F0F0F0] p-5 flex flex-col" data-testid={`social-card-${acc.platform.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+  <div
+    className="coming-soon-card bg-white rounded-xl border border-[#F0F0F0] p-5 flex flex-col"
+    data-testid={`social-card-${acc.platform.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+  >
     <div className="flex items-start gap-3 mb-3">
       <PlatformLogo name={acc.platform} size={40} />
       <div className="flex-1 min-w-0">
         <h3 className="font-semibold text-[#0A0A0A] mb-1">{acc.platform}</h3>
-        {acc.connected ? (
-          <p className="text-xs text-[#6B7280] truncate">{acc.handle} · {acc.followers?.toLocaleString()} followers</p>
-        ) : (
-          <p className="text-xs text-[#6B7280]">Not connected</p>
-        )}
+        <p className="text-xs text-[#6B7280]">Social autopilot coming soon</p>
+        <p className="text-[10px] text-[#9CA3AF] mt-1">Available in v2</p>
       </div>
     </div>
-    <div className="mt-auto pt-3 flex items-center justify-between">
-      {acc.connected ? (
-        <>
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
-            <Check size={12} /> Connected
-          </span>
-          <button onClick={onDisconnect} className="text-xs text-[#6B7280] hover:text-[#EF4444]">
-            Disconnect
-          </button>
-        </>
-      ) : (
-        <Button onClick={onConnect} size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full">
-          Connect
-        </Button>
-      )}
+    <div className="mt-auto pt-3">
+      <span className="w-full text-center inline-flex items-center justify-center gap-1 px-3 py-2 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md">
+        Coming Soon
+      </span>
     </div>
   </div>
 );
@@ -424,6 +426,7 @@ export const ConnectionsPage = () => {
               method={p.method}
               description={p.description}
               connected={p.connected}
+              comingSoon={p.comingSoon}
               onConnect={() => openWebsite(p)}
               onDisconnect={() => disconnectWebsite(p.name)}
               testid={`website-card-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}

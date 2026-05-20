@@ -52,6 +52,11 @@ export const tokenStore = {
   clearAdmin: () => {
     sessionStorage.removeItem(KEYS.ADMIN);
   },
+  clearAll: () => {
+    localStorage.removeItem(KEYS.ACCESS);
+    localStorage.removeItem(KEYS.REFRESH);
+    sessionStorage.removeItem(KEYS.ADMIN);
+  },
 };
 
 // ---- Global error event bus ------------------------------------------------
@@ -226,8 +231,23 @@ async function request(path, opts = {}) {
       (body_ && (body_.error || body_.detail || body_.message)) ||
       `Request failed (${res.status})`;
     const code = body_?.code || '';
-    // Emit cross-cutting toast for 403, 429, and 5xx — auth pages handle 401/422 inline.
-    if (res.status === 403 || res.status === 429 || res.status >= 500) {
+    // 403 + LIMIT_REACHED is special — emit a dedicated event so the UI can
+    // show an upgrade modal instead of the generic global toast.
+    if (res.status === 403 && code === 'LIMIT_REACHED') {
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jalwa:plan-limit', {
+            detail: {
+              code,
+              status: res.status,
+              message: msg,
+              ...(body_?.data || {}),
+            },
+          }));
+        }
+      } catch {}
+    } else if (res.status === 403 || res.status === 429 || res.status >= 500) {
+      // Emit cross-cutting toast for the rest.
       emitApiError({ status: res.status, code, message: msg, path });
     }
     throw new ApiError(msg, {
@@ -272,6 +292,8 @@ export const api = {
   put: (path, body, opts) => request(path, { ...opts, method: 'PUT', body }),
   patch: (path, body, opts) => request(path, { ...opts, method: 'PATCH', body }),
   del: (path, opts) => request(path, { ...opts, method: 'DELETE' }),
+  // DELETE with body support.
+  delWithBody: (path, body, opts) => request(path, { ...opts, method: 'DELETE', body }),
 };
 
 // ---------------------------------------------------------------------------
@@ -324,6 +346,30 @@ export const sitesApi = {
 export const userApi = {
   profile: () => api.get('/api/user/profile'),
   updateProfile: (payload) => api.put('/api/user/profile', payload),
+  deleteAccount: (payload) => api.delWithBody('/api/user/account', payload),
+  activity: () => api.get('/api/user/activity'),
+};
+
+// Billing -----------------------------------------------------------------
+export const billingApi = {
+  subscription: () => api.get('/api/billing/subscription'),
+  usage: () => api.get('/api/billing/usage'),
+  invoices: () => api.get('/api/billing/invoices'),
+  cancel: () => api.post('/api/billing/cancel', {}),
+  resume: () => api.post('/api/billing/resume', {}),
+};
+
+// Feedback (public) -------------------------------------------------------
+export const feedbackApi = {
+  submit: (payload) => api.post('/api/feedback', payload, { auth: 'none' }),
+};
+
+// Notifications ------------------------------------------------------------
+export const notificationsApi = {
+  list: (params) => api.get('/api/notifications', { query: params }),
+  unreadCount: () => api.get('/api/notifications/unread-count'),
+  markRead: (id) => api.post(`/api/notifications/${id}/read`, {}),
+  markAllRead: () => api.post('/api/notifications/mark-all-read', {}),
 };
 
 // Dashboard ----------------------------------------------------------------
@@ -350,6 +396,7 @@ export const articlesApi = {
   generate: (payload) => api.post('/api/articles/generate', payload),
   job: (jobId) => api.get(`/api/articles/job/${jobId}`),
   publish: (id, payload) => api.post(`/api/articles/${id}/publish`, payload),
+  retry: (id) => api.post(`/api/articles/${id}/retry`, {}),
 };
 
 // Search terms (content topics) ------------------------------------------

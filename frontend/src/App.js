@@ -21,6 +21,7 @@ import { Settings as AdminSettings } from "./admin/pages/Settings";
 import { UserProvider, useUser } from "./context/UserContext";
 import { SiteProvider } from "./context/SiteContext";
 import { AppErrorListener } from "./components/AppErrorListener";
+import { LimitReachedListener } from "./components/LimitReachedListener";
 import { PublicLayout } from "./components/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
 import { FeaturesPage } from "./pages/public/FeaturesPage";
@@ -29,6 +30,7 @@ import { IntegrationsPage } from "./pages/public/IntegrationsPage";
 import { AboutPage } from "./pages/public/AboutPage";
 import { BlogPage, BlogPostPage } from "./pages/public/BlogPage";
 import { ContactPage } from "./pages/public/ContactPage";
+import { FeedbackPage } from "./pages/public/FeedbackPage";
 import { PrivacyPage, TermsPage, CookiesPage } from "./pages/legal/LegalPages";
 
 // Auth
@@ -52,6 +54,7 @@ import { ArticleSettingsPage } from "./pages/dashboard/ArticleSettingsPage";
 import { ConnectionsPage } from "./pages/dashboard/ConnectionsPage";
 import { TeamPage } from "./pages/dashboard/TeamPage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
+import { NotificationsPage } from "./pages/dashboard/NotificationsPage";
 
 // Redirect authenticated users away from auth pages
 const AuthRedirect = ({ children }) => {
@@ -68,6 +71,7 @@ function App() {
           <SiteProvider>
             <AppErrorListener />
             <BrowserRouter>
+              <LimitReachedListener />
             <Routes>
               {/* Public Marketing Site */}
               <Route element={<PublicLayout />}>
@@ -79,6 +83,7 @@ function App() {
                 <Route path="/blog" element={<BlogPage />} />
                 <Route path="/blog/:slug" element={<BlogPostPage />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
                 <Route path="/cookies" element={<CookiesPage />} />
@@ -105,6 +110,7 @@ function App() {
                 <Route path="connections" element={<ConnectionsPage />} />
                 <Route path="team" element={<TeamPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="notifications" element={<NotificationsPage />} />
                 {/* Legacy redirects */}
                 <Route path="pulse" element={<Navigate to="/dashboard/ai-visibility" replace />} />
                 <Route path="write" element={<Navigate to="/dashboard/ai-writer" replace />} />

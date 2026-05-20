@@ -136,9 +136,30 @@ export const ArticleViewPage = () => {
     }
   };
 
+  const handleRetry = async () => {
+    if (!id) return;
+    setIsPublishing(true);
+    try {
+      await articlesApi.retry(id);
+      toast.success('Retry queued');
+      setArticle((prev) => ({ ...(prev || {}), status: 'PUBLISHING' }));
+    } catch (err) {
+      toast.error(err?.message || 'Retry failed');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const title = article?.title || '5 SEO Mistakes That Are Killing Your Rankings in 2026 (And How to Fix Them)';
   const excerpt = article?.excerpt || article?.summary || 'Most businesses make these SEO errors without even knowing it. Here\'s how to identify and fix each one fast.';
-  const status = article?.status || 'PUBLISHED';
+  const status = (article?.status || 'PUBLISHED').toUpperCase();
+  const statusBadgeStyle = {
+    PUBLISHED:  'bg-[#E1F5EE] text-[#1D9E75]',
+    SCHEDULED:  'bg-[#DBEAFE] text-[#2563EB]',
+    DRAFT:      'bg-[#FEF3C7] text-[#D97706]',
+    PUBLISHING: 'bg-[#FEF3C7] text-[#D97706] animate-pulse',
+    FAILED:     'bg-red-100 text-[#EF4444]',
+  }[status] || 'bg-[#E1F5EE] text-[#1D9E75]';
   const readTime = article?.estimatedReadTime ? `${article.estimatedReadTime} min read` : '8 min read';
   const seoScore = typeof article?.seoScore === 'number' ? article.seoScore : 78;
   const seoColor = seoScore >= 80 ? '#1D9E75' : seoScore >= 60 ? '#F59E0B' : '#EF4444';
@@ -165,7 +186,7 @@ export const ArticleViewPage = () => {
         >
           <ArrowLeft size={16} /> Back to Calendar
         </button>
-        <span className="px-2.5 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-semibold rounded-full" data-testid="article-status-badge">
+        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusBadgeStyle}`} data-testid="article-status-badge">
           {status}
         </span>
         <div className="flex gap-2">
@@ -173,6 +194,18 @@ export const ArticleViewPage = () => {
           <Button variant="ghost" size="sm" className="text-[#6B7280]" onClick={() => window.open('https://example.com/blog/5-seo-mistakes-2026', '_blank')}>
             <ExternalLink size={14} className="mr-1.5" />View Live
           </Button>
+          {status === 'FAILED' && (
+            <Button
+              size="sm"
+              onClick={handleRetry}
+              disabled={isPublishing}
+              variant="outline"
+              className="border-[#EF4444] text-[#EF4444] hover:bg-red-50"
+              data-testid="article-retry-btn"
+            >
+              <RotateCw size={14} className="mr-1.5" />Retry
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={handlePublish}

@@ -120,7 +120,7 @@ export const PostPage = () => {
             {accountsForUI.map((account) => {
               const Icon = platformIcons[account.platform];
               return (
-                <div key={account.platform} className="bg-white rounded-xl border border-[#F0F0F0] p-5">
+                <div key={account.platform} className="coming-soon-card bg-white rounded-xl border border-[#F0F0F0] p-5" data-testid={`social-card-${account.platform.toLowerCase().replace(/[^a-z0-9]+/g,'-')}`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[#F0F0F0] flex items-center justify-center">
@@ -128,23 +128,11 @@ export const PostPage = () => {
                       </div>
                       <span className="font-medium text-[#0A0A0A]">{account.platform}</span>
                     </div>
-                    {account.connected ? (
-                      <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full flex items-center gap-1">
-                        <Check size={12} /> Connected
-                      </span>
-                    ) : (
-                      <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-xs h-8">
-                        Connect
-                      </Button>
-                    )}
+                    <span className="px-3 py-1 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md">
+                      Coming Soon
+                    </span>
                   </div>
-                  {account.connected && (
-                    <div className="text-sm text-[#6B7280] space-y-1">
-                      <p className="font-medium text-[#0A0A0A]">{account.handle}</p>
-                      <p>{account.followers?.toLocaleString()} followers</p>
-                      <p>Last post: {account.lastPost}</p>
-                    </div>
-                  )}
+                  <p className="text-xs text-[#9CA3AF]">Available in v2</p>
                 </div>
               );
             })}

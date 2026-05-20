@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { userApi, authApi } from '../../lib/api';
+import { userApi, authApi, tokenStore, billingApi } from '../../lib/api';
 import { SETTINGS_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -10,8 +10,11 @@ import { Label } from '../../components/ui/label';
 import { Switch } from '../../components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Progress } from '../../components/ui/progress';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Download, AlertTriangle, ChevronUp, User, Plus, Mail } from 'lucide-react';
+import { Eye, EyeOff, Download, AlertTriangle, ChevronUp, User, Plus, Mail, Loader2 } from 'lucide-react';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -106,6 +109,84 @@ export const SettingsPage = () => {
 
   const [passwordError, setPasswordError] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Delete account state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteEmailConfirm, setDeleteEmailConfirm] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await userApi.deleteAccount({ password: deletePassword });
+      try { tokenStore.clearAll(); } catch {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      toast.success('Your account has been deleted. Goodbye 👋');
+      window.location.href = 'https://seojalwa.com';
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete account');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // User activity log
+  const [activityItems, setActivityItems] = useState(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    setActivityLoading(true);
+    (async () => {
+      try {
+        const data = await userApi.activity();
+        const list = Array.isArray(data) ? data : data?.items || [];
+        if (!cancelled) setActivityItems(list);
+      } catch {
+        if (!cancelled) setActivityItems([]);
+      } finally {
+        if (!cancelled) setActivityLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Billing — real subscription / usage / invoices
+  const [subscription, setSubscription] = useState(null);
+  const [billingUsage, setBillingUsage] = useState(null);
+  const [billingInvoices, setBillingInvoices] = useState(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await billingApi.subscription();
+        if (!cancelled) setSubscription(s || null);
+      } catch {}
+      try {
+        const u = await billingApi.usage();
+        if (!cancelled) setBillingUsage(u || null);
+      } catch {}
+      try {
+        const inv = await billingApi.invoices();
+        if (!cancelled) setBillingInvoices(Array.isArray(inv) ? inv : inv?.items || null);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const handleCancelSubscription = async () => {
+    setIsCancelling(true);
+    try {
+      const res = await billingApi.cancel();
+      toast.success(res?.message || 'Subscription cancelled at end of period');
+      setSubscription((prev) => prev ? { ...prev, status: 'cancelled', cancelAtPeriodEnd: true } : res);
+      setCancelOpen(false);
+    } catch (err) {
+      toast.error(err?.message || 'Could not cancel subscription');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
   const handleChangePassword = async () => {
     setPasswordError('');
     if (!passwords.current) {
@@ -166,6 +247,7 @@ export const SettingsPage = () => {
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="activity" data-testid="settings-activity-tab">Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="account" className="space-y-6">
@@ -251,41 +333,97 @@ export const SettingsPage = () => {
           </motion.div>
 
           {/* Danger Zone */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-red-200 p-6">
-            <h3 className="font-semibold text-[#EF4444] mb-2">Danger Zone</h3>
-            <p className="text-sm text-[#6B7280] mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-            <Button variant="outline" className="border-[#EF4444] text-[#EF4444] hover:bg-red-50">Delete account</Button>
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-red-200 p-6" data-testid="settings-danger-zone">
+            <h3 className="font-semibold text-[#EF4444] mb-2">Delete Account</h3>
+            <p className="text-sm text-[#6B7280] mb-4">Permanently delete your account and all your data. This cannot be undone.</p>
+            <Button
+              variant="outline"
+              className="border-[#EF4444] text-[#EF4444] hover:bg-red-50"
+              onClick={() => setDeleteOpen(true)}
+              data-testid="settings-delete-account-btn"
+            >
+              Delete my account
+            </Button>
           </motion.div>
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6">
-          {/* Current Plan */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-[#0A0A0A]">Current Plan</h3>
-                <p className="text-sm text-[#6B7280]">{user?.plan || 'Growth'} — $199/month</p>
-              </div>
-              <span className="px-3 py-1 bg-[#E1F5EE] text-[#1D9E75] text-sm font-medium rounded-full">Active</span>
-            </div>
-            <p className="text-sm text-[#6B7280] mb-4">Next billing date: January 1, 2027</p>
-            <Button variant="outline" className="border-[#1D9E75] text-[#1D9E75]">
-              <ChevronUp size={16} className="mr-2" />
-              Upgrade to Agency
-            </Button>
-          </motion.div>
+          {(() => {
+            const planName = subscription?.planName || subscription?.plan || user?.plan || 'Starter';
+            const price = subscription?.priceFormatted || subscription?.price || '—';
+            const status = (subscription?.status || 'active').toLowerCase();
+            const statusLabel = { trialing: 'Trialing', active: 'Active', cancelled: 'Cancelled', canceled: 'Cancelled', past_due: 'Past due' }[status] || status;
+            const statusStyle = status === 'trialing' ? 'bg-[#FEF3C7] text-[#D97706]'
+              : status === 'cancelled' || status === 'canceled' ? 'bg-red-100 text-[#EF4444]'
+              : 'bg-[#E1F5EE] text-[#1D9E75]';
+            const trialDaysLeft = subscription?.trialDaysLeft;
+            const nextBilling = subscription?.nextBillingDate || subscription?.currentPeriodEnd;
+            const cancelAtPeriodEnd = subscription?.cancelAtPeriodEnd;
+            const nextPlan = subscription?.upgradePlan || (planName === 'Starter' ? 'Growth' : planName === 'Growth' ? 'Agency' : null);
+            return (
+              <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="billing-subscription-card">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <div>
+                    <h3 className="font-semibold text-[#0A0A0A]">Current Plan</h3>
+                    <p className="text-sm text-[#6B7280]">{planName}{price && price !== '—' ? ` — ${price}` : ''}</p>
+                  </div>
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${statusStyle}`} data-testid="subscription-status-badge">
+                    {statusLabel}
+                  </span>
+                </div>
+                {status === 'trialing' && trialDaysLeft != null && (
+                  <p className="text-sm text-[#0A0A0A] mb-3" data-testid="trial-days-left">
+                    Trial ends in {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} — upgrade to keep your data and pricing.
+                  </p>
+                )}
+                {status === 'active' && nextBilling && (
+                  <p className="text-sm text-[#6B7280] mb-4" data-testid="next-billing-date">
+                    {cancelAtPeriodEnd ? `Cancels on ${new Date(nextBilling).toLocaleDateString()}` : `Next billing: ${new Date(nextBilling).toLocaleDateString()} — renews automatically`}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {nextPlan && (
+                    <Button
+                      onClick={() => window.location.assign('/pricing')}
+                      variant="outline"
+                      className="border-[#1D9E75] text-[#1D9E75]"
+                      data-testid="upgrade-plan-btn"
+                    >
+                      <ChevronUp size={16} className="mr-2" />
+                      Upgrade to {nextPlan}
+                    </Button>
+                  )}
+                  {!cancelAtPeriodEnd && (status === 'active' || status === 'trialing') && (
+                    <Button
+                      onClick={() => setCancelOpen(true)}
+                      variant="ghost"
+                      className="text-[#EF4444] hover:bg-red-50"
+                      data-testid="cancel-subscription-btn"
+                    >
+                      Cancel subscription
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })()}
 
           {/* Usage */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="billing-usage-card">
             <h3 className="font-semibold text-[#0A0A0A] mb-4">Usage This Month</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(data.usage).map(([key, val]) => (
-                <div key={key} className="space-y-2">
-                  <p className="text-sm text-[#6B7280] capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
-                  <p className="text-lg font-semibold text-[#0A0A0A]">{val.used}/{val.limit}</p>
-                  <Progress value={(val.used / val.limit) * 100} className="h-2" />
-                </div>
-              ))}
+              {Object.entries(billingUsage || data.usage).map(([key, val]) => {
+                const used = val?.used ?? 0;
+                const limit = val?.limit ?? 0;
+                const pct = limit > 0 ? (used / limit) * 100 : 0;
+                return (
+                  <div key={key} className="space-y-2">
+                    <p className="text-sm text-[#6B7280] capitalize">{key.replace(/([A-Z])/g, ' $1')}</p>
+                    <p className="text-lg font-semibold text-[#0A0A0A]">{used}/{limit || '∞'}</p>
+                    <Progress value={Math.min(100, pct)} className="h-2" />
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
 
@@ -294,40 +432,41 @@ export const SettingsPage = () => {
             <div className="p-4 border-b border-[#F0F0F0]">
               <h3 className="font-semibold text-[#0A0A0A]">Invoice History</h3>
             </div>
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F9FAFB]">
-                  <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Invoice</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Date</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Amount</th>
-                  <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Status</th>
-                  <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Download</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.invoices.map((invoice, i) => (
-                  <tr key={invoice.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
-                    <td className="p-4 text-sm text-[#0A0A0A]">{invoice.id}</td>
-                    <td className="p-4 text-sm text-[#6B7280]">{invoice.date}</td>
-                    <td className="p-4 text-sm text-[#0A0A0A]">${invoice.amount}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">{invoice.status}</span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <Button size="sm" variant="ghost" className="h-8">
-                        <Download size={14} />
-                      </Button>
-                    </td>
+            {(billingInvoices || data.invoices).length === 0 ? (
+              <p className="p-6 text-sm text-[#6B7280] text-center">No invoices yet.</p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#F9FAFB]">
+                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Invoice</th>
+                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Date</th>
+                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Amount</th>
+                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Status</th>
+                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Download</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(billingInvoices || data.invoices).map((invoice, i) => (
+                    <tr key={invoice.id || i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
+                      <td className="p-4 text-sm text-[#0A0A0A]">{invoice.id || invoice.number}</td>
+                      <td className="p-4 text-sm text-[#6B7280]">{invoice.date || (invoice.createdAt && new Date(invoice.createdAt).toLocaleDateString())}</td>
+                      <td className="p-4 text-sm text-[#0A0A0A]">${invoice.amount || invoice.total}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">{invoice.status || 'paid'}</span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <a href={invoice.downloadUrl || invoice.pdfUrl || '#'} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="ghost" className="h-8"><Download size={14} /></Button>
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </motion.div>
 
-          {/* Cancel */}
-          <p className="text-sm text-[#6B7280]">
-            Need to cancel? <button className="text-[#EF4444] hover:underline">Cancel subscription</button>
-          </p>
+          {/* Cancel — handled by dedicated button + dialog above */}
         </TabsContent>
 
         <TabsContent value="team" className="space-y-6">
@@ -367,7 +506,110 @@ export const SettingsPage = () => {
             <p className="text-xs text-[#6B7280] mt-2">You can invite up to {3 - (data.usage.teamSeats.used)} more team members on your current plan.</p>
           </motion.div>
         </TabsContent>
+
+        <TabsContent value="activity" className="space-y-6">
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0]" data-testid="user-activity-card">
+            <div className="p-4 border-b border-[#F0F0F0]">
+              <h3 className="font-semibold text-[#0A0A0A]">Your activity</h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">Recent actions on your account.</p>
+            </div>
+            {activityLoading ? (
+              <div className="p-6 text-sm text-[#6B7280] text-center" data-testid="user-activity-loading">Loading...</div>
+            ) : !activityItems || activityItems.length === 0 ? (
+              <div className="p-8 text-center text-sm text-[#6B7280]" data-testid="user-activity-empty">
+                No activity yet. Sign in events and content changes will appear here.
+              </div>
+            ) : (
+              <ul className="divide-y divide-[#F0F0F0]">
+                {activityItems.map((a, i) => (
+                  <li key={a.id || i} className="flex items-start gap-3 p-4" data-testid={`user-activity-row-${i}`}>
+                    <div className="w-8 h-8 rounded-full bg-[#1D9E75]/10 flex items-center justify-center text-[#1D9E75] flex-shrink-0">
+                      <User size={14} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-[#0A0A0A]">{a.action || a.title || a.message}</p>
+                      {a.detail && <p className="text-xs text-[#6B7280] mt-0.5">{a.detail}</p>}
+                    </div>
+                    <span className="text-xs text-[#9CA3AF] flex-shrink-0">
+                      {a.createdAt ? new Date(a.createdAt).toLocaleString() : a.date}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        </TabsContent>
       </Tabs>
+
+      {/* Delete account confirmation */}
+      <Dialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) { setDeleteEmailConfirm(''); setDeletePassword(''); } }}>
+        <DialogContent className="max-w-md" data-testid="delete-account-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-[#EF4444]">Delete your account?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete your account and all your data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div>
+              <Label className="mb-1.5 block text-xs">Type your email to confirm: <span className="font-mono text-[#0A0A0A]">{user?.email}</span></Label>
+              <Input
+                value={deleteEmailConfirm}
+                onChange={(e) => setDeleteEmailConfirm(e.target.value)}
+                placeholder={user?.email || 'your@email.com'}
+                className="border-[#F0F0F0]"
+                data-testid="delete-account-email-input"
+              />
+            </div>
+            <div>
+              <Label className="mb-1.5 block text-xs">Enter your password</Label>
+              <Input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Current password"
+                className="border-[#F0F0F0]"
+                data-testid="delete-account-password-input"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || !deletePassword || (deleteEmailConfirm || '').toLowerCase() !== (user?.email || '').toLowerCase()}
+              className="bg-[#EF4444] hover:bg-[#DC2626] text-white"
+              data-testid="confirm-delete-account-btn"
+            >
+              {isDeleting ? <><Loader2 size={14} className="mr-2 animate-spin" />Deleting...</> : 'Permanently Delete Account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel subscription confirmation */}
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent className="max-w-md" data-testid="cancel-subscription-dialog">
+          <DialogHeader>
+            <DialogTitle>Cancel your subscription?</DialogTitle>
+            <DialogDescription>
+              You'll keep access until the end of your current billing period. After that you'll be downgraded to free.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setCancelOpen(false)}>Keep subscription</Button>
+            <Button
+              onClick={handleCancelSubscription}
+              disabled={isCancelling}
+              variant="outline"
+              className="border-[#EF4444] text-[#EF4444] hover:bg-red-50"
+              data-testid="confirm-cancel-subscription-btn"
+            >
+              {isCancelling ? <><Loader2 size={14} className="mr-2 animate-spin" />Cancelling...</> : 'Yes, cancel'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

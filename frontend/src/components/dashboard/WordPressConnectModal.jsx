@@ -317,11 +317,27 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
                     <div className="bg-[#F9FAFB] rounded-lg p-4 mb-4 mt-4">
                       <ol className="text-sm text-[#0A0A0A] space-y-2 list-decimal list-inside">
                         <li>In WordPress admin, go to <strong>Settings → SEO Jalwa</strong></li>
-                        <li>Paste your API key above</li>
-                        <li>Click <strong>Test Connection</strong> in the plugin</li>
-                        <li>Return here and click Connect</li>
+                        <li>Paste your API key above (exact value — no extra spaces)</li>
+                        <li>Click <strong>Verify &amp; Connect</strong> in the plugin</li>
+                        <li>Return here and click <strong>Test &amp; Connect</strong></li>
                       </ol>
                     </div>
+
+                    <Collapsible>
+                      <CollapsibleTrigger asChild>
+                        <button className="text-xs text-[#1D9E75] hover:underline inline-flex items-center gap-1 mb-3" data-testid="wp-troubleshoot-toggle">
+                          Not working? Troubleshooting tips <ChevronDown size={12} />
+                        </button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <ul className="text-xs text-[#6B7280] space-y-1 list-disc list-inside bg-[#F9FAFB] rounded-lg p-3 mb-4">
+                          <li>You've activated the plugin in WordPress</li>
+                          <li>Your WordPress URL matches the one you added in SEO Jalwa</li>
+                          <li>No extra spaces in the API key</li>
+                          <li>Your WordPress REST API is reachable from the public internet</li>
+                        </ul>
+                      </CollapsibleContent>
+                    </Collapsible>
 
                     {verifyError && (
                       <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-red-50 text-[#EF4444] text-sm" data-testid="wp-verify-error">

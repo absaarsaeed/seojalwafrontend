@@ -67,9 +67,21 @@ const STATUS_BY_DAY = (date, today) => {
 };
 
 const statusStyles = {
-  PUBLISHED: 'bg-[#E1F5EE] text-[#1D9E75]',
-  READY:     'bg-[#DBEAFE] text-[#2563EB]',
-  SCHEDULED: 'bg-[#F0F0F0] text-[#6B7280]',
+  PUBLISHED:  'bg-[#E1F5EE] text-[#1D9E75]',
+  READY:      'bg-[#DBEAFE] text-[#2563EB]',
+  SCHEDULED:  'bg-[#DBEAFE] text-[#2563EB]',
+  DRAFT:      'bg-[#FEF3C7] text-[#D97706]',
+  PUBLISHING: 'bg-[#FEF3C7] text-[#D97706]',
+  FAILED:     'bg-red-100 text-[#EF4444]',
+};
+
+const statusLabels = {
+  PUBLISHED:  'PUBLISHED',
+  READY:      'READY TO PUBLISH',
+  SCHEDULED:  'SCHEDULED',
+  DRAFT:      'DRAFT',
+  PUBLISHING: 'PUBLISHING',
+  FAILED:     'FAILED',
 };
 
 const buildMonth = () => {
@@ -116,9 +128,15 @@ const PERF_ROWS = TITLES.slice(0, 10).map((title, i) => ({
 }));
 
 const StatusPill = ({ status }) => {
-  const style = statusStyles[status] || statusStyles.SCHEDULED;
-  const label = status === 'PUBLISHED' ? 'PUBLISHED' : status === 'READY' ? 'READY TO PUBLISH' : 'SCHEDULED';
-  return <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${style}`}>{label}</span>;
+  const key = (status || 'SCHEDULED').toUpperCase();
+  const style = statusStyles[key] || statusStyles.SCHEDULED;
+  const label = statusLabels[key] || key;
+  const isAnimated = key === 'PUBLISHING';
+  return (
+    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${style} ${isAnimated ? 'animate-pulse' : ''}`} data-testid={`status-pill-${key.toLowerCase()}`}>
+      {label}
+    </span>
+  );
 };
 
 const PerfStatusBadge = ({ status }) => {
@@ -364,30 +382,40 @@ export const PublishPage = () => {
         {/* ============================ CMS ============================ */}
         <TabsContent value="cms" className="space-y-6">
           <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {data.cmsConnections.map((cms) => (
-              <div key={cms.name} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <PlatformLogo name={cms.name} size={28} />
-                    <span className="font-medium text-[#0A0A0A]">{cms.name}</span>
+            {data.cmsConnections.map((cms) => {
+              const isWp = (cms.name || '').toLowerCase() === 'wordpress';
+              return (
+                <div key={cms.name} className={`bg-white rounded-xl border border-[#F0F0F0] p-4 ${isWp ? '' : 'coming-soon-card'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <PlatformLogo name={cms.name} size={28} />
+                      <span className="font-medium text-[#0A0A0A]">{cms.name}</span>
+                    </div>
+                    {isWp ? (
+                      cms.connected ? (
+                        <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full flex items-center gap-1">
+                          <Check size={12} /> Connected
+                        </span>
+                      ) : (
+                        <Button size="sm" variant="outline" className="text-xs h-7">Connect</Button>
+                      )
+                    ) : (
+                      <span className="px-2 py-1 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md">Coming Soon</span>
+                    )}
                   </div>
-                  {cms.connected ? (
-                    <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full flex items-center gap-1">
-                      <Check size={12} /> Connected
-                    </span>
-                  ) : (
-                    <Button size="sm" variant="outline" className="text-xs h-7">Connect</Button>
+                  {isWp && cms.connected && (
+                    <div className="text-xs text-[#6B7280] space-y-0.5">
+                      <p>{cms.site}</p>
+                      <p>Last published: {cms.lastPublished}</p>
+                      <p>{cms.articleCount} articles</p>
+                    </div>
+                  )}
+                  {!isWp && (
+                    <p className="text-[10px] text-[#9CA3AF] mt-2">Available in v2</p>
                   )}
                 </div>
-                {cms.connected && (
-                  <div className="text-xs text-[#6B7280] space-y-0.5">
-                    <p>{cms.site}</p>
-                    <p>Last published: {cms.lastPublished}</p>
-                    <p>{cms.articleCount} articles</p>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </motion.div>
         </TabsContent>
 

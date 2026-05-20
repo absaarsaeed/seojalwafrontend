@@ -90,7 +90,7 @@ export const ForgotPasswordPage = () => {
                 <Button
                   type="submit"
                   disabled={isLoading || !email}
-                  className="w-full h-11 bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+                  className="auth-primary-btn w-full h-11"
                   data-testid="forgot-submit-btn"
                 >
                   {isLoading ? 'Sending...' : 'Send reset link'}

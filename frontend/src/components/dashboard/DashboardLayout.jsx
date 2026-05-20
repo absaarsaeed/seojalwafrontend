@@ -2,8 +2,10 @@ import { NavLink, useNavigate, useLocation, Outlet, Navigate } from 'react-route
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
 import { SiteSwitcher } from './SiteSwitcher';
+import { NotificationsBell } from './NotificationsBell';
 import { Logo } from '../public/Logo';
 import { Toaster } from 'sonner';
+import { FeedbackFAB } from '../FeedbackFAB';
 import { 
   LayoutDashboard, Trophy, Radar, Pen, Send, BarChart3, Share2, SlidersHorizontal, Plug, Users, Settings,
   LogOut, Bell, ChevronUp, Menu, X
@@ -177,10 +179,7 @@ export const DashboardLayout = () => {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button className="relative p-2 text-[#6B7280] hover:text-[#0A0A0A] transition-colors">
-                <Bell size={20} />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[#1D9E75] rounded-full" />
-              </button>
+              <NotificationsBell />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center">
@@ -213,6 +212,7 @@ export const DashboardLayout = () => {
       </div>
       
       <Toaster position="bottom-right" richColors />
+      <FeedbackFAB />
     </div>
   );
 };

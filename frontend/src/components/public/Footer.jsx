@@ -25,6 +25,7 @@ export const Footer = () => {
               <li><Link to="/about" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">About</Link></li>
               <li><Link to="/blog" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Blog</Link></li>
               <li><Link to="/contact" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Contact</Link></li>
+              <li><Link to="/feedback" className="text-sm text-[#6B7280] hover:text-[#1D9E75]" data-testid="footer-feedback-link">Send feedback</Link></li>
               <li><a href="#" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Careers</a></li>
             </ul>
           </div>
