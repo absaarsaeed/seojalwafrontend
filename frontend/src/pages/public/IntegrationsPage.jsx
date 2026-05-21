@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { INTEGRATIONS } from '../../data/publicData';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { ArrowRight } from 'lucide-react';
+import { pagesApi } from '../../lib/api';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,10 +16,32 @@ const categories = ['All', 'CMS & Website', 'Social Media', 'CRM & Sales', 'E-co
 
 export const IntegrationsPage = () => {
   const [activeCategory, setActiveCategory] = useState('All');
+  const [liveIntegrations, setLiveIntegrations] = useState(null);
 
-  const filteredIntegrations = activeCategory === 'All' 
-    ? INTEGRATIONS 
-    : INTEGRATIONS.filter(i => i.category === activeCategory);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await pagesApi.integrations();
+        const list = Array.isArray(data) ? data : data?.integrations || data?.items || [];
+        if (!cancelled && list.length > 0) {
+          setLiveIntegrations(list.map((p) => ({
+            name: p.name,
+            method: p.method || p.connectionMethod || 'OAuth',
+            description: p.description || '',
+            category: p.category || 'Other',
+            isAvailable: p.isAvailable !== false && !p.comingSoon,
+          })));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const source = liveIntegrations || INTEGRATIONS;
+  const filteredIntegrations = activeCategory === 'All'
+    ? source
+    : source.filter(i => i.category === activeCategory);
 
   return (
     <div className="min-h-screen" data-testid="integrations-page">
@@ -75,19 +98,29 @@ export const IntegrationsPage = () => {
                 whileInView="visible"
                 viewport={{ once: true }}
                 variants={fadeInUp}
-                whileHover={{ y: -4 }}
-                className="bg-white rounded-xl border border-[#F0F0F0] p-6 transition-shadow hover:shadow-lg"
+                whileHover={integration.isAvailable !== false ? { y: -4 } : {}}
+                className={`bg-white rounded-xl border border-[#F0F0F0] p-6 transition-shadow ${integration.isAvailable === false ? 'coming-soon-card' : 'hover:shadow-lg'}`}
+                data-testid={`integration-card-${(integration.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
               >
                 <div className="flex items-start gap-4">
                   <PlatformLogo name={integration.name} size={48} />
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h3 className="font-semibold text-[#0A0A0A]">{integration.name}</h3>
-                      <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
-                        {integration.method}
-                      </span>
+                      {integration.isAvailable === false ? (
+                        <span className="px-2 py-0.5 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-full">
+                          Coming Soon
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
+                          {integration.method}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-[#6B7280]">{integration.description}</p>
+                    {integration.isAvailable === false && (
+                      <p className="text-[10px] text-[#9CA3AF] mt-1.5">Available in v2</p>
+                    )}
                   </div>
                 </div>
               </motion.div>

@@ -13,7 +13,7 @@ export const Footer = () => {
             <ul className="space-y-2">
               <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">AI Visibility</Link></li>
               <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">AI Writer</Link></li>
-              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Auto Publish</Link></li>
+              <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Auto Article Writing</Link></li>
               <li><Link to="/features" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Social Autopilot</Link></li>
             </ul>
           </div>

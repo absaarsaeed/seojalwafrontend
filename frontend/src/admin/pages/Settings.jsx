@@ -62,6 +62,13 @@ export const Settings = () => {
           trialEndingReminderDays: fmt(flat.trialEndingReminderDays || flat.trial_ending_reminder_days),
           paymentRetryDays: fmt(flat.paymentRetryDays || flat.payment_retry_days),
         });
+        const trialDaysFromApi = flat.trialDays || flat.trial_days || flat.trialPeriodDays;
+        if (trialDaysFromApi) {
+          setLocalSettings((prev) => ({
+            ...prev,
+            general: { ...(prev.general || {}), trialDays: Number(trialDaysFromApi) || 14 },
+          }));
+        }
       } catch {
         // Endpoint may not be present — keep empty fields.
       }
@@ -164,9 +171,20 @@ export const Settings = () => {
     }));
   };
 
-  const handleSaveGeneral = () => {
+  const handleSaveGeneral = async () => {
     updateSettings(localSettings);
-    toast.success('General settings saved');
+    try {
+      await adminApi.updateSettings({
+        siteName: localSettings.general.siteName,
+        siteUrl: localSettings.general.siteUrl,
+        supportEmail: localSettings.general.supportEmail,
+        contactEmail: localSettings.general.contactEmail,
+        trialDays: localSettings.general.trialDays ?? 14,
+      });
+      toast.success('General settings saved');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save settings');
+    }
   };
 
   const handleSaveMaintenance = () => {
@@ -254,6 +272,19 @@ export const Settings = () => {
               className="admin-input"
               data-testid="settings-contact-email"
             />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Trial Period (days)</Label>
+            <Input
+              type="number"
+              min={0}
+              max={90}
+              value={localSettings.general.trialDays ?? 14}
+              onChange={(e) => handleGeneralChange('trialDays', parseInt(e.target.value || '14', 10))}
+              className="admin-input"
+              data-testid="settings-trial-days"
+            />
+            <p className="text-[10px] text-[#71717A]">New users get this many days of free trial.</p>
           </div>
           <Button onClick={handleSaveGeneral} className="admin-btn-primary" data-testid="save-general-btn">
             <Save size={16} className="mr-2" />

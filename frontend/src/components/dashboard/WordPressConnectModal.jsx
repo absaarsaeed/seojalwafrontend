@@ -157,6 +157,14 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
         return;
       }
       setDone(true);
+      // Begin site-analysis polling — backend may flip site.analyzed=true async.
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jalwa:site-connected', {
+            detail: { siteId: activeSite.id },
+          }));
+        }
+      } catch {}
       onConnected?.({ url, site: res });
     } catch (err) {
       const msg = err?.message || 'Connection failed. Please verify the plugin is installed and the API key is pasted correctly in WordPress.';

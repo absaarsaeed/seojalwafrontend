@@ -24,7 +24,7 @@ const navItems = [
   { path: '/dashboard/growth-score', label: 'Growth Score', icon: Trophy },
   { path: '/dashboard/ai-visibility', label: 'AI Visibility', icon: Radar },
   { path: '/dashboard/ai-writer', label: 'AI Writer', icon: Pen },
-  { path: '/dashboard/auto-publish', label: 'Auto Publish', icon: Send },
+  { path: '/dashboard/auto-publish', label: 'Auto Article Writing', icon: Send },
   { path: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/dashboard/social-autopilot', label: 'Social Autopilot', icon: Share2 },
   { path: '/dashboard/article-settings', label: 'Article Settings', icon: SlidersHorizontal },

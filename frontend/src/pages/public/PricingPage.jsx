@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { Button } from '../../components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion';
-import { Check, X, ArrowRight } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '../../components/ui/dialog';
+import { Check, X, ArrowRight, Mail } from 'lucide-react';
 import { FAQ_DATA } from '../../data/publicData';
+import { plansApi, pagesApi, checkoutApi } from '../../lib/api';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 30 },
@@ -15,7 +19,7 @@ const fadeInUp = {
 const allFeatures = [
   { name: 'AI Visibility Monitoring', starter: true, growth: true, agency: true },
   { name: 'AI Writer (Content Writing)', starter: true, growth: true, agency: true },
-  { name: 'Auto Publish', starter: true, growth: true, agency: true },
+  { name: 'Auto Article Writing', starter: true, growth: true, agency: true },
   { name: 'Social Autopilot', starter: true, growth: true, agency: true },
   { name: 'Custom Brand Voice Model', starter: true, growth: true, agency: true },
   { name: 'Articles per month', starter: '10', growth: '30', agency: 'Unlimited' },
@@ -31,9 +35,87 @@ const allFeatures = [
 ];
 
 export const PricingPage = () => {
-  const { getPricing } = useUser();
-  const pricing = getPricing();
+  const { getPricing, user } = useUser();
+  const fallbackPricing = getPricing();
   const [isAnnual, setIsAnnual] = useState(false);
+  const [livePlans, setLivePlans] = useState(null); // array | null
+  const [trialDays, setTrialDays] = useState(14);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
+  const [busyPlan, setBusyPlan] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await plansApi.list();
+        const list = Array.isArray(data) ? data : data?.items || data?.plans || [];
+        if (!cancelled && list.length > 0) setLivePlans(list);
+      } catch {}
+      try {
+        const s = await pagesApi.settings();
+        const flat = s?.settings || s || {};
+        const td = flat.trialDays || flat.trial_days || flat.trialPeriodDays;
+        if (!cancelled && td) setTrialDays(Number(td) || 14);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleStartPlan = async (planKey) => {
+    // Logged-out users go through normal signup flow.
+    if (!user) {
+      window.location.assign('/signup');
+      return;
+    }
+    setBusyPlan(planKey);
+    try {
+      const res = await checkoutApi.start({
+        planId: planKey,
+        interval: isAnnual ? 'annual' : 'monthly',
+      });
+      const url = res?.checkoutUrl || res?.checkout_url;
+      if (url) {
+        window.location.assign(url);
+        return;
+      }
+      // Backend returned a message → show contact modal.
+      setUpgradeMessage(res?.message || 'To upgrade your plan, please contact hello@seojalwa.com and we\'ll set you up manually.');
+      setUpgradeOpen(true);
+    } catch {
+      setUpgradeMessage('To upgrade your plan, please contact hello@seojalwa.com and we\'ll set you up manually.');
+      setUpgradeOpen(true);
+    } finally {
+      setBusyPlan('');
+    }
+  };
+
+  // Merge backend plans with the fallback shape used by the existing UI.
+  const pricing = (() => {
+    if (!livePlans) return fallbackPricing;
+    const byKey = {};
+    livePlans.forEach((p) => {
+      const k = (p.id || p.key || p.name || '').toLowerCase();
+      byKey[k] = {
+        name: p.name || p.id || '',
+        monthlyPrice: p.monthlyPrice ?? p.priceMonthly ?? p.price ?? 0,
+        annualPrice: p.annualPrice ?? p.priceAnnual ?? (p.monthlyPrice ? Math.round(p.monthlyPrice * 0.8) : 0),
+        popular: !!p.popular || /growth/i.test(p.name || ''),
+        whiteLabel: !!p.whiteLabel,
+        articlesPerMonth: p.articlesPerMonth,
+        socialPostsPerMonth: p.socialPostsPerMonth,
+        aiScansPerMonth: p.aiScansPerMonth,
+        teamSeats: p.teamSeats,
+        websiteConnections: p.websiteConnections,
+      };
+    });
+    // keep stable key order matching legacy UI
+    return {
+      starter: byKey.starter || fallbackPricing.starter,
+      growth: byKey.growth || fallbackPricing.growth,
+      agency: byKey.agency || fallbackPricing.agency,
+    };
+  })();
 
   return (
     <div className="min-h-screen" data-testid="pricing-page">
@@ -102,11 +184,18 @@ export const PricingPage = () => {
                     Billed ${(plan.annualPrice * 12)} annually
                   </p>
                 )}
-                <Link to="/signup">
-                  <Button className={`w-full mb-6 ${plan.popular ? 'bg-[#1D9E75] hover:bg-[#0F6E56] text-white' : 'bg-[#F0F0F0] text-[#0A0A0A] hover:bg-[#E0E0E0]'}`}>
-                    Start 14-day free trial
-                  </Button>
-                </Link>
+                <Button
+                  onClick={() => handleStartPlan(key)}
+                  disabled={busyPlan === key}
+                  className={`w-full mb-6 ${plan.popular ? 'bg-[#1D9E75] hover:bg-[#0F6E56] text-white' : 'bg-[#F0F0F0] text-[#0A0A0A] hover:bg-[#E0E0E0]'}`}
+                  data-testid={`pricing-cta-${key}`}
+                >
+                  {busyPlan === key ? 'Loading...' : user ? `Upgrade to ${plan.name}` : `Start your ${trialDays}-day free trial`}
+                </Button>
+                {/* White-label / branding line */}
+                <p className="text-xs text-[#6B7280] mb-3" data-testid={`pricing-branding-${key}`}>
+                  {plan.whiteLabel ? '✓ White-label (no SEO Jalwa branding)' : 'Includes SEO Jalwa branding'}
+                </p>
                 <ul className="space-y-3">
                   {allFeatures.slice(0, 10).map((feature) => {
                     const value = feature[key];
@@ -212,6 +301,28 @@ export const PricingPage = () => {
           </Link>
         </div>
       </section>
+
+      {/* Manual-upgrade contact dialog */}
+      <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <DialogContent className="max-w-md" data-testid="upgrade-contact-dialog">
+          <DialogHeader>
+            <DialogTitle>Upgrade your plan</DialogTitle>
+            <DialogDescription>{upgradeMessage}</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3">
+            <a
+              href="mailto:hello@seojalwa.com?subject=Upgrade%20my%20SEO%20Jalwa%20plan"
+              className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#1D9E75] hover:bg-[#0F6E56] text-white rounded-lg font-medium"
+              data-testid="upgrade-email-link"
+            >
+              <Mail size={16} /> Email hello@seojalwa.com
+            </a>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setUpgradeOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

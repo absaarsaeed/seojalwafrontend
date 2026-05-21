@@ -391,12 +391,39 @@ export const aiVisibilityApi = {
 export const articlesApi = {
   list: (params) => api.get('/api/articles', { query: params }),
   get: (id) => api.get(`/api/articles/${id}`),
+  update: (id, payload) => api.put(`/api/articles/${id}`, payload),
+  remove: (id) => api.del(`/api/articles/${id}`),
   calendar: ({ siteId, year, month }) =>
     api.get('/api/articles/calendar', { query: { siteId, year, month } }),
   generate: (payload) => api.post('/api/articles/generate', payload),
   job: (jobId) => api.get(`/api/articles/job/${jobId}`),
   publish: (id, payload) => api.post(`/api/articles/${id}/publish`, payload),
   retry: (id) => api.post(`/api/articles/${id}/retry`, {}),
+};
+
+// Dashboard overview (real metrics + recommendations + activity) -----------
+export const dashboardApi = {
+  overview: (siteId) => api.get('/api/dashboard/overview', { query: { siteId } }),
+};
+
+// Plans (public) -----------------------------------------------------------
+// (plansApi defined above at line ~318)
+
+// Blog (public) ------------------------------------------------------------
+export const blogApi = {
+  list: () => api.get('/api/blog', { auth: 'none' }),
+  get: (slug) => api.get(`/api/blog/${encodeURIComponent(slug)}`, { auth: 'none' }),
+};
+
+// Public dynamic pages -----------------------------------------------------
+export const pagesApi = {
+  integrations: () => api.get('/api/pages/integrations', { auth: 'none' }),
+  settings: () => api.get('/api/pages/settings', { auth: 'none' }),
+};
+
+// Billing checkout --------------------------------------------------------
+export const checkoutApi = {
+  start: ({ planId, interval }) => api.post('/api/billing/checkout', { planId, interval }),
 };
 
 // Search terms (content topics) ------------------------------------------

@@ -27,6 +27,7 @@ import { UserProvider, useUser } from "./context/UserContext";
 import { SiteProvider } from "./context/SiteContext";
 import { AppErrorListener } from "./components/AppErrorListener";
 import { LimitReachedListener } from "./components/LimitReachedListener";
+import { SiteAnalysisListener } from "./components/SiteAnalysisListener";
 import { PublicLayout } from "./components/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
 import { FeaturesPage } from "./pages/public/FeaturesPage";
@@ -77,6 +78,7 @@ function App() {
             <AppErrorListener />
             <BrowserRouter>
               <LimitReachedListener />
+              <SiteAnalysisListener />
             <Routes>
               {/* Public Marketing Site */}
               <Route element={<PublicLayout />}>

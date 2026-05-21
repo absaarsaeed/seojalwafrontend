@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { growthApi, analyticsApi, searchTermsApi, aiVisibilityLatestApi } from '../../lib/api';
+import { growthApi, analyticsApi, searchTermsApi, aiVisibilityLatestApi, dashboardApi } from '../../lib/api';
 import { DASHBOARD_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
-import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink, Globe, X as XIcon, Check } from 'lucide-react';
+import { Progress } from '../../components/ui/progress';
+import { ArrowRight, ArrowUp, FileText, Share2, Eye, TrendingUp, ExternalLink, Globe, X as XIcon, Check, Sparkles, Activity, Zap, Send } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 const fadeInUp = {
@@ -80,6 +81,7 @@ export const DashboardHome = () => {
   // Live data overlay
   const [growth, setGrowth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
+  const [overview, setOverview] = useState(null);
 
   useEffect(() => {
     if (!activeSite?.id) return;
@@ -92,6 +94,10 @@ export const DashboardHome = () => {
       try {
         const a = await analyticsApi.overview(activeSite.id, '30d');
         if (!cancelled) setAnalytics(a);
+      } catch {}
+      try {
+        const ov = await dashboardApi.overview(activeSite.id);
+        if (!cancelled) setOverview(ov);
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -153,6 +159,38 @@ export const DashboardHome = () => {
       className="space-y-6"
       data-testid="user-dashboard-home"
     >
+      {/* Trial countdown banner */}
+      {(() => {
+        const status = (subscription?.status || '').toLowerCase();
+        const daysLeft = subscription?.trialDaysLeft ?? subscription?.trial_days_left;
+        if (status !== 'trialing' || daysLeft == null) return null;
+        const total = subscription?.trialDays || 14;
+        const used = Math.max(0, total - daysLeft);
+        const urgent = daysLeft <= 3;
+        return (
+          <motion.div
+            variants={fadeInUp}
+            className={`rounded-xl p-5 flex flex-wrap items-center gap-4 border ${urgent ? 'bg-[#FEF3C7] border-[#F59E0B]/30' : 'bg-[#E1F5EE] border-[#1D9E75]/30'}`}
+            data-testid="trial-banner"
+          >
+            <div className={`w-10 h-10 rounded-full ${urgent ? 'bg-[#F59E0B]' : 'bg-[#1D9E75]'} flex items-center justify-center flex-shrink-0`}>
+              <Zap size={18} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-[240px]">
+              <h2 className="font-syne text-lg font-bold text-[#0A0A0A]" data-testid="trial-days-text">
+                {urgent ? `Only ${daysLeft} day${daysLeft === 1 ? '' : 's'} left in your trial` : `Trial: ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining`}
+              </h2>
+              <Progress value={(used / total) * 100} className="h-1.5 mt-2 max-w-md" />
+            </div>
+            <Link to="/pricing">
+              <Button className={urgent ? 'bg-[#F59E0B] hover:bg-[#D97706] text-white' : 'bg-[#1D9E75] hover:bg-[#0F6E56] text-white'} data-testid="trial-upgrade-btn">
+                Upgrade now <ArrowRight size={14} className="ml-1.5" />
+              </Button>
+            </Link>
+          </motion.div>
+        );
+      })()}
+
       {/* Welcome banner — when no active site */}
       {showWelcomeBanner && (
         <motion.div variants={fadeInUp} className="bg-[#E1F5EE] border border-[#1D9E75]/30 rounded-xl p-5 flex flex-wrap items-center gap-4" data-testid="welcome-banner">
@@ -326,24 +364,67 @@ export const DashboardHome = () => {
         </div>
       </motion.div>
 
+      {/* Today's Recommendations */}
+      {(() => {
+        const recs = Array.isArray(overview?.recommendations) ? overview.recommendations.slice(0, 3) : [];
+        if (recs.length === 0) return null;
+        return (
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="todays-recommendations">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles size={16} className="text-[#1D9E75]" />
+              <h3 className="font-semibold text-[#0A0A0A]">Today's Recommendations</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {recs.map((r, i) => (
+                <div key={r.id || i} className="border border-[#F0F0F0] rounded-lg p-4" data-testid={`recommendation-${i}`}>
+                  <p className="font-medium text-[#0A0A0A] mb-1">{r.title}</p>
+                  {r.description && <p className="text-xs text-[#6B7280] mb-3 line-clamp-2">{r.description}</p>}
+                  {r.link && (
+                    <Link to={r.link}>
+                      <Button size="sm" variant="ghost" className="text-[#1D9E75] hover:bg-[#E1F5EE] h-8 p-0">
+                        {r.cta || 'View'} <ArrowRight size={12} className="ml-1" />
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        );
+      })()}
+
       {/* Recent Activity */}
-      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="dashboard-recent-activity">
         <h3 className="font-semibold text-[#0A0A0A] mb-4">Recent Activity</h3>
         <div className="space-y-3">
-          {data.recentActivity.map((activity) => {
-            const Icon = activityIcons[activity.icon] || FileText;
-            return (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center flex-shrink-0">
-                  <Icon size={16} className="text-[#1D9E75]" />
+          {(() => {
+            const liveActivity = Array.isArray(overview?.recentActivity) ? overview.recentActivity : null;
+            const items = liveActivity && liveActivity.length > 0
+              ? liveActivity.slice(0, 6).map((a, i) => ({
+                  id: a.id || i,
+                  icon: a.icon || a.type || 'FileText',
+                  text: a.message || a.title || a.action || '',
+                  time: a.createdAt ? new Date(a.createdAt).toLocaleString() : (a.time || ''),
+                }))
+              : data.recentActivity;
+            if (!items || items.length === 0) {
+              return <p className="text-sm text-[#6B7280]">No activity yet. Generate your first article to see action here.</p>;
+            }
+            return items.map((activity) => {
+              const Icon = activityIcons[activity.icon] || FileText;
+              return (
+                <div key={activity.id} className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#E1F5EE] flex items-center justify-center flex-shrink-0">
+                    <Icon size={16} className="text-[#1D9E75]" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-[#0A0A0A]">{activity.text}</p>
+                    <p className="text-xs text-[#6B7280]">{activity.time}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-[#0A0A0A]">{activity.text}</p>
-                  <p className="text-xs text-[#6B7280]">{activity.time}</p>
-                </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </motion.div>
     </motion.div>

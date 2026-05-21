@@ -3,12 +3,17 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '../../components/ui/dialog';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { useSite } from '../../context/SiteContext';
 import { articlesApi } from '../../lib/api';
 import {
   ArrowLeft, ExternalLink, Edit2, RotateCw, Check, X as XIcon, AlertTriangle, Play,
-  TrendingUp, TrendingDown, Loader2, Send,
+  TrendingUp, TrendingDown, Loader2, Send, Save, Trash2, Calendar as CalendarIcon,
 } from 'lucide-react';
 
 const fadeInUp = {
@@ -101,6 +106,11 @@ export const ArticleViewPage = () => {
   const { id } = useParams();
   const [article, setArticle] = useState(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [edits, setEdits] = useState({});
+  const [editMode, setEditMode] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -115,6 +125,74 @@ export const ArticleViewPage = () => {
     })();
     return () => { cancelled = true; };
   }, [id]);
+
+  // Keep edits in sync with loaded article.
+  useEffect(() => {
+    if (!article) return;
+    setEdits({
+      title: article.title || '',
+      content: article.content || article.body || article.html || '',
+      metaTitle: article.metaTitle || '',
+      metaDescription: article.metaDescription || '',
+      scheduledAt: article.scheduledAt || article.scheduled_at || '',
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article?.id]);
+
+  const handleSaveDraft = async () => {
+    if (!id) return;
+    setIsSaving(true);
+    try {
+      const res = await articlesApi.update(id, {
+        title: edits.title,
+        content: edits.content,
+        metaTitle: edits.metaTitle,
+        metaDescription: edits.metaDescription,
+      });
+      setArticle((p) => ({ ...(p || {}), ...res, ...edits }));
+      toast.success('Draft saved');
+      setEditMode(false);
+    } catch (err) {
+      toast.error(err?.message || 'Could not save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (!id || !edits.scheduledAt) {
+      toast.error('Pick a scheduled date first');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await articlesApi.update(id, {
+        scheduledAt: edits.scheduledAt,
+        status: 'SCHEDULED',
+      });
+      setArticle((p) => ({ ...(p || {}), scheduledAt: edits.scheduledAt, status: 'SCHEDULED' }));
+      toast.success('Article scheduled');
+    } catch (err) {
+      toast.error(err?.message || 'Could not schedule');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      await articlesApi.remove(id);
+      toast.success('Article deleted');
+      navigate('/dashboard/auto-publish');
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete');
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
 
   const handlePublish = async () => {
     if (!id) return;
@@ -189,8 +267,29 @@ export const ArticleViewPage = () => {
         <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusBadgeStyle}`} data-testid="article-status-badge">
           {status}
         </span>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="text-[#6B7280]"><Edit2 size={14} className="mr-1.5" />Edit</Button>
+        <div className="flex gap-2 flex-wrap">
+          {editMode ? (
+            <>
+              <Button variant="ghost" size="sm" className="text-[#6B7280]" onClick={() => setEditMode(false)}>
+                <XIcon size={14} className="mr-1.5" />Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveDraft}
+                disabled={isSaving}
+                variant="outline"
+                className="border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE]"
+                data-testid="article-save-draft-btn"
+              >
+                {isSaving ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <Save size={14} className="mr-1.5" />}
+                Save draft
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" className="text-[#6B7280]" onClick={() => setEditMode(true)} data-testid="article-edit-btn">
+              <Edit2 size={14} className="mr-1.5" />Edit
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="text-[#6B7280]" onClick={() => window.open('https://example.com/blog/5-seo-mistakes-2026', '_blank')}>
             <ExternalLink size={14} className="mr-1.5" />View Live
           </Button>
@@ -218,8 +317,18 @@ export const ArticleViewPage = () => {
             ) : status === 'PUBLISHED' ? (
               <><RotateCw size={14} className="mr-1.5" />Republish</>
             ) : (
-              <><Send size={14} className="mr-1.5" />Publish</>
+              <><Send size={14} className="mr-1.5" />Publish
+              </>
             )}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setDeleteOpen(true)}
+            variant="ghost"
+            className="text-[#EF4444] hover:bg-red-50"
+            data-testid="article-delete-btn"
+          >
+            <Trash2 size={14} className="mr-1.5" />Delete
           </Button>
         </div>
       </motion.div>
@@ -247,9 +356,19 @@ export const ArticleViewPage = () => {
           )}
 
           {/* Title */}
-          <h1 className="font-syne font-bold text-[#0A0A0A] mb-4 leading-tight" style={{ fontSize: 40 }} data-testid="article-title">
-            {title}
-          </h1>
+          {editMode ? (
+            <Input
+              value={edits.title || ''}
+              onChange={(e) => setEdits((p) => ({ ...p, title: e.target.value }))}
+              className="font-syne font-bold text-[#0A0A0A] mb-4 leading-tight border-[#1D9E75]/30 h-auto"
+              style={{ fontSize: 32, padding: '8px 12px' }}
+              data-testid="article-title-input"
+            />
+          ) : (
+            <h1 className="font-syne font-bold text-[#0A0A0A] mb-4 leading-tight" style={{ fontSize: 40 }} data-testid="article-title">
+              {title}
+            </h1>
+          )}
           <p className="text-lg text-[#6B7280] mb-8 leading-relaxed">
             {excerpt}
           </p>
@@ -298,6 +417,22 @@ export const ArticleViewPage = () => {
           </nav>
 
           {/* Body */}
+          {editMode ? (
+            <Textarea
+              rows={20}
+              value={edits.content || ''}
+              onChange={(e) => setEdits((p) => ({ ...p, content: e.target.value }))}
+              className="font-mono text-sm border-[#1D9E75]/30"
+              placeholder="Article HTML or markdown..."
+              data-testid="article-body-input"
+            />
+          ) : article?.content ? (
+            <div
+              className="prose-content space-y-5 text-[17px] leading-[1.8] text-[#0A0A0A]"
+              dangerouslySetInnerHTML={{ __html: article.content }}
+              data-testid="article-body-rendered"
+            />
+          ) : (
           <div className="prose-content space-y-5 text-[17px] leading-[1.8] text-[#0A0A0A]">
             <h2 id={slug(TOC[0])} className="font-syne text-2xl font-bold pt-4">Why SEO Mistakes Are Costing You</h2>
             <p>
@@ -358,6 +493,7 @@ export const ArticleViewPage = () => {
               The fix isn't cosmetic. Add a genuine author profile, link to social proof, include first-person experience inside the content, and cite primary sources. AI-assisted content can absolutely rank — but only when these signals are present and authentic.
             </p>
           </div>
+          )}
 
           {/* FAQ Section (from faqSchema) */}
           {faqSchema && faqSchema.length > 0 && (
@@ -475,6 +611,29 @@ export const ArticleViewPage = () => {
           </div>
         </motion.aside>
       </div>
+
+      {/* Delete confirmation */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="max-w-md" data-testid="article-delete-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-[#EF4444]">Delete this article?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the article from your calendar and your site (if published). This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-[#EF4444] hover:bg-[#DC2626] text-white"
+              data-testid="article-delete-confirm-btn"
+            >
+              {isDeleting ? <><Loader2 size={14} className="mr-2 animate-spin" />Deleting...</> : 'Yes, delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

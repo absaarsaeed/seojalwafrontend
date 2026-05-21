@@ -38,16 +38,16 @@ const modules = [
       'Voice consistency scoring — never go off-brand',
       'Support for 100+ languages with voice preservation',
       'Content brief to finished draft in minutes',
-      'Seamless handoff to Auto Publish'
+      'Seamless handoff to Auto Article Writing'
     ]
   },
   {
     id: 'auto-publish',
     icon: Send,
-    name: 'Auto Publish',
+    name: 'Auto Article Writing',
     tagline: 'Automated Content Publishing',
     headline: 'From keyword idea to published article — on autopilot',
-    description: 'Stop switching between keyword tools, writing apps, and your CMS. Auto Publish handles the entire content pipeline so you can focus on running your business.',
+    description: 'Stop switching between keyword tools, writing apps, and your website. Auto Article Writing handles the entire content pipeline so you can focus on running your business.',
     features: [
       'AI-powered keyword research with traffic estimates',
       'Automatic research and outline generation',

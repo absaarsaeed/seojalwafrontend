@@ -16,9 +16,10 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '../../components/ui/collapsible';
-import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
+import { useUser } from '../../context/UserContext';
 import { articlesApi, searchTermsApi } from '../../lib/api';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { PUBLISH_DATA } from '../../data/publicData';
@@ -148,6 +149,7 @@ const PerfStatusBadge = ({ status }) => {
 
 export const PublishPage = () => {
   const { activeSite } = useSite();
+  const { subscription } = useUser();
   const data = PUBLISH_DATA;
   const { cells, month, year } = useMemo(buildMonth, []);
   const [autoSchedule, setAutoSchedule] = useState(true);
@@ -227,7 +229,7 @@ export const PublishPage = () => {
       data-testid="publish-page"
     >
       <motion.div variants={fadeInUp}>
-        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Auto Publish</h1>
+        <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Auto Article Writing</h1>
         <p className="text-sm text-[#6B7280]">Manage your content calendar and CMS connections</p>
       </motion.div>
 
@@ -235,7 +237,7 @@ export const PublishPage = () => {
         <TabsList className="bg-[#F0F0F0]">
           <TabsTrigger value="calendar">Calendar</TabsTrigger>
           <TabsTrigger value="editor">Article Editor</TabsTrigger>
-          <TabsTrigger value="cms">CMS Connections</TabsTrigger>
+          <TabsTrigger value="cms">Website Connections</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
         </TabsList>
 
@@ -251,6 +253,16 @@ export const PublishPage = () => {
                 <Plus size={16} className="mr-1" /> Add Search Terms
               </Button>
             </div>
+            {(() => {
+              const isTrial = (subscription?.status || '').toLowerCase() === 'trialing';
+              const trialArticles = (liveCalendar || []).reduce((acc, day) => acc + (Array.isArray(day?.articles) ? day.articles.length : (day?.article ? 1 : 0)), 0);
+              if (!isTrial || trialArticles === 0) return null;
+              return (
+                <div className="mt-4 p-3 bg-[#E1F5EE]/40 border border-[#1D9E75]/30 rounded-lg text-sm text-[#0A0A0A]" data-testid="trial-articles-banner">
+                  ✨ We pre-generated <strong>{trialArticles}</strong> article{trialArticles === 1 ? '' : 's'} for your trial. Click any article to review and edit before publishing.
+                </div>
+              );
+            })()}
           </motion.div>
 
           {/* Stats */}
@@ -294,19 +306,42 @@ export const PublishPage = () => {
                             </div>
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-72">
+                        <PopoverContent className="w-72" data-testid={`calendar-popover-${cell.day}`}>
                           <p className="font-semibold text-[#0A0A0A] mb-1">{cell.article.title}</p>
                           <p className="text-xs text-[#6B7280] mb-2">Search term: {cell.article.searchTerm}</p>
                           <p className="text-xs text-[#6B7280] mb-3">Scheduled: {cell.date.toLocaleDateString()}</p>
-                          <div className="flex gap-2">
+                          {(cell.article.status || '').toUpperCase() === 'FAILED' && cell.article.error && (
+                            <div className="p-2 mb-3 bg-red-50 text-[#EF4444] text-xs rounded" data-testid="calendar-failed-error">
+                              {cell.article.error}
+                            </div>
+                          )}
+                          <div className="flex gap-2 flex-wrap">
                             <Link to={`/dashboard/auto-publish/article/${cell.article.id}`}>
                               <Button size="sm" variant="outline" className="border-[#F0F0F0] text-xs">
                                 <ExternalLink size={12} className="mr-1" /> View Article
                               </Button>
                             </Link>
-                            <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-xs">
-                              <Edit2 size={12} className="mr-1" /> Edit
-                            </Button>
+                            {(cell.article.status || '').toUpperCase() === 'FAILED' ? (
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await articlesApi.retry(cell.article.id);
+                                    toast.success('Retry queued');
+                                  } catch (e) {
+                                    toast.error(e?.message || 'Retry failed');
+                                  }
+                                }}
+                                className="bg-[#EF4444] hover:bg-[#DC2626] text-white text-xs"
+                                data-testid={`calendar-retry-${cell.day}`}
+                              >
+                                <RotateCw size={12} className="mr-1" /> Retry
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-xs">
+                                <Edit2 size={12} className="mr-1" /> Edit
+                              </Button>
+                            )}
                           </div>
                         </PopoverContent>
                       </Popover>
