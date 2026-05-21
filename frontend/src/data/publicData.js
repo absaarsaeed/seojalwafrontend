@@ -64,24 +64,24 @@ export const DUMMY_BLOG_POSTS = [
 ];
 
 export const INTEGRATIONS = [
-  { name: 'WordPress', category: 'CMS & Website', method: 'Plugin', description: 'Publish articles directly to your WordPress site with one click.' },
-  { name: 'Shopify', category: 'E-commerce', method: 'API Key', description: 'Optimize product descriptions and blog content for your store.' },
-  { name: 'Webflow', category: 'CMS & Website', method: 'OAuth', description: 'Push content to your Webflow CMS collections automatically.' },
-  { name: 'Ghost', category: 'CMS & Website', method: 'API Key', description: 'Seamless publishing to Ghost blogs with full formatting.' },
-  { name: 'HubSpot', category: 'CRM & Sales', method: 'OAuth', description: 'Sync content with HubSpot CMS and track performance.' },
-  { name: 'Wix', category: 'CMS & Website', method: 'OAuth', description: 'Publish blog posts to your Wix website.' },
-  { name: 'Squarespace', category: 'CMS & Website', method: 'OAuth', description: 'Connect your Squarespace blog for direct publishing.' },
-  { name: 'Notion', category: 'Other', method: 'OAuth', description: 'Export content drafts to your Notion workspace.' },
-  { name: 'Next.js', category: 'CMS & Website', method: 'API', description: 'Headless CMS integration for Next.js sites.' },
-  { name: 'Instagram', category: 'Social Media', method: 'OAuth', description: 'Schedule and publish posts to Instagram Business accounts.' },
-  { name: 'Facebook', category: 'Social Media', method: 'OAuth', description: 'Manage your Facebook page posts automatically.' },
-  { name: 'LinkedIn', category: 'Social Media', method: 'OAuth', description: 'Publish professional content to LinkedIn profiles and pages.' },
-  { name: 'X / Twitter', category: 'Social Media', method: 'OAuth', description: 'Schedule tweets and threads for maximum engagement.' },
-  { name: 'Pinterest', category: 'Social Media', method: 'OAuth', description: 'Create and schedule pins with AI-generated images.' },
-  { name: 'YouTube', category: 'Social Media', method: 'OAuth', description: 'Manage community posts and video descriptions.' },
-  { name: 'Google Search Console', category: 'Other', method: 'OAuth', description: 'Import keyword data and track search performance.' },
-  { name: 'Zapier', category: 'Other', method: 'API', description: 'Connect to 5,000+ apps through Zapier workflows.' },
-  { name: 'Make', category: 'Other', method: 'API', description: 'Build custom automations with Make (formerly Integromat).' }
+  { name: 'WordPress', category: 'CMS & Website', method: 'Plugin', description: 'Publish articles directly to your WordPress site with one click.', isAvailable: true },
+  { name: 'Shopify', category: 'E-commerce', method: 'API Key', description: 'Optimize product descriptions and blog content for your store.', isAvailable: false },
+  { name: 'Webflow', category: 'CMS & Website', method: 'OAuth', description: 'Push content to your Webflow CMS collections automatically.', isAvailable: false },
+  { name: 'Ghost', category: 'CMS & Website', method: 'API Key', description: 'Seamless publishing to Ghost blogs with full formatting.', isAvailable: false },
+  { name: 'HubSpot', category: 'CRM & Sales', method: 'OAuth', description: 'Sync content with HubSpot CMS and track performance.', isAvailable: false },
+  { name: 'Wix', category: 'CMS & Website', method: 'OAuth', description: 'Publish blog posts to your Wix website.', isAvailable: false },
+  { name: 'Squarespace', category: 'CMS & Website', method: 'OAuth', description: 'Connect your Squarespace blog for direct publishing.', isAvailable: false },
+  { name: 'Notion', category: 'Other', method: 'OAuth', description: 'Export content drafts to your Notion workspace.', isAvailable: false },
+  { name: 'Next.js', category: 'CMS & Website', method: 'API', description: 'Headless CMS integration for Next.js sites.', isAvailable: false },
+  { name: 'Instagram', category: 'Social Media', method: 'OAuth', description: 'Schedule and publish posts to Instagram Business accounts.', isAvailable: false },
+  { name: 'Facebook', category: 'Social Media', method: 'OAuth', description: 'Manage your Facebook page posts automatically.', isAvailable: false },
+  { name: 'LinkedIn', category: 'Social Media', method: 'OAuth', description: 'Publish professional content to LinkedIn profiles and pages.', isAvailable: false },
+  { name: 'X / Twitter', category: 'Social Media', method: 'OAuth', description: 'Schedule tweets and threads for maximum engagement.', isAvailable: false },
+  { name: 'Pinterest', category: 'Social Media', method: 'OAuth', description: 'Create and schedule pins with AI-generated images.', isAvailable: false },
+  { name: 'YouTube', category: 'Social Media', method: 'OAuth', description: 'Manage community posts and video descriptions.', isAvailable: false },
+  { name: 'Google Search Console', category: 'Other', method: 'OAuth', description: 'Import keyword data and track search performance.', isAvailable: false },
+  { name: 'Zapier', category: 'Other', method: 'API', description: 'Connect to 5,000+ apps through Zapier workflows.', isAvailable: false },
+  { name: 'Make', category: 'Other', method: 'API', description: 'Build custom automations with Make (formerly Integromat).', isAvailable: false }
 ];
 
 export const FAQ_DATA = [

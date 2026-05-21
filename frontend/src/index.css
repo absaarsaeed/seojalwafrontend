@@ -132,11 +132,24 @@ code {
 }
 
 .admin-btn-primary {
-    @apply bg-[#1D9E75] hover:bg-[#178562] text-white rounded-md px-4 py-2 font-medium transition-colors;
+    @apply bg-[#1D9E75] hover:bg-[#178562] rounded-md px-4 py-2 font-medium transition-colors;
+    color: #ffffff !important;
+    background-color: #1D9E75 !important;
+}
+
+.admin-btn-primary:hover {
+    background-color: #178562 !important;
+    color: #ffffff !important;
 }
 
 .admin-btn-primary:focus {
     @apply ring-2 ring-[#1D9E75] ring-offset-2;
+    color: #ffffff !important;
+}
+
+.admin-btn-primary svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
 }
 
 .admin-btn-secondary {
