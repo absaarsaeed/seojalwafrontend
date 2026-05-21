@@ -35,6 +35,14 @@ export const Settings = () => {
   const [savingPlugin, setSavingPlugin] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Reminder days arrays
+  const [reminders, setReminders] = useState({
+    renewalReminderDays: '',
+    trialEndingReminderDays: '',
+    paymentRetryDays: '',
+  });
+  const [savingReminders, setSavingReminders] = useState(false);
+
   // Hydrate plugin fields from backend admin settings.
   useEffect(() => {
     let cancelled = false;
@@ -48,12 +56,40 @@ export const Settings = () => {
           pluginDownloadUrl: flat.pluginDownloadUrl || flat.plugin_download_url || '',
           pluginChangelog: flat.pluginChangelog || flat.plugin_changelog || '',
         });
+        const fmt = (a) => Array.isArray(a) ? a.join(', ') : (a || '');
+        setReminders({
+          renewalReminderDays: fmt(flat.renewalReminderDays || flat.renewal_reminder_days),
+          trialEndingReminderDays: fmt(flat.trialEndingReminderDays || flat.trial_ending_reminder_days),
+          paymentRetryDays: fmt(flat.paymentRetryDays || flat.payment_retry_days),
+        });
       } catch {
         // Endpoint may not be present — keep empty fields.
       }
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const parseDayList = (s) =>
+    String(s || '')
+      .split(',')
+      .map((x) => parseInt(x.trim(), 10))
+      .filter((n) => Number.isFinite(n) && n >= 0);
+
+  const handleSaveReminders = async () => {
+    setSavingReminders(true);
+    try {
+      await adminApi.updateSettings({
+        renewalReminderDays: parseDayList(reminders.renewalReminderDays),
+        trialEndingReminderDays: parseDayList(reminders.trialEndingReminderDays),
+        paymentRetryDays: parseDayList(reminders.paymentRetryDays),
+      });
+      toast.success('Reminder schedules saved');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save reminders');
+    } finally {
+      setSavingReminders(false);
+    }
+  };
 
   const handleSavePlugin = async (override) => {
     const payload = {
@@ -460,6 +496,50 @@ export const Settings = () => {
               )}
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Reminder schedules */}
+      <div className="admin-card p-6" data-testid="settings-reminders-section">
+        <h3 className="text-lg font-semibold text-[#09090B] mb-1">Reminder Schedules</h3>
+        <p className="text-xs text-[#71717A] mb-4">Comma-separated days. Example <code className="px-1 bg-[#F0F0F0] rounded">7, 3, 1</code> means send reminders at 7, 3, and 1 days before the event.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Subscription renewal reminders (days before)</Label>
+            <Input
+              value={reminders.renewalReminderDays}
+              onChange={(e) => setReminders((p) => ({ ...p, renewalReminderDays: e.target.value }))}
+              placeholder="7, 3, 1"
+              className="admin-input"
+              data-testid="reminder-renewal-days"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Trial-ending reminders (days before)</Label>
+            <Input
+              value={reminders.trialEndingReminderDays}
+              onChange={(e) => setReminders((p) => ({ ...p, trialEndingReminderDays: e.target.value }))}
+              placeholder="3, 1"
+              className="admin-input"
+              data-testid="reminder-trial-days"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-[#71717A]">Payment retry schedule (days after fail)</Label>
+            <Input
+              value={reminders.paymentRetryDays}
+              onChange={(e) => setReminders((p) => ({ ...p, paymentRetryDays: e.target.value }))}
+              placeholder="1, 3, 7"
+              className="admin-input"
+              data-testid="reminder-payment-retry-days"
+            />
+          </div>
+        </div>
+        <div className="pt-4">
+          <Button onClick={handleSaveReminders} disabled={savingReminders} className="admin-btn-primary" data-testid="save-reminders-btn">
+            {savingReminders ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
+            Save reminder schedules
+          </Button>
         </div>
       </div>
 

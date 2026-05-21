@@ -11,6 +11,11 @@ import {
   BarChart3,
   Key,
   Settings,
+  Inbox,
+  Mail,
+  MailOpen,
+  Sparkles,
+  ScrollText,
   LogOut,
   Menu,
   X
@@ -18,16 +23,21 @@ import {
 import { useState } from 'react';
 
 const navItems = [
-  { path: '/adminpanel/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/adminpanel/users', label: 'Users', icon: Users },
-  { path: '/adminpanel/pricing', label: 'Pricing', icon: CreditCard },
-  { path: '/adminpanel/billing', label: 'Billing', icon: Receipt },
-  { path: '/adminpanel/coupons', label: 'Coupons', icon: Tag },
-  { path: '/adminpanel/blog', label: 'Blog', icon: FileText },
-  { path: '/adminpanel/announcements', label: 'Announcements', icon: Megaphone },
-  { path: '/adminpanel/analytics', label: 'Analytics', icon: BarChart3 },
-  { path: '/adminpanel/api-keys', label: 'API Keys', icon: Key },
-  { path: '/adminpanel/settings', label: 'Settings', icon: Settings },
+  { path: '/adminpanel/dashboard',        label: 'Dashboard',         icon: LayoutDashboard },
+  { path: '/adminpanel/insights',         label: 'AI Insights',       icon: Sparkles },
+  { path: '/adminpanel/users',            label: 'Users',             icon: Users },
+  { path: '/adminpanel/submissions',      label: 'Submissions',       icon: Inbox },
+  { path: '/adminpanel/emails',           label: 'Email Logs',        icon: Mail },
+  { path: '/adminpanel/email-templates',  label: 'Email Templates',   icon: MailOpen },
+  { path: '/adminpanel/audit-log',        label: 'Audit Log',         icon: ScrollText },
+  { path: '/adminpanel/pricing',          label: 'Pricing',           icon: CreditCard },
+  { path: '/adminpanel/billing',          label: 'Billing',           icon: Receipt },
+  { path: '/adminpanel/coupons',          label: 'Coupons',           icon: Tag },
+  { path: '/adminpanel/blog',             label: 'Blog',              icon: FileText },
+  { path: '/adminpanel/announcements',    label: 'Announcements',     icon: Megaphone },
+  { path: '/adminpanel/analytics',        label: 'Analytics',         icon: BarChart3 },
+  { path: '/adminpanel/api-keys',         label: 'API Keys',          icon: Key },
+  { path: '/adminpanel/settings',         label: 'Settings',          icon: Settings },
 ];
 
 export const Sidebar = () => {

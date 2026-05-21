@@ -16,6 +16,11 @@ import { Announcements } from "./admin/pages/Announcements";
 import { Analytics } from "./admin/pages/Analytics";
 import { ApiKeys } from "./admin/pages/ApiKeys";
 import { Settings as AdminSettings } from "./admin/pages/Settings";
+import { Submissions } from "./admin/pages/Submissions";
+import { Emails } from "./admin/pages/Emails";
+import { EmailTemplates } from "./admin/pages/EmailTemplates";
+import { AuditLog } from "./admin/pages/AuditLog";
+import { AdminInsights } from "./admin/pages/AdminInsights";
 
 // Public
 import { UserProvider, useUser } from "./context/UserContext";
@@ -134,6 +139,11 @@ function App() {
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="api-keys" element={<ApiKeys />} />
                 <Route path="settings" element={<AdminSettings />} />
+                <Route path="submissions" element={<Submissions />} />
+                <Route path="emails" element={<Emails />} />
+                <Route path="email-templates" element={<EmailTemplates />} />
+                <Route path="audit-log" element={<AuditLog />} />
+                <Route path="insights" element={<AdminInsights />} />
               </Route>
 
               {/* Catch all */}

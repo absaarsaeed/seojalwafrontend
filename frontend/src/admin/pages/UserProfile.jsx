@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { FormSkeleton, ChartSkeleton } from '../components/SkeletonLoaders';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Switch } from '../../components/ui/switch';
+import { Input } from '../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Progress } from '../../components/ui/progress';
 import {
@@ -14,10 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Globe, Instagram, Linkedin, FileText, ExternalLink, Calendar } from 'lucide-react';
+import { ArrowLeft, Globe, Instagram, Linkedin, FileText, ExternalLink, Calendar, Trash2, Loader2 } from 'lucide-react';
 import { USERS_LIST, USER_DETAIL } from '../data/dummyData';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { adminApi } from '../../lib/api';
 
 const PlanBadge = ({ plan }) => {
   // Backend may send a Plan document instead of a string — render the name only.
@@ -60,14 +65,51 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export const UserProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { users, userNotes, updateUserStatus, updateUserNote } = useAdmin();
   const [isLoading, setIsLoading] = useState(true);
   const [note, setNote] = useState('');
   const [selectedPlan, setSelectedPlan] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [activityLog, setActivityLog] = useState(null);
 
   // Find user from list or use detail data
   const baseUser = users.find(u => u.id === id) || USERS_LIST.find(u => u.id === id);
   const user = { ...USER_DETAIL, ...baseUser };
+
+  const handleDeleteUser = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await adminApi.deleteUser(id);
+      const cascaded = res?.cascadedDeletes || res?.cascaded || {};
+      const summary = Object.entries(cascaded).map(([k, v]) => `${v} ${k}`).join(', ');
+      toast.success(`User deleted${summary ? ` — also removed ${summary}` : ''}`);
+      setDeleteOpen(false);
+      navigate('/adminpanel/users', { replace: true });
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete user');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Load real activity log for this user
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await adminApi.userActivityLog(id, { limit: 50 });
+        const list = Array.isArray(data) ? data : data?.items || [];
+        if (!cancelled) setActivityLog(list);
+      } catch {
+        if (!cancelled) setActivityLog([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
   
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 800);
@@ -162,6 +204,19 @@ export const UserProfile = () => {
               <div className="relative">
                 <Progress value={user.jalwaScore} className="h-2" />
               </div>
+            </div>
+
+            {/* Danger zone */}
+            <div className="py-4 border-t border-red-200">
+              <Button
+                onClick={() => setDeleteOpen(true)}
+                variant="outline"
+                className="w-full border-[#EF4444] text-[#EF4444] hover:bg-red-50"
+                data-testid="admin-delete-user-btn"
+              >
+                <Trash2 size={14} className="mr-2" />
+                Delete user (cascade)
+              </Button>
             </div>
 
             {/* Connected Integrations */}
@@ -343,22 +398,63 @@ export const UserProfile = () => {
 
               {/* Activity Log Tab */}
               <TabsContent value="activity" className="p-5">
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {user.activityLog?.map((item) => (
-                    <div key={item.id} className="flex items-start gap-3 py-2 border-b border-[#F0F0F0] last:border-0">
-                      <div className="w-2 h-2 rounded-full bg-[#1D9E75] mt-2" />
-                      <div className="flex-1">
-                        <p className="text-sm text-[#27272A]">{item.action}</p>
-                        <p className="text-xs text-[#71717A]">{item.time}</p>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto" data-testid="admin-user-activity-log">
+                  {activityLog == null ? (
+                    <p className="text-sm text-[#71717A]">Loading activity...</p>
+                  ) : activityLog.length === 0 ? (
+                    <p className="text-sm text-[#71717A]">No activity recorded yet.</p>
+                  ) : (
+                    activityLog.map((item, i) => (
+                      <div key={item.id || i} className="flex items-start gap-3 py-2 border-b border-[#F0F0F0] last:border-0">
+                        <div className="w-2 h-2 rounded-full bg-[#1D9E75] mt-2" />
+                        <div className="flex-1">
+                          <p className="text-sm text-[#27272A]">{item.action || item.title || item.message}</p>
+                          <p className="text-xs text-[#71717A]">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleString() : item.time}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
           </div>
         </div>
       </div>
+
+      {/* Cascade delete dialog */}
+      <Dialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setDeleteEmail(''); }}>
+        <DialogContent className="max-w-md" data-testid="admin-delete-user-dialog">
+          <DialogHeader>
+            <DialogTitle className="text-[#EF4444]">Delete this user?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{user.email}</strong> and cascade-delete all their sites, articles, scans, notifications, and feedback. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <label className="text-xs text-[#71717A] block">Type <code className="px-1 bg-[#F0F0F0] rounded">DELETE</code> to confirm</label>
+            <Input
+              value={deleteEmail}
+              onChange={(e) => setDeleteEmail(e.target.value)}
+              placeholder="DELETE"
+              className="admin-input"
+              data-testid="admin-delete-confirm-input"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleDeleteUser}
+              disabled={isDeleting || deleteEmail !== 'DELETE'}
+              className="bg-[#EF4444] hover:bg-[#DC2626] text-white"
+              data-testid="admin-delete-user-confirm-btn"
+            >
+              {isDeleting ? <><Loader2 size={14} className="mr-2 animate-spin" />Deleting...</> : 'Permanently Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

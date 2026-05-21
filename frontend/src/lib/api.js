@@ -466,6 +466,62 @@ export const adminApi = {
     }
     return body?.data || body;
   },
+
+  // Dashboard activity feed
+  dashboardActivity: (params) =>
+    api.get('/api/admin/dashboard/activity', { auth: 'admin', query: params }),
+
+  // Users — extended
+  deleteUser: (id) => api.del(`/api/admin/users/${id}`, { auth: 'admin' }),
+  updateUserSubscription: (id, payload) =>
+    api.put(`/api/admin/users/${id}/subscription`, payload, { auth: 'admin' }),
+  updateUserStatus: (id, payload) =>
+    api.put(`/api/admin/users/${id}/status`, payload, { auth: 'admin' }),
+  extendTrial: (id, days) =>
+    api.post(`/api/admin/users/${id}/extend-trial`, { days }, { auth: 'admin' }),
+  addUserNote: (id, note) =>
+    api.post(`/api/admin/users/${id}/note`, { note }, { auth: 'admin' }),
+  userActivityLog: (id, params) =>
+    api.get(`/api/admin/users/${id}/activity-log`, { auth: 'admin', query: params }),
+
+  // Audit log
+  auditLog: (params) =>
+    api.get('/api/admin/audit-log', { auth: 'admin', query: params }),
+
+  // Email logs
+  emails: (params) =>
+    api.get('/api/admin/emails', { auth: 'admin', query: params }),
+  email: (id) =>
+    api.get(`/api/admin/emails/${id}`, { auth: 'admin' }),
+
+  // Email templates
+  emailTemplates: () =>
+    api.get('/api/admin/email-templates', { auth: 'admin' }),
+  emailTemplate: (key) =>
+    api.get(`/api/admin/email-templates/${encodeURIComponent(key)}`, { auth: 'admin' }),
+  updateEmailTemplate: (key, payload) =>
+    api.put(`/api/admin/email-templates/${encodeURIComponent(key)}`, payload, { auth: 'admin' }),
+  testEmailTemplate: (key, payload) =>
+    api.post(`/api/admin/email-templates/${encodeURIComponent(key)}/test`, payload, { auth: 'admin' }),
+  seedEmailTemplates: () =>
+    api.post('/api/admin/email-templates/seed', {}, { auth: 'admin' }),
+
+  // Submissions (contact + feedback)
+  submissions: (params) =>
+    api.get('/api/admin/submissions', { auth: 'admin', query: params }),
+  submission: (id) =>
+    api.get(`/api/admin/submissions/${id}`, { auth: 'admin' }),
+  updateSubmission: (id, payload) =>
+    api.put(`/api/admin/submissions/${id}`, payload, { auth: 'admin' }),
+  replySubmission: (id, message) =>
+    api.post(`/api/admin/submissions/${id}/reply`, { message }, { auth: 'admin' }),
+
+  // AI Insights
+  insightsRetention: (force = false) =>
+    api.get('/api/admin/insights/retention', { auth: 'admin', query: force ? { force: 'true' } : undefined }),
+
+  // Plugin info
+  pluginInfo: () => api.get('/api/admin/plugin/info', { auth: 'admin' }),
 };
 
 // AI Visibility (extended) -------------------------------------------------
