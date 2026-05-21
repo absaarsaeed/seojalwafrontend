@@ -57,7 +57,8 @@ export const Emails = () => {
       setItems([]);
     }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status, template]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [status, template]);
 
   const filtered = (items || []).filter((e) => {
     if (!search) return true;

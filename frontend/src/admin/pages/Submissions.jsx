@@ -50,7 +50,8 @@ export const Submissions = () => {
       setItems([]);
     }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tab, status]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [tab, status]);
 
   const resolved = useMemo(() => (items || []).filter((s) => (s.status || '').toUpperCase() === 'RESOLVED').length, [items]);
 

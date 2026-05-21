@@ -49,7 +49,8 @@ export const AuditLog = () => {
       setItems([]);
     }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [action]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [action]);
 
   return (
     <div data-testid="admin-audit-log-page">

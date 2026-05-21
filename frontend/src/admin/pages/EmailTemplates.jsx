@@ -37,7 +37,8 @@ export const EmailTemplates = () => {
       setList([]);
     }
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, []);
 
   const selectTemplate = async (key) => {
     try {
