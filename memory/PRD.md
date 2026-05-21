@@ -361,6 +361,39 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 - Recharts `width(-1)` console warnings (P2 cosmetic, flagged across iterations).
 - Phase-2 admin pages (FIX 3, 4, 12 from the most recent prompt) — not implemented yet (large scope, would need new backend endpoints).
 
+## Phase 12: Full Admin Buildout (Feb 20, 2026)
+
+### Net-new admin pages
+1. **`/adminpanel/submissions`** — Submissions inbox (Feedback + Contact tabs) with status filter, view detail, Reply (sends email), Mark resolved.
+2. **`/adminpanel/emails`** — Email Logs filterable by status / template, click row for full rendered HTML body.
+3. **`/adminpanel/email-templates`** — Left-rail of all templates; right-pane subject + monospace HTML body editor; Active switch; Send test; Save; Preview (sample variable substitution); Re-seed defaults.
+4. **`/adminpanel/audit-log`** — Filterable admin-action history; row → JSON diff dialog.
+5. **`/adminpanel/insights`** — AI Insights retention page: metrics row + suggestion cards (priority + effort + recommendation); re-run button.
+
+### Strengthened existing
+- **Admin Dashboard** now shows top-3 AI Insights widget at bottom with deep-link to `/adminpanel/insights`.
+- **`/adminpanel/users/{id}`** has a real **Cascade Delete** button + dialog (gates confirm on literal "DELETE" string), and the Activity Log tab now fetches `/api/admin/users/{id}/activity-log` instead of dummy data.
+- **`/adminpanel/settings`** now has a **Reminder Schedules** section (renewal / trial-ending / payment-retry days as comma-separated arrays, persisted via `PUT /api/admin/settings`).
+- **`/admin/components/Sidebar.jsx`** — 5 new nav items inserted in logical order.
+
+### `adminApi` extensions in `/lib/api.js`
+- Users: `deleteUser`, `updateUserSubscription`, `updateUserStatus`, `extendTrial`, `addUserNote`, `userActivityLog`.
+- Audit: `auditLog`.
+- Emails: `emails`, `email`, `emailTemplates`, `emailTemplate`, `updateEmailTemplate`, `testEmailTemplate`, `seedEmailTemplates`.
+- Submissions: `submissions`, `submission`, `updateSubmission`, `replySubmission`.
+- AI Insights: `insightsRetention(force)`.
+- Dashboard: `dashboardActivity`.
+- Plugin: `pluginInfo`.
+
+### Verified end-to-end (iteration_12.json)
+- **10/10 admin testids PASS.** No crashes on any new route. All empty-state branches render gracefully (`/api/admin/submissions`, `/api/admin/emails`, `/api/admin/audit-log`, `/api/admin/insights/retention` returned 0 items — that's a content/seed gap, not a frontend bug).
+- Cascade-delete confirm-gate verified: disabled until literal "DELETE" typed.
+- Reminder Schedules save verified with success toast.
+
+### Carry-overs
+- 🟡 To verify the detail dialogs (submission-detail / email-detail / audit-diff / insight-suggestion rows) end-to-end visually, the backend needs to seed at least 1 feedback, 1 contact, 1 email log, 1 audit row, and 1–3 retention suggestions. Frontend is ready and handles empty gracefully.
+- 🟢 Recharts `width(-1)` console warning (cosmetic, P2, flagged across many iterations).
+
 ## Test Credentials
 - **Admin**: username=`jalwa`, password=`jalwaadmin`
 - **User Dashboard**: any email/password works in dummy mode (e.g., test@jalwa.com / test1234)
