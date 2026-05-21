@@ -394,10 +394,34 @@ Frontend connected to external backend at `https://api.seojalwa.com` (DNS pendin
 - 🟡 To verify the detail dialogs (submission-detail / email-detail / audit-diff / insight-suggestion rows) end-to-end visually, the backend needs to seed at least 1 feedback, 1 contact, 1 email log, 1 audit row, and 1–3 retention suggestions. Frontend is ready and handles empty gracefully.
 - 🟢 Recharts `width(-1)` console warning (cosmetic, P2, flagged across many iterations).
 
+## Phase 13: 100% Launch Sign-Off (Feb 21, 2026)
+
+### Two final iteration_13 carry-over fixes
+1. **Integrations "Coming Soon" dimming** — `/app/frontend/src/data/publicData.js` INTEGRATIONS array now carries `isAvailable: true` for WordPress and `isAvailable: false` for the other 17 entries (Shopify, Webflow, Ghost, HubSpot, Wix, Squarespace, Notion, Next.js, Instagram, Facebook, LinkedIn, X/Twitter, Pinterest, YouTube, Google Search Console, Zapier, Make). When `/api/pages/integrations` 404s, fallback now correctly applies `.coming-soon-card` (opacity 0.6) + "Coming Soon" badge on all 17 non-WordPress cards.
+2. **Admin General Save button visual** — `/app/frontend/src/index.css` `.admin-btn-primary` hardened with `color: #ffffff !important`, `background-color: #1D9E75 !important`, and `.admin-btn-primary svg { color/stroke: #ffffff !important }` so the Save label + Save icon render correctly across all admin cards (was rendering empty rectangle in General Settings card due to Shadcn Button `text-primary-foreground` cascade conflict).
+
+### Verified end-to-end (iteration_14.json — 100% PASS)
+- Both iteration_13 fixes CONFIRMED in browser (querySelectorAll('.coming-soon-card').length=17; save-general-btn bg=rgb(29,158,117), color=rgb(255,255,255), hasIcon=true).
+- All 20-part launch polish items PASS (dashboard recent activity, pricing logged-in upgrade modal, article edit mode, sidebar rename to "Auto Article Writing", admin trial days save, notifications page).
+- Mobile responsiveness at 375px PASS on all 8 public pages (no horizontal overflow). Mobile hamburger menu opens sheet correctly.
+- Full 15-step E2E flow PASS (login → dashboard → auto-publish → article view → edit mode → save draft → calendar → connections → settings tabs → notifications). No page errors.
+
+### Open carry-overs (non-blocking)
+- 🟡 OPTIONAL/LOW: `/dashboard/settings` tab is labelled "Billing" instead of "Subscription" — content is correct (plan/billing info), purely a naming choice. Not blocking launch.
+- 🟡 Backend `/api/dashboard/overview`, `/api/pages/integrations`, `/api/pages/settings` return 404 — frontend gracefully falls back via static data per spec. Console emits ~6 expected 404s per dashboard load. Non-blocking.
+- 🟡 Backend `POST /api/feedback` still 404s server-side. Frontend POSTs correctly; backend implementation pending.
+- 🟡 Calendar FAILED article retry + trial-banner render path verified by code review only — needs a seeded trialing user + a FAILED article to E2E-test in browser.
+- 🟡 LemonSqueezy billing checkout: currently a mailto: upgrade modal. Phase 2 backlog.
+
+### Status: 🟢 **CLEARED FOR LAUNCH (Frontend)**
+
 ## Test Credentials
-- **Admin**: username=`jalwa`, password=`jalwaadmin`
-- **User Dashboard**: any email/password works in dummy mode (e.g., test@jalwa.com / test1234)
+- **Admin Panel**: `/adminpanel` — username=`jalwa`, password=`jalwaisadmin` (note: previous PRD line had old `jalwaadmin` — actual live API password is `jalwaisadmin`)
+- **End User (live API)**: `test_1779193655@jalwa.com` / `TestPassword123!`
+- See `/app/memory/test_credentials.md` for full details.
 
 ## Test Reports
 - `/app/test_reports/iteration_1.json` — Admin panel (100% pass)
 - `/app/test_reports/iteration_2.json` — Public + Dashboard (97% → 100% after logout fix)
+- `/app/test_reports/iteration_13.json` — 8/10 PASS, 2 fixes flagged (resolved in Phase 13)
+- `/app/test_reports/iteration_14.json` — 100% PASS, final launch sign-off
