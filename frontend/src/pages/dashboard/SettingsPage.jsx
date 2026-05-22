@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
@@ -25,7 +25,7 @@ const ArticleQuotaCard = ({ subscription, sites, billingUsage }) => {
   const planQuota = subscription?.plan?.articlesPerMonth ?? subscription?.articlesPerMonth ?? null;
   const used = billingUsage?.articles?.used ?? subscription?.usage?.articlesThisMonth ?? 0;
   const remaining = planQuota != null ? Math.max(0, planQuota - used) : null;
-  const siteList = Array.isArray(sites) ? sites : [];
+  const siteList = useMemo(() => (Array.isArray(sites) ? sites : []), [sites]);
   const multipleSites = siteList.length > 1;
 
   const [autoDistribute, setAutoDistribute] = useState(true);
