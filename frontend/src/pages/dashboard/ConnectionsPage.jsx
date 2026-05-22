@@ -381,7 +381,6 @@ export const ConnectionsPage = () => {
     if (!wpOpen || !activeSite?.id) return;
     let pollCount = 0;
     const maxPolls = 6;
-    let notified = false;
     const interval = setInterval(async () => {
       pollCount += 1;
       try { await refresh(); } catch {}
@@ -393,6 +392,14 @@ export const ConnectionsPage = () => {
     // We intentionally only re-run when the modal opens or the site changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wpOpen, activeSite?.id]);
+
+  // Stop polling early once the connection flips to "connected".
+  useEffect(() => {
+    if (isWpConnected && wpOpen) {
+      // Auto-close modal so the success state on the card is visible immediately.
+      setWpOpen(false);
+    }
+  }, [isWpConnected, wpOpen]);
 
   // Toast once when WordPress flips to connected (catches both the explicit
   // Test & Connect flow AND the case where the user finished in WP first).
@@ -445,6 +452,12 @@ export const ConnectionsPage = () => {
 
   const openWebsite = (platform) => {
     if (platform.name === 'WordPress') {
+      // If the user has no site yet, route them to add-site instead of
+      // opening the modal into the wp-no-site dead-end.
+      if (!activeSite) {
+        toast.info('Add your website first, then come back to connect it.');
+        return;
+      }
       setWpOpen(true);
     } else {
       setActiveWebsite(platform);

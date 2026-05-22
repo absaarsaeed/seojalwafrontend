@@ -448,4 +448,26 @@ User request: "Never show dummy data as fallback." 11 fixes shipped across admin
 ## Test Credentials
 - **Admin Panel**: `/adminpanel` — username=`jalwa`, password=`jalwaisadmin`
 - **End User (live API)**: `test_1779193655@jalwa.com` / `TestPassword123!`
+
+## Phase 15: WordPress Connection Status Sync (Feb 22, 2026)
+
+User report: WordPress card status not updating on dashboard after `Test & Connect` succeeds.
+
+### What landed
+1. **`WordPressConnectModal.handleTestAndConnect`** — now `await refresh()` from `SiteContext` BEFORE rendering success state and toasting "WordPress connected! Articles will publish automatically." The verify-error message wording updated to spec: "Connection failed. Make sure you pasted the API key in your WordPress plugin and clicked Verify & Connect there first."
+2. **`ConnectionsPage`** — WordPress card status now derived from live `SiteContext` via `isWpConnected` (supports flag shapes `wordpressConnected`, `wordpress_connected`, `isConnected`, `connected`, `status==='connected'`). `websitePlatforms` array now syncs via `useEffect` when `isWpConnected` flips. The buggy `addSite` call that was duplicating WP sites is removed.
+3. **Auto-poll** — While the WordPress modal is open, the page refreshes `/api/sites` every 5 seconds for up to 30 seconds (6 polls). Stops early when `isWpConnected` flips true (and auto-closes the modal).
+4. **Status badges** — Two distinct test-id'd badges per card: `[data-testid={card}-status-badge]` reads **"Connected"** (green) or **"Not Connected"** (gray). Disconnect link only renders when connected; Connect button only when disconnected. Hidden for coming-soon platforms.
+5. **UX guard** — Clicking Connect on WP card when no `activeSite` exists shows toast "Add your website first, then come back to connect it." (instead of opening modal into the dead-end `wp-no-site` empty state).
+6. **A11y** — Added hidden `DialogDescription` to WP modal to silence Radix warning.
+
+### Verified (iteration_16.json)
+- 100% code-review match with spec on all six items above.
+- Initial state PASSES live test: "Not Connected" gray badge visible, Connect button visible, no Disconnect link for test users.
+- Full end-to-end run blocked because seeded test users' `GET /api/sites` returns `[]` even though `/adminpanel` shows `maternityfeed.com` attached to the same user — likely a backend ownership filter mismatch. **Action item for backend team**: RCA the `/api/sites` list filter (seems to omit sites the admin endpoint shows for the same `user_id`).
+
+### Carry-overs
+- 🟡 Backend `GET /api/sites` site-list ownership filter — sites visible in admin not visible in user dashboard for the same user. Blocks ALL site-dependent UX.
+- 🟡 Backend disconnect endpoint (`DELETE /api/sites/{id}/wordpress`) — frontend currently shows "Disconnect coming soon — contact support" toast.
+
 - See `/app/memory/test_credentials.md` for full details.
