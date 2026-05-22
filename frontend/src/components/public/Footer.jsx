@@ -34,9 +34,9 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold text-[#0A0A0A] mb-4">Legal</h4>
             <ul className="space-y-2">
-              <li><Link to="/privacy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Terms of Service</Link></li>
-              <li><Link to="/cookies" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Cookie Policy</Link></li>
+              <li><Link to="/privacy-policy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Privacy Policy</Link></li>
+              <li><Link to="/terms-of-service" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Terms of Service</Link></li>
+              <li><Link to="/cookie-policy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Cookie Policy</Link></li>
             </ul>
           </div>
 
@@ -67,7 +67,7 @@ export const Footer = () => {
           </div>
           <div className="flex items-center gap-6">
             <a href="#" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Status</a>
-            <Link to="/privacy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Privacy</Link>
+            <Link to="/privacy-policy" className="text-sm text-[#6B7280] hover:text-[#1D9E75]">Privacy</Link>
           </div>
         </div>
       </div>

@@ -111,9 +111,13 @@ function App() {
                 <Route path="/blog/:slug" element={<BlogPostPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/cookies" element={<CookiesPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPage />} />
+                <Route path="/terms-of-service" element={<TermsPage />} />
+                <Route path="/cookie-policy" element={<CookiesPage />} />
+                {/* Short-slug aliases for backwards-compat with old footer links */}
+                <Route path="/privacy" element={<Navigate to="/privacy-policy" replace />} />
+                <Route path="/terms" element={<Navigate to="/terms-of-service" replace />} />
+                <Route path="/cookies" element={<Navigate to="/cookie-policy" replace />} />
               </Route>
 
               {/* Auth (no public layout / no navbar) */}

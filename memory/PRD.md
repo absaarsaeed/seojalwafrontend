@@ -522,3 +522,43 @@ User report: `/dashboard/auto-publish` crashing with `(N||[]).reduce is not a fu
 - 🔴 `PUT /api/user/quota/sites/{id}` 405 — Save toast error.
 - 🔴 `POST /api/billing/checkout` + `validate-coupon` likely missing — UI shows graceful error.
 - 🟡 Seed a demo user with `subscription.plan.articlesPerMonth` + multiple sites + WP connection for full runtime E2E.
+
+
+## Phase 18: Phase-3 Batch 1 — AutoSEO Dashboard + Legal + Maintenance + Announcements (Feb 22, 2026)
+
+Shipped 7 of 13 Phase-3 parts. Parts 3, 8, 9, 10, 12, 13 queued for Batch 2.
+
+### Shipped
+1. **PART 1 — AutoSEO-style dashboard** (`DashboardHome.jsx` rewritten). Plugin update banner (gated on `overview.pluginUpdate.available && !dismissed`, close button → `PUT /api/user/dismiss-plugin-banner`). Stats bar (4 cards): Total Words / Cost Savings / Time Saved / Articles Published with colored icon backgrounds. Content Calendar: month nav (prev/next), 7-col grid, today highlight, per-cell article card with status badge (PUBLISHED/SCHEDULED/QUEUED/READY/DRAFT/FAILED), View Article + View Live (cmsUrl) + Retry + Edit + Trash actions. Welcome banner kept for no-active-site users.
+2. **PART 2 — AI Writer fully removed**. `WritePage` import + `/dashboard/ai-writer` route gone. `/dashboard/write` alias now redirects to `/dashboard/auto-publish`. Cross-link in `PulsePage` recommendation also rewired.
+3. **PART 4 — Admin Legal page** (`/adminpanel/legal`). 3 tabs (Privacy / Terms / Cookie). Per-tab editor: title input + HTML textarea + Last updated + "Preview public page" button (opens `/{slug}` in new tab). Save button posts to `PUT /api/admin/legal/{slug}`.
+4. **PART 5 — Public legal pages from DB** (`LegalPages.jsx` rewritten). Loads from `GET /api/legal/{slug}`. `[data-testid={slug}-page]`, `[data-testid=legal-content]` (renders HTML), `[data-testid=legal-last-updated]`, cross-links to the other 2 pages. **HIGH bug FIXED in same phase**: App.js routes were `/privacy`/`/terms`/`/cookies` (mismatch with spec + admin preview button). Now `/privacy-policy`/`/terms-of-service`/`/cookie-policy` with short-slug `<Navigate>` aliases for backwards compatibility. Footer.jsx links updated.
+5. **PART 6 — Maintenance Mode UI** (`MaintenanceListener.jsx`). `api.js` `req()` now dispatches `jalwa:maintenance-mode` CustomEvent on 503+code:MAINTENANCE_MODE. Listener renders full-screen overlay (`[data-testid=maintenance-overlay]`, `[data-testid=maintenance-message]`, `[data-testid=maintenance-retry-btn]`). Skipped on `/adminpanel` paths so admins can still operate.
+6. **PART 7 — Announcements live recipient count** (`Announcements.jsx`). On target audience change, calls `GET /api/admin/announcements/preview-count?targetAudience=X` and renders `[data-testid=announcement-recipient-count-value]` (em-dash fallback when null). Hardcoded `getRecipientCount()`+`{2847, 847, 298, 58, 1644}` map deleted. Send button now POSTs to `/api/admin/announcements` with `subject/message/targetAudience/channel` and surfaces real `recipientCount` in success toast.
+7. **PART 11 — Admin sidebar "Legal Pages"** inserted between Blog and Announcements. Uses `ScrollText` icon (already imported).
+
+### API additions (`/app/frontend/src/lib/api.js`)
+- `legalApi.get(slug)` → `GET /api/legal/{slug}`
+- `adminLegalApi.list/get/update`
+- `adminApi.announcementPreviewCount(audience)` / `adminApi.sendAnnouncement(payload)`
+- `userApi.dismissPluginBanner({version})`
+- 503+`MAINTENANCE_MODE` event broadcast in `req()`
+
+### Verified (iteration_19.json — 6/7 PASS initially, 7/7 after fix)
+- HIGH bug in PART 5 (route mismatch) FIXED in this phase: `/privacy-policy` smoke-tested live, alias `/privacy` redirects correctly.
+- PART 1 stats bar + calendar runtime path still pending — requires a seeded user with active connected site.
+
+### Remaining Phase-3 backlog (Batch 2)
+- PART 3 — Rich-text blog editor (admin /blog/new + /blog/{id}) with react-quill + image upload
+- PART 8 — Admin analytics real charts (signups line, revenue bars, plan donut, conversion funnel, content stats)
+- PART 9 — Admin email full HTML preview (iframe srcDoc) + Resend button
+- PART 10 — Audit log click → detail panel + before/after diff table
+- PART 12 — Connections analysis status: 3-step state machine (Just connected → Analyzing → Setup complete) with animated progress bar
+- PART 13 — Notifications icon + color mapping by type (ARTICLE_PUBLISHED → 📄 green, AI_SCAN_COMPLETE → 🔍 blue, etc.)
+
+### Backend gaps (graceful UI fallbacks already in place)
+- 🔴 `GET /api/legal/{slug}` may 404 → fallback placeholder HTML shown
+- 🔴 `GET /api/admin/legal/{slug}` returns 405 → editor opens with empty fields (action item LOW)
+- 🔴 `PUT /api/user/dismiss-plugin-banner` 404 → frontend hides banner locally regardless
+- 🔴 `GET /api/admin/announcements/preview-count` 404 → em-dash shown
+- 🟡 Seed a user with active connected site + WP plugin + articles so PART 1 stats bar + calendar runtime is exercisable next iteration.
