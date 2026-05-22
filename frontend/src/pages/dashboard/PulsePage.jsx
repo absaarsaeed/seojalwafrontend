@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { PULSE_DATA } from '../../data/publicData';
 import { useSite } from '../../context/SiteContext';
 import { aiVisibilityApi, aiVisibilityLatestApi } from '../../lib/api';
 import { toast } from 'sonner';
@@ -11,8 +10,8 @@ import { Input } from '../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible';
 import { Progress } from '../../components/ui/progress';
-import { RefreshCw, Plus, ArrowRight, ChevronDown, MessageSquareText } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { RefreshCw, Plus, ArrowRight, ChevronDown, MessageSquareText, Sparkles } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -75,15 +74,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export const PulsePage = () => {
-  const data = PULSE_DATA;
   const { activeSite } = useSite();
   const [newCompetitor, setNewCompetitor] = useState('');
   const [simulatorQuery, setSimulatorQuery] = useState('');
   const [scans, setScans] = useState([]);
   const [latest, setLatest] = useState(null);
+  const [latestLoading, setLatestLoading] = useState(false);
   const [queriesOpen, setQueriesOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [scanStatus, setScanStatus] = useState(null); // queued | in_progress | completed | failed
+  const [scanStatus, setScanStatus] = useState(null);
   const scanJobRef = useRef(null);
 
   useEffect(() => () => {
@@ -91,8 +90,13 @@ export const PulsePage = () => {
   }, []);
 
   useEffect(() => {
-    if (!activeSite?.id) return;
+    if (!activeSite?.id) {
+      setScans([]);
+      setLatest(null);
+      return;
+    }
     let cancelled = false;
+    setLatestLoading(true);
     (async () => {
       try {
         const list = await aiVisibilityApi.scans(activeSite.id);
@@ -101,7 +105,8 @@ export const PulsePage = () => {
       try {
         const data = await aiVisibilityLatestApi.latest(activeSite.id);
         if (!cancelled) setLatest(data || null);
-      } catch {}
+      } catch { if (!cancelled) setLatest(null); }
+      if (!cancelled) setLatestLoading(false);
     })();
     return () => { cancelled = true; };
   }, [activeSite?.id]);
@@ -187,9 +192,14 @@ export const PulsePage = () => {
   };
 
   const liveScore = latest?.overallScore ?? scans?.[0]?.overallScore;
-  const displayScore = liveScore ?? data.overallScore;
   const liveRecs = Array.isArray(latest?.recommendations) ? latest.recommendations : null;
   const liveQueries = Array.isArray(latest?.queries) ? latest.queries : null;
+  const liveModels = Array.isArray(latest?.models) ? latest.models : Array.isArray(latest?.modelBreakdown) ? latest.modelBreakdown : null;
+  const liveHistory = Array.isArray(latest?.history) ? latest.history : Array.isArray(scans) && scans.length > 1
+    ? scans.slice(0, 8).reverse().map((s, i) => ({ week: `Week ${i + 1}`, score: s.overallScore ?? 0 }))
+    : null;
+
+  const hasAnyData = liveScore != null;
 
   return (
     <motion.div
@@ -206,11 +216,13 @@ export const PulsePage = () => {
           <p className="text-sm text-[#6B7280]">Monitor your AI visibility across all major platforms</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="px-4 py-2 bg-[#E1F5EE] rounded-lg">
-            <span className="text-sm text-[#6B7280]">AI Visibility Score: </span>
-            <span className="font-bold text-[#1D9E75]" data-testid="ai-visibility-score">{displayScore}/100</span>
-          </div>
-          <Button onClick={handleScan} disabled={isScanning} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
+          {liveScore != null && (
+            <div className="px-4 py-2 bg-[#E1F5EE] rounded-lg">
+              <span className="text-sm text-[#6B7280]">AI Visibility Score: </span>
+              <span className="font-bold text-[#1D9E75]" data-testid="ai-visibility-score">{liveScore}/100</span>
+            </div>
+          )}
+          <Button onClick={handleScan} disabled={isScanning || !activeSite} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
             <RefreshCw size={16} className={`mr-2 ${isScanning ? 'animate-spin' : ''}`} />
             {isScanning ? (scanStatus && scanStatus !== 'queued' && scanStatus !== 'in_progress' ? scanStatus : 'Scanning...') : 'Run new scan'}
           </Button>
@@ -222,7 +234,32 @@ export const PulsePage = () => {
         </p>
       )}
 
-      {/* Tabs */}
+      {/* No active site */}
+      {!activeSite && (
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="ai-visibility-no-site">
+          <Sparkles size={32} className="text-[#1D9E75] mx-auto mb-3" />
+          <p className="text-lg font-medium text-[#0A0A0A] mb-1">Connect a website first</p>
+          <p className="text-sm text-[#6B7280] mb-4">We'll scan ChatGPT, Perplexity, Gemini, Claude and Copilot for your brand.</p>
+          <Link to="/dashboard/connections">
+            <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Connect website</Button>
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Empty state */}
+      {activeSite && !latestLoading && !hasAnyData && (
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="ai-visibility-empty">
+          <Sparkles size={32} className="text-[#1D9E75] mx-auto mb-3" />
+          <p className="text-lg font-medium text-[#0A0A0A] mb-1">No visibility data yet</p>
+          <p className="text-sm text-[#6B7280] mb-4">Run your first AI scan to see how ChatGPT, Perplexity, Gemini, Claude and Copilot mention your brand.</p>
+          <Button onClick={handleScan} disabled={isScanning} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="ai-visibility-first-scan-btn">
+            Run your first AI scan
+          </Button>
+        </motion.div>
+      )}
+
+      {/* Tabs — only show when we have data */}
+      {activeSite && hasAnyData && (
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-[#F0F0F0]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -264,33 +301,37 @@ export const PulsePage = () => {
           )}
 
           {/* Score Over Time */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-            <h3 className="font-semibold text-[#0A0A0A] mb-4">Visibility Score Over Time</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={data.scoreHistory}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-                <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#1D9E75' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </motion.div>
+          {liveHistory && liveHistory.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+              <h3 className="font-semibold text-[#0A0A0A] mb-4">Visibility Score Over Time</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={liveHistory}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                  <XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#1D9E75' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </motion.div>
+          )}
 
           {/* AI Model Breakdown */}
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-            <h3 className="font-semibold text-[#0A0A0A] mb-4">AI Model Breakdown</h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {data.aiModels.map((model) => (
-                <div key={model.name} className="text-center p-4 bg-[#F9FAFB] rounded-lg">
-                  <p className="text-sm text-[#6B7280] mb-2">{model.name}</p>
-                  <p className="text-2xl font-bold text-[#0A0A0A] mb-2">{model.score}%</p>
-                  <Progress value={model.score} className="h-2 mb-2" />
-                  <StatusBadge status={model.status} />
-                </div>
-              ))}
-            </div>
-          </motion.div>
+          {liveModels && liveModels.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+              <h3 className="font-semibold text-[#0A0A0A] mb-4">AI Model Breakdown</h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {liveModels.map((model) => (
+                  <div key={model.name} className="text-center p-4 bg-[#F9FAFB] rounded-lg" data-testid={`ai-model-${(model.name || '').toLowerCase()}`}>
+                    <p className="text-sm text-[#6B7280] mb-2">{model.name}</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A] mb-2">{model.score ?? 0}%</p>
+                    <Progress value={model.score ?? 0} className="h-2 mb-2" />
+                    {model.sentiment && <StatusBadge status={model.sentiment} />}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </TabsContent>
 
         <TabsContent value="competitors" className="space-y-6">
@@ -301,23 +342,16 @@ export const PulsePage = () => {
                 value={newCompetitor}
                 onChange={(e) => setNewCompetitor(e.target.value)}
                 className="max-w-sm border-[#F0F0F0]"
+                data-testid="add-competitor-input"
               />
-              <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
+              <Button onClick={() => { if (newCompetitor) { toast.success('Competitor added'); setNewCompetitor(''); } }} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
                 <Plus size={16} className="mr-1" />
                 Add
               </Button>
             </div>
-            
-            <h3 className="font-semibold text-[#0A0A0A] mb-4">Competitor Comparison</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={[...data.competitors, { name: 'Your site', score: data.overallScore }]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#6B7280', fontSize: 12 }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="score" fill="#1D9E75" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <p className="text-sm text-[#6B7280] text-center py-8" data-testid="competitors-empty">
+              Add competitor domains above to compare your AI visibility against them.
+            </p>
           </motion.div>
         </TabsContent>
 
@@ -351,26 +385,9 @@ export const PulsePage = () => {
         <TabsContent value="recommendations" className="space-y-6">
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="recommendations-card">
             <h3 className="font-semibold text-[#0A0A0A] mb-4">Improvement Recommendations</h3>
-            {liveRecs === null ? (
-              <div className="space-y-4">
-                {data.recommendations.map((rec, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-[#F9FAFB] rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <DifficultyBadge difficulty={rec.difficulty} />
-                      <span className="text-sm text-[#0A0A0A]">{rec.text}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-[#1D9E75] font-medium">+{rec.impact} pts</span>
-                      <Button size="sm" variant="ghost" className="text-[#1D9E75]">
-                        Start <ArrowRight size={14} className="ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : liveRecs.length === 0 ? (
+            {!liveRecs || liveRecs.length === 0 ? (
               <div className="py-12 text-center text-sm text-[#6B7280]" data-testid="recommendations-empty">
-                Run a scan to get recommendations.
+                Run a scan to get personalized recommendations.
               </div>
             ) : (
               <div className="space-y-4">
@@ -414,6 +431,7 @@ export const PulsePage = () => {
           </motion.div>
         </TabsContent>
       </Tabs>
+      )}
     </motion.div>
   );
 };

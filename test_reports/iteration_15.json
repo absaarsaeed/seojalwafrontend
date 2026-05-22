@@ -1,0 +1,48 @@
+{
+  "summary": "Verified the 11-fix 'remove ALL dummy data' batch on /dashboard, /dashboard/growth-score, /dashboard/ai-visibility, /dashboard/auto-publish, /dashboard/analytics and /adminpanel/users/{userId}. All target data-testids render the correct empty/no-site states for the test user (who has no active site per the user dashboard). Admin user profile now loads real backend data (no USER_DETAIL fallback). GSC error toast verified via ?error=gsc_failed. NO dummy strings (USER_DETAIL 'Aarav Mehta', PULSE_DATA '74/100', PERF_ROWS, fake 'SEO Trends 2026' titles) detected in live runtime on the user-facing pages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/dashboard/overview, /api/growth-score, /api/analytics/overview, /api/pulse/*, /api/auto-publish/*", "issue": "Returns 404/empty for the test user — frontend now gracefully renders empty/no-site states per the new spec. Non-blocking."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminUserProfile (/adminpanel/users/{id})", "issue": "[data-testid=user-email] renders as EMPTY string for the inspected real user (e3156147-...). Backend returns user record but email field is empty/null OR mapping key is off. UI shows 'Unknown' for name and no visible email line — admin cannot see the user's email. Low-severity since rest of profile loads correctly with real data.", "selector": "[data-testid=user-email]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "fix_verification_results": {
+    "FIX_1_admin_user_profile": "PASS — user-profile-page renders, user-full-name='Unknown' (real, not 'Aarav Mehta' dummy), user-plan-badge='Starter', user-subscription-status='TRIALING', Usage tab has 4 [data-testid^=usage-] progress bars, Billing tab has billing-plan-name + billing-monthly-price, Activity tab has admin-user-activity-log (showing real SITE_CONNECTED & USER_REGISTERED events with timestamps). Cascade delete: admin-delete-user-confirm-btn disabled before typing 'DELETE', enabled after typing 'DELETE'. NO 'Aarav Mehta'/'aarav@acmeinc.com' dummy strings. NOTE: user-email element exists but is empty (see ui_bugs).",
+    "FIX_2_user_dashboard_home": "PASS — With no active site, ONLY [data-testid=welcome-banner] renders. dashboard-metrics-grid=ABSENT, trial-banner=ABSENT, activity-empty=ABSENT (because top-level welcome-banner replaces the metrics layout entirely). NO '74/100' dummy growth score visible. NO fake recent-activity rows. Screenshot confirms clean empty state.",
+    "FIX_3_growth_score": "PASS — growth-no-site=TRUE (correct: no active site). growth-empty=FALSE, growth-score-value=FALSE (correct — no fallback rendering). NO '74/100' hardcoded number.",
+    "FIX_4_ai_visibility_pulse": "PASS — ai-visibility-no-site=TRUE (correct: no active site). ai-visibility-empty / ai-visibility-first-scan-btn / ai-visibility-score=ABSENT (gated on site connection). No PULSE_DATA dummy data rendered.",
+    "FIX_6_auto_publish_calendar_and_perf": "PASS — Calendar tab: calendar-no-site=TRUE, no fake titles like '10 SEO Trends 2026' present. Performance tab: perf-empty=TRUE renders empty state. perf-total-clicks element present (likely showing 0). NO PERF_ROWS or fake article titles in DOM.",
+    "FIX_7_analytics": "PASS — analytics-no-site=TRUE (correct: no active site; takes precedence over gsc-not-connected per implementation). Page renders 'Connect a website first' empty card with Connect-website CTA. NO dummy SERIES/ARTICLES/SEARCH_TERMS rendered. gsc-not-connected & gsc-connect-btn correctly hidden when no site (per design — banner only appears when a site exists but GSC is unconnected).",
+    "FIX_11_gsc_error_handling": "PASS — Visiting /dashboard/analytics?error=gsc_failed produced toast: 'Google connection failed. Please try again or contact support.' — exactly matching spec wording. (Note: 'Could not start Google Search Console connection' click-without-redirect path could not be tested because gsc-connect-btn is hidden in the no-site state — recommend re-testing after a site is connected.)",
+    "no_dummy_string_references": "PASS — No USER_DETAIL/USERS_LIST/PULSE_DATA/PUBLISH_DATA/PERF_ROWS strings present in the live DOM of any user-facing page that was previously affected. The constants still exist in /app/frontend/src/admin/data/dummyData.js & /app/frontend/src/data/publicData.js (USERS_LIST is still imported by AdminContext.jsx as initial state for the in-memory store, which is acceptable until full backend wiring — but USER_DETAIL is no longer imported/used)."
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_15.json"
+  ],
+  "action_items": [
+    "MEDIUM: Investigate why /adminpanel/users/{id} renders [data-testid=user-email] as an empty string for real users. Either backend GET /api/admin/users/{id} doesn't include email, or UserProfile.jsx is mapping the wrong key (e.g., `data.email` vs `data.user.email`). Admin should see the user's email.",
+    "LOW: Re-test FIX 11's 'Could not start Google Search Console connection' toast on the click path after a site is connected (gsc-connect-btn is gated on having an active site).",
+    "LOW (cleanup): /app/frontend/src/admin/data/dummyData.js still defines USERS_LIST/USER_DETAIL etc., and AdminContext.jsx imports USERS_LIST. Since admin user list/profile now hits real APIs, consider removing the seed import (or keep documented as initial in-memory cache)."
+  ],
+  "critical_code_review_comments": [
+    "Empty-state logic is well-structured: each affected page has a clear no-site → no-data → has-data ladder using distinct data-testids. Easy to test and reason about.",
+    "Admin user profile correctly uses adminApi.user(id) with proper loading/error states (user-profile-loading / user-profile-error data-testids present).",
+    "Cascade-delete confirmation pattern (type 'DELETE' to enable button) implemented correctly and verified working.",
+    "Spec wording for GSC error toast ('Google connection failed. Please try again or contact support.') exactly matches the implementation — good adherence to PRD."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only run)", "frontend": "100% on all 7 fix targets; 1 minor data-mapping ui_bug discovered (user-email empty on admin profile)"},
+  "test_credentials": "Admin: jalwa / jalwaisadmin (verified). User: test_1779193655@jalwa.com / TestPassword123! (verified — has no active site; admin shows site=maternityfeed.com but user dashboard does not surface it as activeSite, hence empty states).",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 15 = dummy-data-purge verification. All 7 fixes PASS for the no-active-site empty-state path. To fully validate the 'data-present' path (FIX 2 metrics-grid, FIX 3 growth-score-value, FIX 4 ai-visibility-score, FIX 6 calendar-grid + perf-total-clicks numbers, FIX 7 charts/tables), a test user with a fully provisioned site + scans + GSC + published articles is needed. One real bug found: admin user-email element renders empty — needs backend mapping check.",
+  "rca_of_the_issue": "user-email empty: most likely UserProfile.jsx is reading the email from a path that the backend doesn't populate (e.g., response.data.email is missing, while response.data.user.email or response.data.account.email is populated). To RCA: console.log the full response of adminApi.user(id) — if email is present in payload, fix the JSX mapping; if absent, fix the backend GET /api/admin/users/{id} to include email."
+}

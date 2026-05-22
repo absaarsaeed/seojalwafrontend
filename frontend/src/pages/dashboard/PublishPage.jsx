@@ -16,55 +16,16 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '../../components/ui/collapsible';
-import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles, RotateCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles, RotateCw, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
 import { useUser } from '../../context/UserContext';
 import { articlesApi, searchTermsApi } from '../../lib/api';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
-import { PUBLISH_DATA } from '../../data/publicData';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-};
-
-const TITLES = [
-  '10 SEO Trends That Will Dominate 2026',
-  'Complete Guide to AI-Powered Content Marketing',
-  'How to Rank #1 on Google with AI Tools',
-  'ChatGPT vs Perplexity: SEO Comparison',
-  'Ultimate Local SEO Checklist',
-  'Why Your Content Strategy Is Failing',
-  'Long-Tail Keywords in the AI Era',
-  '5 Free SEO Tools You\'re Not Using',
-  'Building Topical Authority Step-by-Step',
-  'Content Pillars Explained: 2026 Edition',
-  'Schema Markup for Better Rankings',
-  'Internal Linking Strategies That Work',
-  'Mobile-First Indexing Explained',
-  'Backlinks in 2026: Quality Over Quantity',
-  'The Death of Keyword Stuffing',
-  'AI Writing Tools Compared',
-  'Voice Search Optimization Guide',
-  'E-E-A-T: The Definitive Guide',
-  'Featured Snippets: How to Capture Them',
-  'Content Refresh: A Complete Playbook',
-  'SEO Audit in 30 Minutes',
-  'Building a Content Calendar',
-  'Pillar Pages and Topic Clusters',
-  'SERP Features You Should Target',
-  'Core Web Vitals Optimization',
-  'Image SEO Best Practices',
-  'Video SEO for YouTube and Google',
-  'How to Recover from a Google Penalty',
-];
-
-const STATUS_BY_DAY = (date, today) => {
-  const d = new Date(date);
-  if (d < today) return 'PUBLISHED';
-  if (d.getTime() === today.getTime() || d.getTime() === today.getTime() + 86400000) return 'READY';
-  return 'SCHEDULED';
 };
 
 const statusStyles = {
@@ -98,17 +59,7 @@ const buildMonth = () => {
   for (let i = 0; i < startWeekday; i++) cells.push(null);
   for (let i = 1; i <= daysInMonth; i++) {
     const d = new Date(year, month, i);
-    const hasArticle = i % 7 !== 0; // skip Sundays for variety
-    cells.push({
-      date: d,
-      day: i,
-      article: hasArticle ? {
-        id: `${year}-${month}-${i}`,
-        title: TITLES[(i - 1) % TITLES.length],
-        searchTerm: TITLES[(i - 1) % TITLES.length].toLowerCase().slice(0, 30),
-        status: STATUS_BY_DAY(d, today),
-      } : null,
-    });
+    cells.push({ date: d, day: i, article: null });
   }
   return { cells, month, year };
 };
@@ -116,17 +67,7 @@ const buildMonth = () => {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-// Performance table data
-const PERF_ROWS = TITLES.slice(0, 10).map((title, i) => ({
-  title,
-  term: title.toLowerCase().split(':')[0].slice(0, 30),
-  status: i < 6 ? 'Published' : i < 8 ? 'Scheduled' : 'Draft',
-  date: `2026-${String(Math.max(1, 5 - Math.floor(i / 4))).padStart(2, '0')}-${String(5 + i * 2).padStart(2, '0')}`,
-  impressions: 15000 - i * 1200,
-  clicks: 540 - i * 50,
-  ctr: ((540 - i * 50) / (15000 - i * 1200) * 100).toFixed(2),
-  position: 3.2 + i * 1.8,
-}));
+// Performance table data — fetched live from articlesApi.list
 
 const StatusPill = ({ status }) => {
   const key = (status || 'SCHEDULED').toUpperCase();
@@ -150,7 +91,6 @@ const PerfStatusBadge = ({ status }) => {
 export const PublishPage = () => {
   const { activeSite } = useSite();
   const { subscription } = useUser();
-  const data = PUBLISH_DATA;
   const { cells, month, year } = useMemo(buildMonth, []);
   const [autoSchedule, setAutoSchedule] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -158,9 +98,14 @@ export const PublishPage = () => {
   const [keywords, setKeywords] = useState('');
   const [aiAuto, setAiAuto] = useState(true);
   const [liveCalendar, setLiveCalendar] = useState(null);
+  const [liveArticles, setLiveArticles] = useState([]);
 
   useEffect(() => {
-    if (!activeSite?.id) return;
+    if (!activeSite?.id) {
+      setLiveCalendar(null);
+      setLiveArticles([]);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -170,7 +115,12 @@ export const PublishPage = () => {
           month: month + 1,
         });
         if (!cancelled) setLiveCalendar(cal);
-      } catch {}
+      } catch { if (!cancelled) setLiveCalendar(null); }
+      try {
+        const list = await articlesApi.list({ siteId: activeSite.id });
+        const items = Array.isArray(list) ? list : list?.items || [];
+        if (!cancelled) setLiveArticles(items);
+      } catch { if (!cancelled) setLiveArticles([]); }
     })();
     return () => { cancelled = true; };
   }, [activeSite?.id, year, month]);
@@ -265,22 +215,58 @@ export const PublishPage = () => {
             })()}
           </motion.div>
 
-          {/* Stats */}
-          <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Total articles written',    value: 47 },
-              { label: 'Time saved vs writer',      value: '94 hours' },
-              { label: 'Articles published this month', value: 12 },
-              { label: 'Articles scheduled',        value: 28 },
-            ].map((s) => (
-              <div key={s.label} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
-                <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">{s.label}</p>
-                <p className="text-2xl font-bold text-[#0A0A0A]">{s.value}</p>
-              </div>
-            ))}
-          </motion.div>
+          {/* Stats — from real articles list */}
+          {(() => {
+            const total = liveArticles.length;
+            const thisMonth = liveArticles.filter((a) => {
+              const d = new Date(a.publishedAt || a.scheduledAt || a.createdAt || 0);
+              return d.getMonth() === month && d.getFullYear() === year;
+            });
+            const published = thisMonth.filter((a) => (a.status || '').toUpperCase() === 'PUBLISHED').length;
+            const scheduled = liveArticles.filter((a) => ['SCHEDULED', 'READY'].includes((a.status || '').toUpperCase())).length;
+            const stats = [
+              { label: 'Total articles written',          value: total },
+              { label: 'Articles published this month',   value: published },
+              { label: 'Articles scheduled',              value: scheduled },
+              { label: 'Time saved vs writer',            value: `${total * 2} hours` },
+            ];
+            return (
+              <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {stats.map((s) => (
+                  <div key={s.label} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">{s.label}</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A]">{s.value}</p>
+                  </div>
+                ))}
+              </motion.div>
+            );
+          })()}
+
+          {/* No-site empty state */}
+          {!activeSite && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="calendar-no-site">
+              <Globe size={32} className="text-[#1D9E75] mx-auto mb-3" />
+              <p className="text-lg font-medium text-[#0A0A0A] mb-1">Connect a website first</p>
+              <p className="text-sm text-[#6B7280] mb-4">Add your site so we can publish daily SEO articles to it.</p>
+              <Link to="/dashboard/connections">
+                <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Connect website</Button>
+              </Link>
+            </motion.div>
+          )}
+
+          {/* Calendar empty (site connected but no articles yet) */}
+          {activeSite && liveArticles.length === 0 && !liveCalendar && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="calendar-empty">
+              <p className="text-lg font-medium text-[#0A0A0A] mb-1">No articles yet</p>
+              <p className="text-sm text-[#6B7280] mb-4">Add search terms to start publishing articles automatically.</p>
+              <Button onClick={() => setAddOpen(true)} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
+                <Plus size={16} className="mr-1" /> Add Search Terms
+              </Button>
+            </motion.div>
+          )}
 
           {/* Calendar Grid */}
+          {activeSite && (
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="calendar-grid">
             <h4 className="font-semibold text-[#0A0A0A] mb-4">{MONTH_NAMES[month]} {year}</h4>
             <div className="grid grid-cols-7 gap-px bg-[#F0F0F0] rounded-lg overflow-hidden">
@@ -356,25 +342,7 @@ export const PublishPage = () => {
               })}
             </div>
           </motion.div>
-
-          {/* Recycle Bin */}
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#F0F0F0] rounded-lg text-sm text-[#6B7280] hover:bg-[#F9FAFB]" data-testid="recycle-bin-toggle">
-                <Trash2 size={14} /> Recycle Bin (2) <ChevronDown size={14} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="mt-2 bg-white border border-[#F0F0F0] rounded-lg p-4 space-y-2">
-                {['Old SEO Trends 2024', 'Outdated Keyword Strategy'].map((t) => (
-                  <div key={t} className="flex items-center justify-between p-2 bg-[#F9FAFB] rounded">
-                    <span className="text-sm text-[#6B7280]">{t}</span>
-                    <button className="text-xs text-[#1D9E75] hover:underline">Restore</button>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
+          )}
         </TabsContent>
 
         {/* ============================ EDITOR ============================ */}
@@ -416,98 +384,127 @@ export const PublishPage = () => {
 
         {/* ============================ CMS ============================ */}
         <TabsContent value="cms" className="space-y-6">
-          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {data.cmsConnections.map((cms) => {
-              const isWp = (cms.name || '').toLowerCase() === 'wordpress';
-              return (
-                <div key={cms.name} className={`bg-white rounded-xl border border-[#F0F0F0] p-4 ${isWp ? '' : 'coming-soon-card'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <PlatformLogo name={cms.name} size={28} />
-                      <span className="font-medium text-[#0A0A0A]">{cms.name}</span>
-                    </div>
-                    {isWp ? (
-                      cms.connected ? (
-                        <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full flex items-center gap-1">
-                          <Check size={12} /> Connected
-                        </span>
-                      ) : (
-                        <Button size="sm" variant="outline" className="text-xs h-7">Connect</Button>
-                      )
-                    ) : (
-                      <span className="px-2 py-1 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md">Coming Soon</span>
-                    )}
-                  </div>
-                  {isWp && cms.connected && (
-                    <div className="text-xs text-[#6B7280] space-y-0.5">
-                      <p>{cms.site}</p>
-                      <p>Last published: {cms.lastPublished}</p>
-                      <p>{cms.articleCount} articles</p>
-                    </div>
-                  )}
-                  {!isWp && (
-                    <p className="text-[10px] text-[#9CA3AF] mt-2">Available in v2</p>
-                  )}
+          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="cms-connections">
+            {/* WordPress (only platform live in v1) */}
+            <div className="bg-white rounded-xl border border-[#F0F0F0] p-4" data-testid="cms-wordpress-card">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <PlatformLogo name="WordPress" size={28} />
+                  <span className="font-medium text-[#0A0A0A]">WordPress</span>
                 </div>
-              );
-            })}
+                {activeSite ? (
+                  <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full flex items-center gap-1">
+                    <Check size={12} /> Connected
+                  </span>
+                ) : (
+                  <Link to="/dashboard/connections">
+                    <Button size="sm" variant="outline" className="text-xs h-7">Connect</Button>
+                  </Link>
+                )}
+              </div>
+              {activeSite && (
+                <div className="text-xs text-[#6B7280] space-y-0.5">
+                  <p>{activeSite.url || activeSite.domain}</p>
+                  <p>{liveArticles.length} article{liveArticles.length === 1 ? '' : 's'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Coming soon — Shopify, Webflow, Ghost */}
+            {['Shopify', 'Webflow', 'Ghost'].map((name) => (
+              <div key={name} className="bg-white rounded-xl border border-[#F0F0F0] p-4 coming-soon-card">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <PlatformLogo name={name} size={28} />
+                    <span className="font-medium text-[#0A0A0A]">{name}</span>
+                  </div>
+                  <span className="px-2 py-1 bg-[#F0F0F0] text-[#9CA3AF] text-xs font-medium rounded-md">Coming Soon</span>
+                </div>
+                <p className="text-[10px] text-[#9CA3AF] mt-2">Available in v2</p>
+              </div>
+            ))}
           </motion.div>
         </TabsContent>
 
         {/* ============================ PERFORMANCE ============================ */}
         <TabsContent value="performance" className="space-y-6">
-          <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Total impressions', value: '124,847' },
-              { label: 'Total clicks',      value: '2,341' },
-              { label: 'Avg CTR',           value: '1.87%' },
-              { label: 'Avg position',      value: '14.2' },
-            ].map((s) => (
-              <div key={s.label} className="bg-white rounded-xl border border-[#F0F0F0] p-4">
-                <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">{s.label}</p>
-                <p className="text-2xl font-bold text-[#0A0A0A]">{s.value}</p>
-              </div>
-            ))}
-          </motion.div>
+          {(() => {
+            const articles = Array.isArray(liveArticles) ? liveArticles : [];
+            const totals = articles.reduce((acc, a) => ({
+              impressions: acc.impressions + (a.impressions || 0),
+              clicks: acc.clicks + (a.clicks || 0),
+            }), { impressions: 0, clicks: 0 });
+            const avgCtr = totals.impressions > 0 ? ((totals.clicks / totals.impressions) * 100).toFixed(2) : '0.00';
+            const positions = articles.map((a) => a.position).filter((p) => p != null);
+            const avgPos = positions.length ? (positions.reduce((s, p) => s + p, 0) / positions.length).toFixed(1) : '—';
+            const hasData = articles.length > 0;
+            return (
+              <>
+                <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4">
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">Total impressions</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A]" data-testid="perf-total-impressions">{totals.impressions.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4">
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">Total clicks</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A]" data-testid="perf-total-clicks">{totals.clicks.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4">
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">Avg CTR</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A]">{avgCtr}%</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-[#F0F0F0] p-4">
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-1">Avg position</p>
+                    <p className="text-2xl font-bold text-[#0A0A0A]">{avgPos}</p>
+                  </div>
+                </motion.div>
 
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-[#F9FAFB] border-b border-[#F0F0F0]">
-                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Article Title</th>
-                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Search Term</th>
-                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Status</th>
-                    <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Published Date</th>
-                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Impressions</th>
-                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Clicks</th>
-                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">CTR</th>
-                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Avg Position</th>
-                    <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {PERF_ROWS.map((r, i) => (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
-                      <td className="p-4 text-sm text-[#0A0A0A]">{r.title}</td>
-                      <td className="p-4 text-sm text-[#6B7280]">{r.term}</td>
-                      <td className="p-4"><PerfStatusBadge status={r.status} /></td>
-                      <td className="p-4 text-sm text-[#6B7280]">{r.date}</td>
-                      <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.impressions.toLocaleString()}</td>
-                      <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.clicks.toLocaleString()}</td>
-                      <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.ctr}%</td>
-                      <td className="p-4 text-sm text-[#0A0A0A] text-right">{r.position.toFixed(1)}</td>
-                      <td className="p-4 text-right">
-                        <Link to={`/dashboard/auto-publish/article/${r.term.replace(/[^a-z0-9]+/g, '-')}-${i}`} className="text-sm text-[#1D9E75] hover:underline inline-flex items-center gap-1">
-                          View <ExternalLink size={12} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
+                {!hasData ? (
+                  <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="perf-empty">
+                    <p className="text-sm text-[#6B7280]">No published articles yet. Add search terms to start publishing.</p>
+                  </motion.div>
+                ) : (
+                  <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-[#F9FAFB] border-b border-[#F0F0F0]">
+                            <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Article Title</th>
+                            <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Status</th>
+                            <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Impressions</th>
+                            <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Clicks</th>
+                            <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">CTR</th>
+                            <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {articles.map((r, i) => {
+                            const impr = r.impressions || 0;
+                            const clk = r.clicks || 0;
+                            const ctr = impr > 0 ? ((clk / impr) * 100).toFixed(2) : '0.00';
+                            return (
+                              <tr key={r.id || i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
+                                <td className="p-4 text-sm text-[#0A0A0A]">{r.title}</td>
+                                <td className="p-4"><PerfStatusBadge status={r.status || 'Draft'} /></td>
+                                <td className="p-4 text-sm text-[#0A0A0A] text-right">{impr.toLocaleString()}</td>
+                                <td className="p-4 text-sm text-[#0A0A0A] text-right">{clk.toLocaleString()}</td>
+                                <td className="p-4 text-sm text-[#0A0A0A] text-right">{ctr}%</td>
+                                <td className="p-4 text-right">
+                                  <Link to={`/dashboard/auto-publish/article/${r.id || i}`} className="text-sm text-[#1D9E75] hover:underline inline-flex items-center gap-1">
+                                    View <ExternalLink size={12} />
+                                  </Link>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
       </Tabs>
 

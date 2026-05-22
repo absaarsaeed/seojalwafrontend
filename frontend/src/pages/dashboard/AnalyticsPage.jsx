@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../../components/ui/button';
 import {
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { Check, ArrowUp, ArrowDown, ExternalLink, Loader2 } from 'lucide-react';
+import { Check, ArrowUp, ArrowDown, ExternalLink, Loader2, Sparkles } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
@@ -22,69 +22,8 @@ const fadeInUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
 };
 
-// 30 days of dummy traffic
-const buildSeries = () => {
-  const series = [];
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    series.push({
-      date: label,
-      impressions: 60000 + Math.round(Math.random() * 60000),
-      clicks: 200 + Math.round(Math.random() * 1000),
-    });
-  }
-  return series;
-};
-
-const SERIES = buildSeries();
-
-const ARTICLES = [
-  { title: '10 SEO Trends That Will Dominate 2026', impressions: 184230, clicks: 4120, ctr: 2.24, position: 4.2 },
-  { title: 'Complete Guide to AI-Powered Content Marketing', impressions: 156780, clicks: 3987, ctr: 2.54, position: 3.8 },
-  { title: 'How to Rank #1 on Google with AI Tools', impressions: 142309, clicks: 2891, ctr: 2.03, position: 5.1 },
-  { title: 'ChatGPT vs Perplexity: Which is Better for SEO?', impressions: 128456, clicks: 2347, ctr: 1.83, position: 6.4 },
-  { title: 'The Ultimate Local SEO Checklist for 2026', impressions: 114287, clicks: 2103, ctr: 1.84, position: 7.2 },
-  { title: 'Why Your Content Strategy Is Failing (And How to Fix It)', impressions: 98765, clicks: 1876, ctr: 1.90, position: 8.9 },
-  { title: 'Mastering Long-Tail Keywords in the AI Era', impressions: 87432, clicks: 1543, ctr: 1.77, position: 9.5 },
-  { title: 'The 5 Best Free SEO Tools You\'re Not Using', impressions: 76321, clicks: 1387, ctr: 1.82, position: 11.3 },
-  { title: 'Building Topical Authority: A Step-by-Step Guide', impressions: 67432, clicks: 1098, ctr: 1.63, position: 13.7 },
-  { title: 'Content Pillars Explained: The 2026 Edition', impressions: 58743, clicks: 956, ctr: 1.63, position: 14.8 },
-  { title: 'How to Use Schema Markup for Better Rankings', impressions: 49382, clicks: 743, ctr: 1.50, position: 18.4 },
-  { title: 'Internal Linking Strategies That Actually Work', impressions: 41287, clicks: 612, ctr: 1.48, position: 21.2 },
-  { title: 'Mobile-First Indexing: What You Need to Know', impressions: 36421, clicks: 489, ctr: 1.34, position: 24.6 },
-  { title: 'Backlinks in 2026: Quality Over Quantity', impressions: 28743, clicks: 387, ctr: 1.35, position: 32.1 },
-  { title: 'The Death of Keyword Stuffing (Finally)', impressions: 21456, clicks: 234, ctr: 1.09, position: 53.4 },
-];
-
-const SEARCH_TERMS = [
-  { term: 'best seo tools 2026', clicks: 1234, impressions: 23456, position: 3.2 },
-  { term: 'ai content marketing', clicks: 987, impressions: 18743, position: 4.1 },
-  { term: 'how to rank on google', clicks: 876, impressions: 16234, position: 5.7 },
-  { term: 'chatgpt for seo', clicks: 743, impressions: 14123, position: 6.8 },
-  { term: 'content strategy template', clicks: 654, impressions: 12387, position: 7.4 },
-  { term: 'local seo checklist', clicks: 543, impressions: 10234, position: 8.2 },
-  { term: 'long tail keywords', clicks: 432, impressions: 8743, position: 9.6 },
-  { term: 'schema markup guide', clicks: 387, impressions: 7423, position: 11.3 },
-  { term: 'topical authority seo', clicks: 321, impressions: 6234, position: 13.8 },
-  { term: 'free seo audit tools', clicks: 287, impressions: 5432, position: 15.4 },
-];
-
-const TOP_PAGES = [
-  { url: '/blog/10-seo-trends-2026', clicks: 1876, impressions: 32456, position: 3.1 },
-  { url: '/blog/complete-guide-ai-content-marketing', clicks: 1543, impressions: 28743, position: 3.7 },
-  { url: '/blog/rank-1-google-ai-tools', clicks: 1287, impressions: 24123, position: 5.2 },
-  { url: '/blog/chatgpt-vs-perplexity', clicks: 1098, impressions: 22387, position: 6.3 },
-  { url: '/blog/local-seo-checklist', clicks: 987, impressions: 19432, position: 7.1 },
-  { url: '/blog/content-strategy-failing', clicks: 876, impressions: 17234, position: 8.8 },
-  { url: '/blog/long-tail-keywords-ai', clicks: 743, impressions: 15123, position: 9.4 },
-  { url: '/blog/best-free-seo-tools', clicks: 654, impressions: 13456, position: 11.2 },
-  { url: '/blog/topical-authority-guide', clicks: 543, impressions: 11234, position: 13.6 },
-  { url: '/blog/content-pillars-2026', clicks: 432, impressions: 9432, position: 14.7 },
-];
-
 const PositionBadge = ({ position }) => {
+  if (position == null) return <span className="text-xs text-[#6B7280]">—</span>;
   let cls = 'bg-[#6B7280]/10 text-[#6B7280]';
   if (position <= 10) cls = 'bg-[#1D9E75]/10 text-[#1D9E75]';
   else if (position <= 20) cls = 'bg-[#2563EB]/10 text-[#2563EB]';
@@ -92,8 +31,8 @@ const PositionBadge = ({ position }) => {
   return <span className={`px-2 py-0.5 rounded text-xs font-medium ${cls}`}>{position.toFixed(1)}</span>;
 };
 
-const MetricCard = ({ label, value, delta, deltaPositive, color }) => (
-  <div className="bg-white rounded-xl border border-[#F0F0F0] p-5">
+const MetricCard = ({ label, value, delta, deltaPositive, color, testid }) => (
+  <div className="bg-white rounded-xl border border-[#F0F0F0] p-5" data-testid={testid}>
     <p className="text-xs text-[#6B7280] uppercase tracking-wide mb-2">{label}</p>
     <p className="text-2xl font-bold text-[#0A0A0A] mb-1" style={{ color }}>{value}</p>
     {delta && (
@@ -114,39 +53,47 @@ export const AnalyticsPage = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [gscConnecting, setGscConnecting] = useState(false);
   const [gscSyncing, setGscSyncing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Detect ?connected=true after OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('connected') === 'true') {
-      toast.success('Google Search Console connected!');
+      toast.success('Google Search Console connected! Syncing data...');
       params.delete('connected');
       const newSearch = params.toString();
-      navigate(
-        `${location.pathname}${newSearch ? `?${newSearch}` : ''}`,
-        { replace: true },
-      );
+      navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
       setReloadKey((k) => k + 1);
+    }
+    if (params.get('error') === 'gsc_failed') {
+      toast.error('Google connection failed. Please try again or contact support.');
+      params.delete('error');
+      navigate(`${location.pathname}${params.toString() ? `?${params.toString()}` : ''}`, { replace: true });
     }
   }, [location.search, location.pathname, navigate]);
 
   useEffect(() => {
-    if (!activeSite?.id) return;
+    if (!activeSite?.id) {
+      setOverview(null);
+      return;
+    }
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
         const data = await analyticsApi.overview(activeSite.id, range);
         if (!cancelled) setOverview(data);
-      } catch {}
+      } catch (err) {
+        if (!cancelled) setOverview(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [activeSite?.id, range, reloadKey]);
 
-  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : n);
-  const liveClicks = overview ? fmt(overview.totalClicks) : '26,089';
-  const liveImpr = overview ? fmt(overview.totalImpressions) : '1,867,192';
-  const liveCtr = overview ? `${(overview.avgCTR * 100).toFixed(2)}%` : '1.40%';
-  const livePos = overview ? overview.avgPosition?.toFixed(1) : '2.8';
+  const fmt = (n) => (typeof n === 'number' ? n.toLocaleString() : (n ?? '—'));
+  const gscConnected = !!overview?.gscConnected;
 
   const handleGscConnect = async () => {
     setGscConnecting(true);
@@ -155,10 +102,12 @@ export const AnalyticsPage = () => {
       const authUrl = res?.authUrl || res?.auth_url;
       if (authUrl) {
         window.location.href = authUrl;
-        return; // navigation will discard component
+        return;
       }
       toast.error('Could not start Google Search Console connection');
+      console.error('GSC connect: no authUrl in response', res);
     } catch (err) {
+      console.error('GSC connect failed:', err);
       toast.error(err?.message || 'Could not connect Google Search Console');
     } finally {
       setGscConnecting(false);
@@ -176,6 +125,7 @@ export const AnalyticsPage = () => {
       toast.success('Analytics synced');
       setReloadKey((k) => k + 1);
     } catch (err) {
+      console.error('GSC sync failed:', err);
       toast.error(err?.message || 'Sync failed');
     } finally {
       setGscSyncing(false);
@@ -209,155 +159,193 @@ export const AnalyticsPage = () => {
         </Select>
       </motion.div>
 
-      {/* GSC banner */}
-      <motion.div variants={fadeInUp} className="bg-[#E1F5EE] border border-[#1D9E75]/20 rounded-xl p-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
-            <Check size={16} className="text-white" />
+      {/* No active site */}
+      {!activeSite && (
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-dashed border-[#F0F0F0] p-12 text-center" data-testid="analytics-no-site">
+          <Sparkles size={32} className="text-[#1D9E75] mx-auto mb-3" />
+          <p className="text-lg font-medium text-[#0A0A0A] mb-1">Connect a website first</p>
+          <p className="text-sm text-[#6B7280] mb-4">Add your site to start tracking Google Search Console performance.</p>
+          <Link to="/dashboard/connections">
+            <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Connect website</Button>
+          </Link>
+        </motion.div>
+      )}
+
+      {/* GSC NOT connected — prominent empty state */}
+      {activeSite && !gscConnected && !loading && (
+        <motion.div variants={fadeInUp} className="bg-[#FEF3C7] border border-[#F59E0B]/30 rounded-xl p-8 text-center" data-testid="gsc-not-connected">
+          <div className="w-12 h-12 rounded-full bg-[#F59E0B] flex items-center justify-center mx-auto mb-3">
+            <Sparkles size={22} className="text-white" />
           </div>
-          <div className="min-w-0">
-            <p className="font-medium text-[#0A0A0A]">Google Search Console Connected</p>
-            <p className="text-xs text-[#6B7280] truncate">Property: sc-domain:{activeSite?.domain || 'myblog.com'} · Last synced: 2 hours ago</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGscConnect}
-            disabled={gscConnecting}
-            className="border-[#F0F0F0] bg-white"
-            data-testid="gsc-connect-btn"
-          >
+          <p className="text-lg font-bold text-[#0A0A0A] mb-1">Connect Google Search Console</p>
+          <p className="text-sm text-[#6B7280] mb-4">Get real traffic data — impressions, clicks, CTR, average position, and your top-performing articles.</p>
+          <Button onClick={handleGscConnect} disabled={gscConnecting} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="gsc-connect-btn">
             {gscConnecting ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
             Connect Google Search Console
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSyncNow}
-            disabled={gscSyncing}
-            className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
-            data-testid="gsc-sync-btn"
-          >
-            {gscSyncing ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
-            {gscSyncing ? 'Syncing...' : 'Sync Now'}
-          </Button>
-          <Button size="sm" variant="ghost" className="text-[#6B7280]">Disconnect</Button>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
-      {/* Metric cards */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Clicks"      value={liveClicks}  delta="+12% vs last month"   deltaPositive color="#1D9E75" />
-        <MetricCard label="Total Impressions" value={liveImpr}    delta="+8% vs last month"    deltaPositive color="#2563EB" />
-        <MetricCard label="Average CTR"       value={liveCtr}     delta="-0.2% vs last month"  deltaPositive={false} color="#F59E0B" />
-        <MetricCard label="Average Position"  value={livePos}     delta="+0.4 improved"        deltaPositive color="#8B5CF6" />
-      </motion.div>
+      {/* GSC Connected banner */}
+      {activeSite && gscConnected && (
+        <motion.div variants={fadeInUp} className="bg-[#E1F5EE] border border-[#1D9E75]/20 rounded-xl p-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+              <Check size={16} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-[#0A0A0A]">Google Search Console Connected</p>
+              <p className="text-xs text-[#6B7280] truncate">
+                Property: sc-domain:{activeSite?.domain || activeSite?.url}
+                {overview?.lastSyncedAt ? ` · Last synced: ${new Date(overview.lastSyncedAt).toLocaleString()}` : ''}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={handleSyncNow}
+              disabled={gscSyncing}
+              className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+              data-testid="gsc-sync-btn"
+            >
+              {gscSyncing ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+              {gscSyncing ? 'Syncing...' : 'Sync Now'}
+            </Button>
+          </div>
+        </motion.div>
+      )}
 
-      {/* Chart */}
-      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-        <div className="mb-4">
-          <h3 className="font-semibold text-[#0A0A0A]">SEO Jalwa Article Traffic & Clicks Over Time</h3>
-          <p className="text-xs text-[#6B7280]">How articles written by SEO Jalwa are performing in Google Search</p>
-        </div>
-        <div style={{ width: '100%', height: 320 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={SERIES} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="impr" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563EB" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="clk" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#1D9E75" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#1D9E75" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} interval={3} />
-              <YAxis yAxisId="left"  tick={{ fill: '#2563EB', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fill: '#1D9E75', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #F0F0F0', borderRadius: 8 }}
-                formatter={(value) => value.toLocaleString()}
-              />
-              <Legend />
-              <Area yAxisId="left"  type="monotone" dataKey="impressions" name="Impressions" stroke="#2563EB" strokeWidth={2} fill="url(#impr)" />
-              <Area yAxisId="right" type="monotone" dataKey="clicks"      name="Clicks"      stroke="#1D9E75" strokeWidth={2} fill="url(#clk)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </motion.div>
+      {/* Metrics + Chart + Tables — only when GSC connected */}
+      {activeSite && gscConnected && (
+        <>
+          <motion.div variants={fadeInUp} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <MetricCard label="Total Clicks"      value={fmt(overview.totalClicks)} color="#1D9E75" testid="metric-total-clicks" />
+            <MetricCard label="Total Impressions" value={fmt(overview.totalImpressions)} color="#2563EB" testid="metric-total-impressions" />
+            <MetricCard label="Average CTR"       value={overview.avgCTR != null ? `${(overview.avgCTR * 100).toFixed(2)}%` : '—'} color="#F59E0B" testid="metric-avg-ctr" />
+            <MetricCard label="Average Position"  value={overview.avgPosition != null ? overview.avgPosition.toFixed(1) : '—'} color="#8B5CF6" testid="metric-avg-position" />
+          </motion.div>
 
-      {/* Articles table */}
-      <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">
-        <div className="p-6 border-b border-[#F0F0F0]">
-          <h3 className="font-semibold text-[#0A0A0A]">Your Articles</h3>
-          <p className="text-xs text-[#6B7280]">Last 30 days performance from Google Search Console</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-[#F9FAFB] border-b border-[#F0F0F0]">
-                <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Article Title</th>
-                <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Impressions</th>
-                <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Clicks</th>
-                <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">CTR</th>
-                <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Avg Position</th>
-              </tr>
-            </thead>
-            <tbody data-testid="articles-table">
-              {ARTICLES.map((a, i) => (
-                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
-                  <td className="p-4 text-sm">
-                    <a href="#" className="text-[#1D9E75] hover:underline inline-flex items-center gap-1">
-                      {a.title} <ExternalLink size={12} />
-                    </a>
-                  </td>
-                  <td className="p-4 text-sm text-[#0A0A0A] text-right">{a.impressions.toLocaleString()}</td>
-                  <td className="p-4 text-sm text-[#0A0A0A] text-right">{a.clicks.toLocaleString()}</td>
-                  <td className="p-4 text-sm text-[#0A0A0A] text-right">{a.ctr.toFixed(2)}%</td>
-                  <td className="p-4 text-sm text-right"><PositionBadge position={a.position} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </motion.div>
+          {Array.isArray(overview.trend) && overview.trend.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+              <div className="mb-4">
+                <h3 className="font-semibold text-[#0A0A0A]">Article Traffic & Clicks Over Time</h3>
+                <p className="text-xs text-[#6B7280]">Daily impressions and clicks from Google Search</p>
+              </div>
+              <div style={{ width: '100%', height: 320 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={overview.trend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="impr" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2563EB" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="clk" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#1D9E75" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#1D9E75" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={false} tickLine={false} interval={3} />
+                    <YAxis yAxisId="left"  tick={{ fill: '#2563EB', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: '#1D9E75', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #F0F0F0', borderRadius: 8 }}
+                      formatter={(value) => (typeof value === 'number' ? value.toLocaleString() : value)}
+                    />
+                    <Legend />
+                    <Area yAxisId="left"  type="monotone" dataKey="impressions" name="Impressions" stroke="#2563EB" strokeWidth={2} fill="url(#impr)" />
+                    <Area yAxisId="right" type="monotone" dataKey="clicks"      name="Clicks"      stroke="#1D9E75" strokeWidth={2} fill="url(#clk)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+          )}
 
-      {/* Search performance */}
-      <motion.div variants={fadeInUp} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-          <h3 className="font-semibold text-[#0A0A0A] mb-4">Top Search Terms</h3>
-          <ol className="space-y-3" data-testid="top-search-terms">
-            {SEARCH_TERMS.map((t, i) => (
-              <li key={i} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-lg">
-                <span className="w-7 h-7 rounded-full bg-white border border-[#F0F0F0] flex items-center justify-center text-xs font-bold text-[#6B7280]">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#0A0A0A] truncate">{t.term}</p>
-                  <p className="text-xs text-[#6B7280]">{t.clicks.toLocaleString()} clicks · {t.impressions.toLocaleString()} impressions</p>
+          {/* Articles table */}
+          {Array.isArray(overview.topArticles) && overview.topArticles.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">
+              <div className="p-6 border-b border-[#F0F0F0]">
+                <h3 className="font-semibold text-[#0A0A0A]">Your Articles</h3>
+                <p className="text-xs text-[#6B7280]">Performance from Google Search Console</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#F9FAFB] border-b border-[#F0F0F0]">
+                      <th className="text-left p-4 text-xs font-semibold text-[#6B7280] uppercase">Article Title</th>
+                      <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Impressions</th>
+                      <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Clicks</th>
+                      <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">CTR</th>
+                      <th className="text-right p-4 text-xs font-semibold text-[#6B7280] uppercase">Avg Position</th>
+                    </tr>
+                  </thead>
+                  <tbody data-testid="articles-table">
+                    {overview.topArticles.map((a, i) => (
+                      <tr key={a.id || i} className={i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}>
+                        <td className="p-4 text-sm">
+                          <a href={a.url || '#'} target="_blank" rel="noreferrer" className="text-[#1D9E75] hover:underline inline-flex items-center gap-1">
+                            {a.title} <ExternalLink size={12} />
+                          </a>
+                        </td>
+                        <td className="p-4 text-sm text-[#0A0A0A] text-right">{(a.impressions || 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm text-[#0A0A0A] text-right">{(a.clicks || 0).toLocaleString()}</td>
+                        <td className="p-4 text-sm text-[#0A0A0A] text-right">{a.ctr != null ? `${(a.ctr * 100).toFixed(2)}%` : '—'}</td>
+                        <td className="p-4 text-sm text-right"><PositionBadge position={a.position} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Search performance */}
+          {(Array.isArray(overview.topQueries) && overview.topQueries.length > 0) || (Array.isArray(overview.topPages) && overview.topPages.length > 0) ? (
+            <motion.div variants={fadeInUp} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {Array.isArray(overview.topQueries) && overview.topQueries.length > 0 && (
+                <div className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+                  <h3 className="font-semibold text-[#0A0A0A] mb-4">Top Search Terms</h3>
+                  <ol className="space-y-3" data-testid="top-search-terms">
+                    {overview.topQueries.map((t, i) => (
+                      <li key={i} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-lg">
+                        <span className="w-7 h-7 rounded-full bg-white border border-[#F0F0F0] flex items-center justify-center text-xs font-bold text-[#6B7280]">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#0A0A0A] truncate">{t.query || t.term}</p>
+                          <p className="text-xs text-[#6B7280]">{(t.clicks || 0).toLocaleString()} clicks · {(t.impressions || 0).toLocaleString()} impressions</p>
+                        </div>
+                        <PositionBadge position={t.position} />
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <PositionBadge position={t.position} />
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-          <h3 className="font-semibold text-[#0A0A0A] mb-4">Top Pages</h3>
-          <ol className="space-y-3" data-testid="top-pages">
-            {TOP_PAGES.map((p, i) => (
-              <li key={i} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-lg">
-                <span className="w-7 h-7 rounded-full bg-white border border-[#F0F0F0] flex items-center justify-center text-xs font-bold text-[#6B7280]">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[#0A0A0A] truncate font-mono">{p.url}</p>
-                  <p className="text-xs text-[#6B7280]">{p.clicks.toLocaleString()} clicks · {p.impressions.toLocaleString()} impressions</p>
+              )}
+              {Array.isArray(overview.topPages) && overview.topPages.length > 0 && (
+                <div className="bg-white rounded-xl border border-[#F0F0F0] p-6">
+                  <h3 className="font-semibold text-[#0A0A0A] mb-4">Top Pages</h3>
+                  <ol className="space-y-3" data-testid="top-pages">
+                    {overview.topPages.map((p, i) => (
+                      <li key={i} className="flex items-center gap-3 p-3 bg-[#F9FAFB] rounded-lg">
+                        <span className="w-7 h-7 rounded-full bg-white border border-[#F0F0F0] flex items-center justify-center text-xs font-bold text-[#6B7280]">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-[#0A0A0A] truncate font-mono">{p.url || p.page}</p>
+                          <p className="text-xs text-[#6B7280]">{(p.clicks || 0).toLocaleString()} clicks · {(p.impressions || 0).toLocaleString()} impressions</p>
+                        </div>
+                        <PositionBadge position={p.position} />
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <PositionBadge position={p.position} />
-              </li>
-            ))}
-          </ol>
-        </div>
-      </motion.div>
+              )}
+            </motion.div>
+          ) : null}
+        </>
+      )}
+
+      {/* Loading skeleton */}
+      {activeSite && loading && !overview && (
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-8 h-48 animate-pulse" data-testid="analytics-loading" />
+      )}
     </motion.div>
   );
 };
