@@ -320,3 +320,11 @@ code {
 .coming-soon-card * {
     cursor: not-allowed;
 }
+
+
+/* Site analysis indeterminate progress bar */
+@keyframes jalwa-analysis-progress {
+    0%   { transform: translateX(-100%); width: 30%; }
+    50%  { transform: translateX(50%);   width: 60%; }
+    100% { transform: translateX(150%);  width: 30%; }
+}

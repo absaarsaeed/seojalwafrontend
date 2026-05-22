@@ -528,49 +528,96 @@ export const ConnectionsPage = () => {
         <p className="text-sm text-[#6B7280]">Connect your website so SEO Jalwa can publish articles directly. Choose your platform below.</p>
       </motion.div>
 
-      {/* Site-analysis inline banner */}
-      {isAnalyzing && !analysisDone && (
+      {/* 3-step Connection state machine (Just Connected → Analyzing → Complete) */}
+      {(isWpConnected || isAnalyzing || analysisDone) && (
         <motion.div
           variants={fadeInUp}
-          className="rounded-xl p-5 flex items-center gap-4 border bg-[#E1F5EE] border-[#1D9E75]/30"
-          data-testid="site-analysis-banner"
+          className="rounded-xl p-5 border bg-white border-[#F0F0F0]"
+          data-testid="connection-state-machine"
         >
-          <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
-            <Loader2 size={18} className="text-white animate-spin" />
+          {/* Stepper */}
+          <div className="flex items-center gap-2 mb-4">
+            {[
+              { key: 'connected', label: 'Connected', done: true, active: false },
+              { key: 'analyzing', label: 'Analyzing', done: analysisDone, active: isAnalyzing && !analysisDone },
+              { key: 'complete', label: 'Setup complete', done: analysisDone, active: false },
+            ].map((step, idx, arr) => (
+              <div key={step.key} className="flex items-center flex-1" data-testid={`connection-step-${step.key}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold flex-shrink-0 ${
+                  step.done
+                    ? 'bg-[#1D9E75] text-white'
+                    : step.active
+                      ? 'bg-[#1D9E75]/15 text-[#1D9E75] ring-2 ring-[#1D9E75]'
+                      : 'bg-[#F0F0F0] text-[#9CA3AF]'
+                }`}>
+                  {step.done ? <Check size={14} /> : step.active ? <Loader2 size={14} className="animate-spin" /> : idx + 1}
+                </div>
+                <span className={`ml-2 text-xs font-medium ${step.done || step.active ? 'text-[#0A0A0A]' : 'text-[#9CA3AF]'}`}>
+                  {step.label}
+                </span>
+                {idx < arr.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-3 ${arr[idx + 1].done || arr[idx + 1].active ? 'bg-[#1D9E75]' : 'bg-[#F0F0F0]'}`} />
+                )}
+              </div>
+            ))}
           </div>
-          <div className="flex-1">
-            <p className="font-semibold text-[#0A0A0A]">🔍 Analyzing your website content...</p>
-            <p className="text-xs text-[#6B7280]">
-              We&rsquo;re reading your existing posts and configuring everything automatically. This takes about 30 seconds.
-            </p>
-            <div className="h-1.5 bg-white rounded-full overflow-hidden mt-2 max-w-md">
-              <div className="h-full bg-[#1D9E75] animate-pulse" style={{ width: '60%' }} />
+
+          {/* Step body */}
+          {isAnalyzing && !analysisDone && (
+            <div className="flex items-start gap-3" data-testid="site-analysis-banner">
+              <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                <Loader2 size={18} className="text-white animate-spin" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-[#0A0A0A]">Analyzing your website content...</p>
+                <p className="text-xs text-[#6B7280]">
+                  We&rsquo;re reading your existing posts and configuring everything automatically. This takes about 30 seconds.
+                </p>
+                <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden mt-2 max-w-md" data-testid="analysis-progress-bar">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#1D9E75] to-[#0F6E56]"
+                    style={{
+                      width: '70%',
+                      animation: 'jalwa-analysis-progress 2s ease-in-out infinite',
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      )}
-      {analysisDone && (
-        <motion.div
-          variants={fadeInUp}
-          className="rounded-xl p-5 flex flex-wrap items-center gap-4 border bg-[#E1F5EE] border-[#1D9E75]/30"
-          data-testid="site-analysis-complete"
-        >
-          <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
-            <Check size={18} className="text-white" />
-          </div>
-          <div className="flex-1 min-w-[240px]">
-            <p className="font-semibold text-[#0A0A0A]">✓ Analysis complete!</p>
-            <p className="text-xs text-[#6B7280]">
-              We configured your article settings and suggested 10 topics based on your content.
-            </p>
-          </div>
-          <button
-            onClick={() => { window.location.assign('/dashboard/article-settings'); }}
-            className="px-4 py-2 bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-sm rounded-lg"
-            data-testid="site-analysis-review-btn"
-          >
-            Review settings →
-          </button>
+          )}
+          {analysisDone && (
+            <div className="flex flex-wrap items-center gap-3" data-testid="site-analysis-complete">
+              <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                <Check size={18} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-[240px]">
+                <p className="font-semibold text-[#0A0A0A]">Setup complete!</p>
+                <p className="text-xs text-[#6B7280]">
+                  We configured your article settings and suggested 10 topics based on your content.
+                </p>
+              </div>
+              <button
+                onClick={() => { window.location.assign('/dashboard/article-settings'); }}
+                className="px-4 py-2 bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-sm rounded-lg"
+                data-testid="site-analysis-review-btn"
+              >
+                Review settings →
+              </button>
+            </div>
+          )}
+          {isWpConnected && !isAnalyzing && !analysisDone && (
+            <div className="flex items-center gap-3" data-testid="connection-just-connected">
+              <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+                <Check size={18} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-[#0A0A0A]">WordPress connected!</p>
+                <p className="text-xs text-[#6B7280]">
+                  Your site &mdash; <span className="font-mono">{activeSite?.domain || activeSite?.url}</span> &mdash; is ready. Articles will publish automatically.
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 

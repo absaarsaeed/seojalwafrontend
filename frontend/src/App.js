@@ -12,6 +12,7 @@ import { Pricing as AdminPricing } from "./admin/pages/Pricing";
 import { Billing } from "./admin/pages/Billing";
 import { Coupons } from "./admin/pages/Coupons";
 import { Blog as AdminBlog } from "./admin/pages/Blog";
+import { BlogEditor as AdminBlogEditor } from "./admin/pages/BlogEditor";
 import { Legal as AdminLegal } from "./admin/pages/Legal";
 import { Announcements } from "./admin/pages/Announcements";
 import { Analytics } from "./admin/pages/Analytics";
@@ -164,6 +165,8 @@ function App() {
                 <Route path="billing" element={<Billing />} />
                 <Route path="coupons" element={<Coupons />} />
                 <Route path="blog" element={<AdminBlog />} />
+                <Route path="blog/new" element={<AdminBlogEditor />} />
+                <Route path="blog/:id" element={<AdminBlogEditor />} />
                 <Route path="legal" element={<AdminLegal />} />
                 <Route path="announcements" element={<Announcements />} />
                 <Route path="analytics" element={<Analytics />} />

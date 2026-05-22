@@ -6,23 +6,28 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../components/ui/select';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from '../../components/ui/dialog';
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '../../components/ui/sheet';
 import { TableSkeleton } from '../components/SkeletonLoaders';
 import { EmptyState } from '../components/EmptyState';
-import { Mail, Eye, Search, Filter } from 'lucide-react';
+import { Mail, Eye, Search, RotateCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_BADGES = {
-  SENT:    'bg-[#1D9E75]/10 text-[#1D9E75]',
-  PENDING: 'bg-[#F59E0B]/10 text-[#F59E0B]',
-  FAILED:  'bg-[#EF4444]/10 text-[#EF4444]',
-  BOUNCED: 'bg-[#EF4444]/10 text-[#EF4444]',
+  SENT:      'bg-[#1D9E75]/10 text-[#1D9E75]',
+  DELIVERED: 'bg-[#1D9E75]/10 text-[#1D9E75]',
+  PENDING:   'bg-[#F59E0B]/10 text-[#F59E0B]',
+  FAILED:    'bg-[#EF4444]/10 text-[#EF4444]',
+  BOUNCED:   'bg-[#EF4444]/10 text-[#EF4444]',
 };
 
 const Pill = ({ status }) => {
   const cls = STATUS_BADGES[(status || '').toUpperCase()] || 'bg-[#71717A]/10 text-[#71717A]';
-  return <span className={`px-2 py-0.5 text-xs font-medium rounded-full uppercase ${cls}`}>{status}</span>;
+  return (
+    <span className={`px-2 py-0.5 text-xs font-medium rounded-full uppercase ${cls}`} data-testid={`email-status-${(status || '').toLowerCase()}`}>
+      {status}
+    </span>
+  );
 };
 
 export const Emails = () => {
@@ -31,6 +36,9 @@ export const Emails = () => {
   const [status, setStatus] = useState('all');
   const [template, setTemplate] = useState('all');
   const [active, setActive] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
@@ -60,11 +68,47 @@ export const Emails = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [status, template]);
 
+  const openDetail = async (e) => {
+    setActive(e);
+    setDetail(null);
+    setDetailLoading(true);
+    try {
+      const data = await adminApi.email(e.id);
+      setDetail(data || e);
+    } catch {
+      setDetail(e);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setActive(null);
+    setDetail(null);
+  };
+
+  const handleResend = async () => {
+    if (!active?.id) return;
+    setResending(true);
+    try {
+      await adminApi.emailResend(active.id);
+      toast.success('Email resent');
+      load();
+    } catch (err) {
+      toast.error(err?.message || 'Could not resend');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const filtered = (items || []).filter((e) => {
     if (!search) return true;
     const t = search.toLowerCase();
-    return [e.recipient, e.subject, e.templateKey].filter(Boolean).some((s) => String(s).toLowerCase().includes(t));
+    return [e.recipient, e.to, e.subject, e.templateKey].filter(Boolean).some((s) => String(s).toLowerCase().includes(t));
   });
+
+  const view = detail || active || {};
+  const htmlBody = view.htmlBody || view.html || view.body || '';
 
   return (
     <div data-testid="admin-emails-page">
@@ -128,7 +172,8 @@ export const Emails = () => {
               {filtered.map((e, i) => (
                 <tr
                   key={e.id || i}
-                  className={`border-b border-[#F0F0F0] hover:bg-[#F9FAFB] ${i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}`}
+                  className={`border-b border-[#F0F0F0] hover:bg-[#F9FAFB] cursor-pointer ${i % 2 === 0 ? 'bg-white' : 'bg-[#FAFAFA]'}`}
+                  onClick={() => openDetail(e)}
                   data-testid={`email-row-${e.id || i}`}
                 >
                   <td className="p-3 text-sm text-[#09090B]">{e.recipient || e.to}</td>
@@ -138,7 +183,7 @@ export const Emails = () => {
                   <td className="p-3"><Pill status={e.status} /></td>
                   <td className="p-3 text-xs text-[#71717A]">{e.createdAt ? new Date(e.createdAt).toLocaleString() : ''}</td>
                   <td className="p-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => setActive(e)} data-testid={`email-view-${e.id || i}`}>
+                    <Button size="sm" variant="ghost" onClick={(ev) => { ev.stopPropagation(); openDetail(e); }} data-testid={`email-view-${e.id || i}`}>
                       <Eye size={14} className="mr-1" />View
                     </Button>
                   </td>
@@ -149,32 +194,95 @@ export const Emails = () => {
         )}
       </div>
 
-      <Dialog open={!!active} onOpenChange={(o) => { if (!o) setActive(null); }}>
-        <DialogContent className="max-w-3xl" data-testid="email-detail-dialog">
-          {active && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2"><span>{active.subject}</span><Pill status={active.status} /></DialogTitle>
-                <DialogDescription>
-                  To <strong>{active.recipient || active.to}</strong> · {active.templateKey} · {active.createdAt && new Date(active.createdAt).toLocaleString()}
-                </DialogDescription>
-              </DialogHeader>
-              <div
-                className="bg-white border border-[#F0F0F0] rounded-lg p-4 max-h-[480px] overflow-y-auto text-sm prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: active.htmlBody || active.body || `<p class="text-[#71717A]">No body captured.</p>` }}
-                data-testid="email-body"
-              />
-              {active.error && (
-                <div className="p-3 bg-red-50 text-[#EF4444] text-xs rounded-lg">
-                  Error: {active.error}
+      <p className="text-xs text-[#71717A] mt-3">{filtered.length} email(s)</p>
+
+      <Sheet open={!!active} onOpenChange={(o) => { if (!o) closeDetail(); }}>
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col"
+          data-testid="email-detail-panel"
+        >
+          <SheetHeader className="px-6 py-4 border-b border-[#F0F0F0]">
+            <SheetTitle className="text-base flex items-center gap-2 pr-8">
+              <span className="truncate">{view.subject || 'Email details'}</span>
+              {view.status && <Pill status={view.status} />}
+            </SheetTitle>
+            <SheetDescription className="text-xs">
+              To <strong data-testid="email-detail-recipient">{view.recipient || view.to}</strong>
+              {view.templateKey && <> · <span className="text-[#1D9E75]">{view.templateKey}</span></>}
+              {view.createdAt && <> · {new Date(view.createdAt).toLocaleString()}</>}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto">
+            {/* Metadata block */}
+            <div className="px-6 py-4 grid grid-cols-2 gap-3 text-xs border-b border-[#F0F0F0] bg-[#FAFAFA]">
+              <div>
+                <p className="text-[#71717A] uppercase font-semibold tracking-wide mb-0.5">From</p>
+                <p className="text-[#09090B]">{view.from || view.sender || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[#71717A] uppercase font-semibold tracking-wide mb-0.5">Provider</p>
+                <p className="text-[#09090B] uppercase">{view.provider || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[#71717A] uppercase font-semibold tracking-wide mb-0.5">Message ID</p>
+                <p className="text-[#09090B] font-mono text-[10px] truncate">{view.messageId || view.providerMessageId || view.id || '—'}</p>
+              </div>
+              <div>
+                <p className="text-[#71717A] uppercase font-semibold tracking-wide mb-0.5">Attempts</p>
+                <p className="text-[#09090B]">{view.attempts ?? view.retryCount ?? 1}</p>
+              </div>
+            </div>
+
+            {/* HTML body in iframe (sandboxed, no execution) */}
+            <div className="px-6 py-4">
+              <p className="text-xs text-[#71717A] uppercase font-semibold tracking-wide mb-2">Email Body Preview</p>
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-12 border border-[#F0F0F0] rounded-lg" data-testid="email-detail-loading">
+                  <Loader2 className="animate-spin text-[#1D9E75]" size={20} />
+                </div>
+              ) : htmlBody ? (
+                <iframe
+                  title="email-preview"
+                  sandbox=""
+                  srcDoc={htmlBody}
+                  className="w-full border border-[#F0F0F0] rounded-lg bg-white"
+                  style={{ height: 500 }}
+                  data-testid="email-iframe-preview"
+                />
+              ) : (
+                <div className="p-6 text-center text-sm text-[#71717A] border border-dashed border-[#F0F0F0] rounded-lg" data-testid="email-no-body">
+                  No body captured for this email.
                 </div>
               )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
 
-      <p className="text-xs text-[#71717A] mt-3">{filtered.length} email(s)</p>
+            {view.error && (
+              <div className="px-6 pb-4">
+                <div className="p-3 bg-red-50 border border-red-200 text-[#B91C1C] text-xs rounded-lg" data-testid="email-detail-error">
+                  <p className="font-semibold mb-1">Error</p>
+                  <p>{view.error}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer actions */}
+          <div className="px-6 py-4 border-t border-[#F0F0F0] flex items-center justify-end gap-2 bg-white">
+            <Button variant="outline" onClick={closeDetail} data-testid="email-detail-close">Close</Button>
+            <Button
+              onClick={handleResend}
+              disabled={resending || !active?.id}
+              className="admin-btn-primary"
+              data-testid="email-resend-btn"
+            >
+              {resending ? <Loader2 size={14} className="mr-1.5 animate-spin" /> : <RotateCw size={14} className="mr-1.5" />}
+              {resending ? 'Resending...' : 'Resend'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
