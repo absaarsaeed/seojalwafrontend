@@ -106,8 +106,13 @@ export const UserProfile = () => {
     setError(null);
     (async () => {
       try {
-        const data = await adminApi.user(id);
+        const raw = await adminApi.user(id);
         if (cancelled) return;
+        // Backend may return either the flat user OR { user, subscription, sites } envelope.
+        const nested = raw?.user;
+        const data = nested
+          ? { ...nested, subscription: raw.subscription ?? nested.subscription, sites: raw.sites ?? nested.sites, stats: raw.stats ?? nested.stats, usage: raw.usage ?? nested.usage, billingHistory: raw.billingHistory ?? raw.invoices ?? nested.billingHistory, paymentMethod: raw.paymentMethod ?? nested.paymentMethod }
+          : raw;
         setUser(data);
         const planName = data?.subscription?.plan?.name || data?.plan;
         if (planName) setSelectedPlan(typeof planName === 'string' ? planName : planName.name || '');
