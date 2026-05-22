@@ -399,9 +399,9 @@ export const PublishPage = () => {
 
         {/* ============================ CMS ============================ */}
         <TabsContent value="cms" className="space-y-6">
-          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="cms-connections">
+          <motion.div variants={fadeInUp} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="website-connections">
             {/* WordPress (only platform live in v1) */}
-            <div className="bg-white rounded-xl border border-[#F0F0F0] p-4" data-testid="cms-wordpress-card">
+            <div className="bg-white rounded-xl border border-[#F0F0F0] p-4" data-testid="website-card-wordpress">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <PlatformLogo name="WordPress" size={28} />

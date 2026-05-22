@@ -471,3 +471,24 @@ User report: WordPress card status not updating on dashboard after `Test & Conne
 - 🟡 Backend disconnect endpoint (`DELETE /api/sites/{id}/wordpress`) — frontend currently shows "Disconnect coming soon — contact support" toast.
 
 - See `/app/memory/test_credentials.md` for full details.
+
+## Phase 16: 8-Fix Phase-1 Launch Batch (Feb 22, 2026)
+
+User report: `/dashboard/auto-publish` crashing with `(N||[]).reduce is not a function` + 7 polish items.
+
+### Shipped
+1. **CRASH FIX (FIX 1)** — `PublishPage.jsx` `liveCalendar.reduce` now guards with `Array.isArray(liveCalendar) ? liveCalendar : Array.isArray(liveCalendar?.days) ? liveCalendar.days : Array.isArray(liveCalendar?.items) ? liveCalendar.items : []`. `articlesApi.list` setter accepts 4 envelope shapes (`Array`, `{items}`, `{articles}`, `{data}`).
+2. **ErrorBoundary** — New `/app/frontend/src/components/ErrorBoundary.jsx` wraps every dashboard route in `App.js` (13 routes). Shows "Try again" + "Reload page" UI on any runtime error instead of white-screening the whole shell.
+3. **FIX 2 — AI Visibility revamp** — Removed Competitors + Simulator tabs. Only **Overview** and **Recommendations** tabs remain. Score circle + `[data-testid=visibility-status-badge]` (VISIBLE → green "Visible on AI Engines ✓", PARTIAL → orange "Partially Visible", NOT_VISIBLE → red "Not Yet Visible") + `visibilityMessage` field. AI Model Breakdown removed. Scanning UI simplified to single "Scanning AI engines..." progress card.
+4. **FIX 3 — Connections "Add your website first" card** — When `!activeSite`, ConnectionsPage renders inline `[data-testid=no-site-card]` (dashed border, Globe icon, "Add your website first" h3, "→" CTA) instead of website-card grid. CTA dispatches global `jalwa:open-add-site` CustomEvent; `SiteSwitcher` listens and opens the Add Site dialog.
+5. **FIX 4 — Onboarding dismissal persistence** — `userApi.updateOnboarding(payload)` added (`PUT /api/user/onboarding`). DashboardHome `dismissOnboarding` writes localStorage + awaits backend persist. Reads `user.onboarding.dismissed === true` to hide checklist forever after.
+6. **FIX 5 — Test & Connect refresh-and-recheck** — On `verify-connection` returning `connected:false`, the handler now calls `refresh()` and re-inspects all 5 status flag shapes (`wordpressConnected`/`wordpress_connected`/`isConnected`/`connected`/`status==='connected'`) before showing the error. `SiteContext.refresh()` now returns the active site for direct re-check.
+7. **FIX 6 — Sidebar trimmed** — Removed `AI Writer`, `Social Autopilot`, `Team`. Final 8 items: **Dashboard / AI Visibility / Auto Article Writing / Growth Score / Analytics / Website Connections / Article Settings / Settings**.
+8. **FIX 7 — Article Settings cleanup** — Section 8 "Competitors" (input + state + addCompetitor handler + list) removed entirely.
+9. **FIX 8 — Naming sweep** — "CMS connections" → "Website connections" across public `PricingPage.jsx`, admin `Pricing.jsx`, dashboard `PublishPage.jsx`. data-testids `cms-connections`/`cms-wordpress-card` also renamed.
+
+### Verified (iteration_17.json — 100% PASS)
+- Fresh signup `testuser_1779442067@jalwa.com` (added to test_credentials.md). Old seeded users now 401.
+- All 8 fixes pass runtime checks where reachable. FIX 4 + FIX 5 verified via code review.
+- Sidebar exactly matches spec order: 8 items, no `AI Writer`, no `Social Autopilot`, no `Team`.
+- Zero remaining user-visible 'CMS connections' strings in `/app/frontend/src`.
