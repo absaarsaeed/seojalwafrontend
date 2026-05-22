@@ -34,6 +34,7 @@ const navItems = [
   { path: '/adminpanel/billing',          label: 'Billing',           icon: Receipt },
   { path: '/adminpanel/coupons',          label: 'Coupons',           icon: Tag },
   { path: '/adminpanel/blog',             label: 'Blog',              icon: FileText },
+  { path: '/adminpanel/legal',            label: 'Legal Pages',       icon: ScrollText },
   { path: '/adminpanel/announcements',    label: 'Announcements',     icon: Megaphone },
   { path: '/adminpanel/analytics',        label: 'Analytics',         icon: BarChart3 },
   { path: '/adminpanel/api-keys',         label: 'API Keys',          icon: Key },

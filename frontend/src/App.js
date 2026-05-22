@@ -12,6 +12,7 @@ import { Pricing as AdminPricing } from "./admin/pages/Pricing";
 import { Billing } from "./admin/pages/Billing";
 import { Coupons } from "./admin/pages/Coupons";
 import { Blog as AdminBlog } from "./admin/pages/Blog";
+import { Legal as AdminLegal } from "./admin/pages/Legal";
 import { Announcements } from "./admin/pages/Announcements";
 import { Analytics } from "./admin/pages/Analytics";
 import { ApiKeys } from "./admin/pages/ApiKeys";
@@ -28,6 +29,7 @@ import { SiteProvider } from "./context/SiteContext";
 import { AppErrorListener } from "./components/AppErrorListener";
 import { LimitReachedListener } from "./components/LimitReachedListener";
 import { SiteAnalysisListener } from "./components/SiteAnalysisListener";
+import { MaintenanceListener } from "./components/MaintenanceListener";
 import { PublicLayout } from "./components/public/PublicLayout";
 import { HomePage } from "./pages/public/HomePage";
 import { FeaturesPage } from "./pages/public/FeaturesPage";
@@ -56,7 +58,6 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DashboardHome } from "./pages/dashboard/DashboardHome";
 import { GrowthScorePage } from "./pages/dashboard/GrowthScorePage";
 import { PulsePage } from "./pages/dashboard/PulsePage";
-import { WritePage } from "./pages/dashboard/WritePage";
 import { PublishPage } from "./pages/dashboard/PublishPage";
 import { ArticleViewPage } from "./pages/dashboard/ArticleViewPage";
 import { AnalyticsPage } from "./pages/dashboard/AnalyticsPage";
@@ -94,6 +95,7 @@ function App() {
         <UserProvider>
           <SiteProvider>
             <AppErrorListener />
+            <MaintenanceListener />
             <BrowserRouter>
               <LimitReachedListener />
               <SiteAnalysisListener />
@@ -130,7 +132,6 @@ function App() {
                 <Route index element={<ErrorBoundary><DashboardHome /></ErrorBoundary>} />
                 <Route path="growth-score" element={<ErrorBoundary><GrowthScorePage /></ErrorBoundary>} />
                 <Route path="ai-visibility" element={<ErrorBoundary><PulsePage /></ErrorBoundary>} />
-                <Route path="ai-writer" element={<ErrorBoundary><WritePage /></ErrorBoundary>} />
                 <Route path="auto-publish" element={<ErrorBoundary><PublishPage /></ErrorBoundary>} />
                 <Route path="auto-publish/article/:id" element={<ErrorBoundary><ArticleViewPage /></ErrorBoundary>} />
                 <Route path="analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
@@ -142,7 +143,7 @@ function App() {
                 <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
                 {/* Legacy redirects */}
                 <Route path="pulse" element={<Navigate to="/dashboard/ai-visibility" replace />} />
-                <Route path="write" element={<Navigate to="/dashboard/ai-writer" replace />} />
+                <Route path="write" element={<Navigate to="/dashboard/auto-publish" replace />} />
                 <Route path="publish" element={<Navigate to="/dashboard/auto-publish" replace />} />
                 <Route path="post" element={<Navigate to="/dashboard/social-autopilot" replace />} />
               </Route>
@@ -159,6 +160,7 @@ function App() {
                 <Route path="billing" element={<Billing />} />
                 <Route path="coupons" element={<Coupons />} />
                 <Route path="blog" element={<AdminBlog />} />
+                <Route path="legal" element={<AdminLegal />} />
                 <Route path="announcements" element={<Announcements />} />
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="api-keys" element={<ApiKeys />} />

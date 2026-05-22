@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAdmin } from '../context/AdminContext';
+import { adminApi } from '../../lib/api';
 import { TableSkeleton, FormSkeleton } from '../components/SkeletonLoaders';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -19,7 +20,15 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog';
 import { toast } from 'sonner';
-import { Send, Eye, Users, Mail, Bell } from 'lucide-react';
+import { Send, Eye, Users, Mail, Bell, Loader2 } from 'lucide-react';
+
+const TARGET_TO_AUDIENCE = {
+  'All users': 'ALL',
+  'Free users': 'FREE',
+  'Starter plan': 'STARTER',
+  'Growth plan': 'GROWTH',
+  'Agency plan': 'AGENCY',
+};
 
 export const Announcements = () => {
   const { announcements, addAnnouncement } = useAdmin();
@@ -31,39 +40,65 @@ export const Announcements = () => {
     target: 'All users',
     channel: 'Both'
   });
+  const [recipientCount, setRecipientCount] = useState(null);
+  const [countLoading, setCountLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
 
-  const getRecipientCount = () => {
-    const counts = {
-      'All users': 2847,
-      'Starter plan': 847,
-      'Growth plan': 298,
-      'Agency plan': 58,
-      'Free users': 1644
-    };
-    return counts[formData.target] || 0;
-  };
+  // Live preview count from /api/admin/announcements/preview-count
+  useEffect(() => {
+    let cancelled = false;
+    setCountLoading(true);
+    setRecipientCount(null);
+    const audience = TARGET_TO_AUDIENCE[formData.target] || 'ALL';
+    (async () => {
+      try {
+        const res = await adminApi.announcementPreviewCount(audience);
+        const count = res?.count ?? res?.recipientCount ?? res?.total ?? null;
+        if (!cancelled && count != null) setRecipientCount(count);
+      } catch {
+        // Silent — UI will show "—"
+      } finally {
+        if (!cancelled) setCountLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [formData.target]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.subject || !formData.message) {
       toast.error('Please fill in all required fields');
       return;
     }
-
-    addAnnouncement({
-      subject: formData.subject,
-      target: formData.target,
-      channel: formData.channel,
-      recipients: getRecipientCount()
-    });
-
-    setFormData({ subject: '', message: '', target: 'All users', channel: 'Both' });
-    toast.success('Announcement sent successfully!');
+    setSending(true);
+    try {
+      const audience = TARGET_TO_AUDIENCE[formData.target] || 'ALL';
+      const res = await adminApi.sendAnnouncement({
+        subject: formData.subject,
+        message: formData.message,
+        targetAudience: audience,
+        channel: formData.channel,
+      });
+      const sent = res?.recipientCount ?? res?.sent ?? recipientCount ?? 0;
+      // Keep local context list in sync for the History table.
+      addAnnouncement({
+        subject: formData.subject,
+        target: formData.target,
+        channel: formData.channel,
+        recipients: sent,
+      });
+      setFormData({ subject: '', message: '', target: 'All users', channel: 'Both' });
+      toast.success(`Sent to ${sent} user${sent === 1 ? '' : 's'} successfully`);
+    } catch (err) {
+      toast.error(err?.message || 'Could not send announcement');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handlePreview = () => {
@@ -147,10 +182,18 @@ export const Announcements = () => {
           </div>
 
           {/* Recipients count */}
-          <div className="flex items-center gap-2 p-3 bg-[#FAFAFA] rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-[#FAFAFA] rounded-lg" data-testid="announcement-recipient-count">
             <Users size={16} className="text-[#71717A]" />
             <span className="text-sm text-[#27272A]">
-              This will be sent to <strong>{getRecipientCount().toLocaleString()}</strong> users
+              This will be sent to{' '}
+              {countLoading ? (
+                <Loader2 size={14} className="inline animate-spin text-[#71717A]" />
+              ) : (
+                <strong data-testid="announcement-recipient-count-value">
+                  {recipientCount != null ? recipientCount.toLocaleString() : '—'}
+                </strong>
+              )}
+              {' '}users
             </span>
           </div>
 
@@ -159,9 +202,9 @@ export const Announcements = () => {
               <Eye size={16} className="mr-2" />
               Preview
             </Button>
-            <Button type="submit" className="admin-btn-primary" data-testid="send-announcement-btn">
-              <Send size={16} className="mr-2" />
-              Send announcement
+            <Button type="submit" disabled={sending} className="admin-btn-primary" data-testid="send-announcement-btn">
+              {sending ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Send size={16} className="mr-2" />}
+              {sending ? 'Sending…' : 'Send announcement'}
             </Button>
           </div>
         </form>

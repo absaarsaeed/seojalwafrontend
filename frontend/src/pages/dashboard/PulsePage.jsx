@@ -373,7 +373,7 @@ export const PulsePage = () => {
                         </div>
                       </div>
                       {isWriteArticle ? (
-                        <Link to="/dashboard/ai-writer">
+                        <Link to="/dashboard/auto-publish">
                           <Button size="sm" className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid={`recommendation-write-${i}`}>
                             Write now <ArrowRight size={14} className="ml-1" />
                           </Button>

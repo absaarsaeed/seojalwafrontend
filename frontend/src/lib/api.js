@@ -231,6 +231,17 @@ async function request(path, opts = {}) {
       (body_ && (body_.error || body_.detail || body_.message)) ||
       `Request failed (${res.status})`;
     const code = body_?.code || '';
+    // 503 + MAINTENANCE_MODE — broadcast so the UI can show a full-screen
+    // maintenance page.
+    if (res.status === 503 && code === 'MAINTENANCE_MODE') {
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('jalwa:maintenance-mode', {
+            detail: { message: msg, ...(body_?.data || {}) },
+          }));
+        }
+      } catch {}
+    }
     // 403 + LIMIT_REACHED is special — emit a dedicated event so the UI can
     // show an upgrade modal instead of the generic global toast.
     if (res.status === 403 && code === 'LIMIT_REACHED') {
@@ -351,6 +362,7 @@ export const userApi = {
   deleteAccount: (payload) => api.delWithBody('/api/user/account', payload),
   activity: () => api.get('/api/user/activity'),
   updateOnboarding: (payload) => api.put('/api/user/onboarding', payload),
+  dismissPluginBanner: (payload) => api.put('/api/user/dismiss-plugin-banner', payload),
 };
 
 // Billing -----------------------------------------------------------------
@@ -434,6 +446,16 @@ export const checkoutApi = {
     api.post('/api/billing/validate-coupon', { code, planId }),
 };
 
+// Legal pages ----------------------------------------------------------
+export const legalApi = {
+  get: (slug) => api.get(`/api/legal/${slug}`, { auth: 'none' }),
+};
+export const adminLegalApi = {
+  list: () => api.get('/api/admin/legal', { auth: 'admin' }),
+  get: (slug) => api.get(`/api/admin/legal/${slug}`, { auth: 'admin' }),
+  update: (slug, payload) => api.put(`/api/admin/legal/${slug}`, payload, { auth: 'admin' }),
+};
+
 // Quota allocation --------------------------------------------------------
 export const quotaApi = {
   setSiteQuota: (siteId, quota) =>
@@ -471,6 +493,10 @@ export const adminApi = {
   coupons: () => api.get('/api/admin/coupons', { auth: 'admin' }),
   blog: () => api.get('/api/admin/blog', { auth: 'admin' }),
   announcements: () => api.get('/api/admin/announcements', { auth: 'admin' }),
+  announcementPreviewCount: (targetAudience) =>
+    api.get('/api/admin/announcements/preview-count', { auth: 'admin', query: { targetAudience } }),
+  sendAnnouncement: (payload) =>
+    api.post('/api/admin/announcements', payload, { auth: 'admin' }),
   apiKeys: () => api.get('/api/admin/api-keys', { auth: 'admin' }),
   updateApiKey: (key, fields) => {
     // Send both shapes so this works against the old backend (expects `value`)
