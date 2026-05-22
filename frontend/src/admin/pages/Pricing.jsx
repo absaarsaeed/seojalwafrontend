@@ -17,23 +17,36 @@ const FeatureToggle = ({ label, checked, onChange }) => (
   </div>
 );
 
-const LimitInput = ({ label, value, onChange, isUnlimited }) => (
-  <div className="space-y-1">
-    <Label className="text-xs text-[#71717A]">{label}</Label>
-    {isUnlimited ? (
-      <div className="h-10 px-3 flex items-center bg-[#FAFAFA] rounded-md text-sm text-[#71717A]">
-        Unlimited
+const LimitInput = ({ label, value, onChange, isUnlimited }) => {
+  // A value of 0 means the feature is disabled; toggle ON to enable & enter a value.
+  const numericValue = typeof value === 'number' ? value : (value === 'unlimited' ? 'unlimited' : 0);
+  const isEnabled = isUnlimited || (typeof numericValue === 'number' && numericValue > 0);
+  return (
+    <div className={`p-3 rounded-lg border ${isEnabled ? 'border-[#1D9E75]/30 bg-white' : 'border-[#F0F0F0] bg-[#FAFAFA] opacity-60'}`}>
+      <div className="flex items-center justify-between mb-1">
+        <Label className="text-xs text-[#71717A]">{label}</Label>
+        <Switch
+          checked={isEnabled}
+          onCheckedChange={(on) => onChange(on ? (typeof value === 'number' && value > 0 ? value : 1) : 0)}
+          data-testid={`feature-toggle-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+        />
       </div>
-    ) : (
-      <Input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(parseInt(e.target.value) || 0)}
-        className="admin-input"
-      />
-    )}
-  </div>
-);
+      {isEnabled && (isUnlimited ? (
+        <div className="h-9 px-3 flex items-center bg-[#FAFAFA] rounded-md text-sm text-[#71717A]">
+          Unlimited
+        </div>
+      ) : (
+        <Input
+          type="number"
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+          className="admin-input"
+          data-testid={`feature-value-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+        />
+      ))}
+    </div>
+  );
+};
 
 // Map live API plan → legacy admin-page nested shape ({limits, features}).
 const apiPlanToLocal = (p) => ({
@@ -322,8 +335,13 @@ export const Pricing = () => {
           <Check size={16} className="mr-2" />
           {isSaving ? 'Saving...' : 'Save changes'}
         </Button>
-        <Button variant="outline" className="admin-btn-secondary">
-          Preview changes
+        <Button
+          variant="outline"
+          className="admin-btn-secondary"
+          onClick={() => window.open('/pricing', '_blank', 'noopener,noreferrer')}
+          data-testid="preview-pricing-btn"
+        >
+          Preview on website
         </Button>
       </div>
 

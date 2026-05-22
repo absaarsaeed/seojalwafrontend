@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { userApi, authApi, tokenStore, billingApi } from '../../lib/api';
+import { userApi, authApi, tokenStore, billingApi, quotaApi } from '../../lib/api';
 import { SETTINGS_DATA } from '../../data/publicData';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -19,6 +19,134 @@ import { Eye, EyeOff, Download, AlertTriangle, ChevronUp, User, Plus, Mail, Load
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+};
+
+const ArticleQuotaCard = ({ subscription, sites, billingUsage }) => {
+  const planQuota = subscription?.plan?.articlesPerMonth ?? subscription?.articlesPerMonth ?? null;
+  const used = billingUsage?.articles?.used ?? subscription?.usage?.articlesThisMonth ?? 0;
+  const remaining = planQuota != null ? Math.max(0, planQuota - used) : null;
+  const siteList = Array.isArray(sites) ? sites : [];
+  const multipleSites = siteList.length > 1;
+
+  const [autoDistribute, setAutoDistribute] = useState(true);
+  const [allocations, setAllocations] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!planQuota || siteList.length === 0) return;
+    // Initial allocation: existing site.quota field, else equal split.
+    const initial = {};
+    const even = Math.floor(planQuota / siteList.length);
+    let assigned = 0;
+    siteList.forEach((s, i) => {
+      const existing = s.articleQuota ?? s.quota;
+      initial[s.id] = existing != null ? existing : (i === siteList.length - 1 ? planQuota - assigned : even);
+      if (existing != null) assigned += existing;
+      else assigned += even;
+    });
+    setAllocations(initial);
+  }, [planQuota, siteList]);
+
+  if (planQuota == null) return null;
+
+  const totalAllocated = Object.values(allocations).reduce((s, v) => s + (parseInt(v, 10) || 0), 0);
+  const overLimit = totalAllocated > planQuota;
+
+  const handleAllocChange = (siteId, value) => {
+    const num = Math.max(0, parseInt(value, 10) || 0);
+    setAllocations((a) => ({ ...a, [siteId]: num }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await Promise.all(
+        Object.entries(allocations).map(([siteId, quota]) => quotaApi.setSiteQuota(siteId, quota))
+      );
+      toast.success('Site quota saved');
+    } catch (err) {
+      toast.error(err?.message || 'Could not save quota');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="article-quota-card">
+      <h3 className="font-semibold text-[#0A0A0A] mb-1">Article Quota</h3>
+      <p className="text-xs text-[#6B7280] mb-4">From your {subscription?.plan?.name || 'current'} plan.</p>
+      <div className="grid grid-cols-3 gap-4 mb-5">
+        <div className="p-3 bg-[#F9FAFB] rounded-lg">
+          <p className="text-xs text-[#6B7280] uppercase tracking-wide">Total quota</p>
+          <p className="font-syne text-xl font-bold text-[#0A0A0A]" data-testid="quota-total">{planQuota}/mo</p>
+        </div>
+        <div className="p-3 bg-[#F9FAFB] rounded-lg">
+          <p className="text-xs text-[#6B7280] uppercase tracking-wide">Used this month</p>
+          <p className="font-syne text-xl font-bold text-[#0A0A0A]" data-testid="quota-used">{used}</p>
+        </div>
+        <div className="p-3 bg-[#F9FAFB] rounded-lg">
+          <p className="text-xs text-[#6B7280] uppercase tracking-wide">Remaining</p>
+          <p className="font-syne text-xl font-bold text-[#1D9E75]" data-testid="quota-remaining">{remaining}</p>
+        </div>
+      </div>
+
+      {multipleSites && (
+        <div className="space-y-4 pt-4 border-t border-[#F0F0F0]">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-[#0A0A0A]">Site allocation</p>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="auto-distribute" className="text-xs text-[#6B7280]">Auto-distribute equally</Label>
+              <Switch
+                id="auto-distribute"
+                checked={autoDistribute}
+                onCheckedChange={(on) => {
+                  setAutoDistribute(on);
+                  if (on) {
+                    const even = Math.floor(planQuota / siteList.length);
+                    const newAlloc = {};
+                    siteList.forEach((s, i) => {
+                      newAlloc[s.id] = (i === siteList.length - 1) ? planQuota - even * (siteList.length - 1) : even;
+                    });
+                    setAllocations(newAlloc);
+                  }
+                }}
+                data-testid="quota-auto-distribute"
+              />
+            </div>
+          </div>
+          <div className="space-y-3" data-testid="quota-sites-list">
+            {siteList.map((s) => (
+              <div key={s.id} className="flex items-center gap-3" data-testid={`quota-site-${s.id}`}>
+                <p className="text-sm text-[#0A0A0A] flex-1 min-w-0 truncate">{s.name || s.domain || s.url}</p>
+                <Input
+                  type="number"
+                  value={allocations[s.id] ?? 0}
+                  onChange={(e) => { setAutoDistribute(false); handleAllocChange(s.id, e.target.value); }}
+                  className="w-24"
+                  min={0}
+                  data-testid={`quota-input-${s.id}`}
+                />
+                <span className="text-xs text-[#6B7280]">articles</span>
+              </div>
+            ))}
+          </div>
+          <p className={`text-xs ${overLimit ? 'text-[#EF4444]' : 'text-[#6B7280]'}`} data-testid="quota-allocation-summary">
+            Total allocated: {totalAllocated} / {planQuota}
+            {overLimit && ' — over plan limit'}
+          </p>
+          <Button
+            onClick={handleSave}
+            disabled={saving || overLimit}
+            className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white"
+            data-testid="save-quota-btn"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+            Save allocation
+          </Button>
+        </div>
+      )}
+    </motion.div>
+  );
 };
 
 export const SettingsPage = () => {
@@ -373,7 +501,7 @@ export const SettingsPage = () => {
                 </div>
                 {status === 'trialing' && trialDaysLeft != null && (
                   <p className="text-sm text-[#0A0A0A] mb-3" data-testid="trial-days-left">
-                    Trial ends in {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} — upgrade to keep your data and pricing.
+                    Free trial extended via admin — {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} left.
                   </p>
                 )}
                 {status === 'active' && nextBilling && (
@@ -426,6 +554,13 @@ export const SettingsPage = () => {
               })}
             </div>
           </motion.div>
+
+          {/* Article Quota Allocation */}
+          <ArticleQuotaCard
+            subscription={subscription}
+            sites={sites}
+            billingUsage={billingUsage}
+          />
 
           {/* Invoices */}
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] overflow-hidden">

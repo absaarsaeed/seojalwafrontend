@@ -72,7 +72,7 @@ export const SignupPage = () => {
     setIsLoading(true);
     try {
       await signup(formData);
-      navigate('/dashboard', { replace: true });
+      navigate('/onboarding/select-plan', { replace: true });
     } catch (err) {
       const code = err?.code;
       if (code === 'EMAIL_TAKEN' || err?.status === 409) {

@@ -317,6 +317,8 @@ export const authApi = {
 
 export const plansApi = {
   list: () => api.get('/api/plans', { auth: 'none' }),
+  selection: () => api.get('/api/plans/selection', { auth: 'none' }),
+  get: (id) => api.get(`/api/plans/${id}`, { auth: 'none' }),
 };
 
 export const adminAuthApi = {
@@ -424,7 +426,18 @@ export const pagesApi = {
 
 // Billing checkout --------------------------------------------------------
 export const checkoutApi = {
-  start: ({ planId, interval }) => api.post('/api/billing/checkout', { planId, interval }),
+  start: ({ planId, interval, couponCode }) =>
+    api.post('/api/billing/checkout', { planId, interval, couponCode }),
+  complete: (sessionId, payload) =>
+    api.post(`/api/billing/checkout/${sessionId}/complete`, payload),
+  validateCoupon: (code, planId) =>
+    api.post('/api/billing/validate-coupon', { code, planId }),
+};
+
+// Quota allocation --------------------------------------------------------
+export const quotaApi = {
+  setSiteQuota: (siteId, quota) =>
+    api.put(`/api/user/quota/sites/${siteId}`, { quota }),
 };
 
 // Search terms (content topics) ------------------------------------------

@@ -48,7 +48,9 @@ export const PricingPage = () => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await plansApi.list();
+        // Prefer plans/selection if available, else plans.list as fallback.
+        let data;
+        try { data = await plansApi.selection(); } catch { data = await plansApi.list(); }
         const list = Array.isArray(data) ? data : data?.items || data?.plans || [];
         if (!cancelled && list.length > 0) setLivePlans(list);
       } catch {}
@@ -63,31 +65,18 @@ export const PricingPage = () => {
   }, []);
 
   const handleStartPlan = async (planKey) => {
-    // Logged-out users go through normal signup flow.
+    const isFreePlan = (planKey || '').toLowerCase() === 'free';
+    // Logged-out users: free → /signup, paid → /signup then redirect via select-plan flow.
     if (!user) {
       window.location.assign('/signup');
       return;
     }
-    setBusyPlan(planKey);
-    try {
-      const res = await checkoutApi.start({
-        planId: planKey,
-        interval: isAnnual ? 'annual' : 'monthly',
-      });
-      const url = res?.checkoutUrl || res?.checkout_url;
-      if (url) {
-        window.location.assign(url);
-        return;
-      }
-      // Backend returned a message → show contact modal.
-      setUpgradeMessage(res?.message || 'To upgrade your plan, please contact hello@seojalwa.com and we\'ll set you up manually.');
-      setUpgradeOpen(true);
-    } catch {
-      setUpgradeMessage('To upgrade your plan, please contact hello@seojalwa.com and we\'ll set you up manually.');
-      setUpgradeOpen(true);
-    } finally {
-      setBusyPlan('');
+    // Logged-in: free plan downgrade goes to dashboard; paid plans route to /onboarding/checkout.
+    if (isFreePlan) {
+      window.location.assign('/dashboard');
+      return;
     }
+    window.location.assign(`/onboarding/checkout?planId=${encodeURIComponent(planKey)}&interval=${isAnnual ? 'annual' : 'monthly'}`);
   };
 
   // Merge backend plans with the fallback shape used by the existing UI.

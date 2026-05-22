@@ -46,6 +46,10 @@ import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { GoogleCallbackPage } from "./pages/auth/GoogleCallbackPage";
 
+// Onboarding
+import { SelectPlanPage } from "./pages/onboarding/SelectPlanPage";
+import { CheckoutPage } from "./pages/onboarding/CheckoutPage";
+
 // Dashboard
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -103,6 +107,10 @@ function App() {
               <Route path="/forgot-password" element={<AuthRedirect><ForgotPasswordPage /></AuthRedirect>} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
+
+              {/* Onboarding */}
+              <Route path="/onboarding/select-plan" element={<ErrorBoundary><SelectPlanPage /></ErrorBoundary>} />
+              <Route path="/onboarding/checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
 
               {/* User Dashboard (DashboardLayout itself enforces auth) */}
               <Route path="/dashboard" element={<DashboardLayout />}>

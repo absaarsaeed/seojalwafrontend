@@ -30,6 +30,35 @@ const navItems = [
   { path: '/dashboard/settings', label: 'Settings', icon: Settings }
 ];
 
+// Small "Free" / paid plan badge — Free plan also shows an inline upgrade nudge.
+const PlanBadge = ({ user }) => {
+  const planName = user?.subscription?.plan?.name || user?.plan || 'Free';
+  const isFree = (typeof planName === 'string' ? planName : '').toLowerCase() === 'free';
+  const articlesLimit = user?.subscription?.plan?.articlesPerMonth ?? user?.plan?.articlesPerMonth;
+  const articlesUsed = user?.usage?.articlesThisMonth ?? 0;
+  const remaining = articlesLimit != null ? Math.max(0, articlesLimit - articlesUsed) : null;
+  if (isFree) {
+    return (
+      <div className="space-y-0.5" data-testid="sidebar-plan-block">
+        <span className="inline-block px-2 py-0.5 bg-[#F0F0F0] text-[#6B7280] text-xs font-medium rounded-full" data-testid="sidebar-plan-badge-free">
+          Free
+        </span>
+        <div className="text-[10px] text-[#6B7280] flex items-center gap-1">
+          <span>{remaining != null ? `${remaining} article${remaining === 1 ? '' : 's'} left` : '3 articles'}</span>
+          <NavLink to="/pricing" className="text-[#1D9E75] hover:underline font-medium" data-testid="sidebar-upgrade-link">
+            Upgrade →
+          </NavLink>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <span className="inline-block px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full" data-testid="sidebar-plan-badge-paid">
+      {planName}
+    </span>
+  );
+};
+
 export const DashboardLayout = () => {
   const { isAuthenticated, isLoading, user, logout } = useUser();
   const { activeSite } = useSite();
@@ -103,9 +132,7 @@ export const DashboardLayout = () => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-[#0A0A0A] truncate">{user?.name || 'User'}</p>
-              <span className="inline-block px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
-                {user?.plan || 'Growth'}
-              </span>
+              <PlanBadge user={user} />
             </div>
           </div>
         </div>

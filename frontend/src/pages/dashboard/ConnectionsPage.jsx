@@ -13,11 +13,11 @@ import {
 } from '../../components/ui/dialog';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { POST_DATA } from '../../data/publicData';
-import { Check, Copy, X as XIcon, Download, Globe } from 'lucide-react';
+import { Check, Copy, X as XIcon, Download, Globe, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { WordPressConnectModal } from '../../components/dashboard/WordPressConnectModal';
 import { useSite } from '../../context/SiteContext';
-import { pluginApi } from '../../lib/api';
+import { pluginApi, sitesApi } from '../../lib/api';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
@@ -450,6 +450,32 @@ export const ConnectionsPage = () => {
     toast.success(`${platform} disconnected`);
   };
 
+  // Site-analysis polling — display a visible inline banner while the backend
+  // is reading the user's posts after a fresh WordPress connection.
+  const [analysisDone, setAnalysisDone] = useState(false);
+  const isAnalyzing = !!(activeSite && (
+    activeSite.analyzing === true ||
+    activeSite.analysis_in_progress === true ||
+    (activeSite.analyzed === false && isWpConnected)
+  ));
+  useEffect(() => {
+    if (!isAnalyzing || !activeSite?.id) return;
+    let cancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const s = await sitesApi.get(activeSite.id);
+        const analyzed = s?.analyzed === true || s?.analysisComplete === true;
+        if (analyzed && !cancelled) {
+          setAnalysisDone(true);
+          await refresh();
+          clearInterval(interval);
+        }
+      } catch {}
+    }, 3000);
+    return () => { cancelled = true; clearInterval(interval); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAnalyzing, activeSite?.id]);
+
   const openWebsite = (platform) => {
     if (platform.name === 'WordPress') {
       // If the user has no site yet, route them to add-site instead of
@@ -501,6 +527,52 @@ export const ConnectionsPage = () => {
         <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Connect Site</h1>
         <p className="text-sm text-[#6B7280]">Connect your website so SEO Jalwa can publish articles directly. Choose your platform below.</p>
       </motion.div>
+
+      {/* Site-analysis inline banner */}
+      {isAnalyzing && !analysisDone && (
+        <motion.div
+          variants={fadeInUp}
+          className="rounded-xl p-5 flex items-center gap-4 border bg-[#E1F5EE] border-[#1D9E75]/30"
+          data-testid="site-analysis-banner"
+        >
+          <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+            <Loader2 size={18} className="text-white animate-spin" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-[#0A0A0A]">🔍 Analyzing your website content...</p>
+            <p className="text-xs text-[#6B7280]">
+              We&rsquo;re reading your existing posts and configuring everything automatically. This takes about 30 seconds.
+            </p>
+            <div className="h-1.5 bg-white rounded-full overflow-hidden mt-2 max-w-md">
+              <div className="h-full bg-[#1D9E75] animate-pulse" style={{ width: '60%' }} />
+            </div>
+          </div>
+        </motion.div>
+      )}
+      {analysisDone && (
+        <motion.div
+          variants={fadeInUp}
+          className="rounded-xl p-5 flex flex-wrap items-center gap-4 border bg-[#E1F5EE] border-[#1D9E75]/30"
+          data-testid="site-analysis-complete"
+        >
+          <div className="w-10 h-10 rounded-full bg-[#1D9E75] flex items-center justify-center flex-shrink-0">
+            <Check size={18} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-[240px]">
+            <p className="font-semibold text-[#0A0A0A]">✓ Analysis complete!</p>
+            <p className="text-xs text-[#6B7280]">
+              We configured your article settings and suggested 10 topics based on your content.
+            </p>
+          </div>
+          <button
+            onClick={() => { window.location.assign('/dashboard/article-settings'); }}
+            className="px-4 py-2 bg-[#1D9E75] hover:bg-[#0F6E56] text-white text-sm rounded-lg"
+            data-testid="site-analysis-review-btn"
+          >
+            Review settings →
+          </button>
+        </motion.div>
+      )}
 
       {/* Section A — Website */}
       <motion.section variants={fadeInUp} className="space-y-4" data-testid="connections-website-section">

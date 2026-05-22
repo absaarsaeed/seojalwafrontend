@@ -16,7 +16,7 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from '../../components/ui/collapsible';
-import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles, RotateCw, Globe } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X as XIcon, ChevronDown, ExternalLink, Sparkles, RotateCw, Globe, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSite } from '../../context/SiteContext';
 import { useUser } from '../../context/UserContext';
@@ -190,6 +190,38 @@ export const PublishPage = () => {
         <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Auto Article Writing</h1>
         <p className="text-sm text-[#6B7280]">Manage your content calendar and Website Connections</p>
       </motion.div>
+
+      {/* Free-plan article limit banner */}
+      {(() => {
+        const planName = (subscription?.plan?.name || subscription?.plan || '').toString().toLowerCase();
+        const isFree = planName === 'free';
+        const limit = subscription?.plan?.articlesPerMonth ?? subscription?.articlesPerMonth ?? (isFree ? 3 : null);
+        const used = liveArticles.length;
+        const limitReached = limit != null && used >= limit;
+        if (!limitReached) return null;
+        return (
+          <motion.div
+            variants={fadeInUp}
+            className="rounded-xl p-5 flex flex-wrap items-center gap-4 border bg-[#FEF3C7] border-[#F59E0B]/30"
+            data-testid="free-plan-limit-banner"
+          >
+            <div className="w-10 h-10 rounded-full bg-[#F59E0B] flex items-center justify-center flex-shrink-0">
+              <Lock size={18} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-[240px]">
+              <h2 className="font-syne text-lg font-bold text-[#0A0A0A]">
+                You&rsquo;ve used all {limit} {isFree ? 'free' : ''} article{limit === 1 ? '' : 's'}
+              </h2>
+              <p className="text-sm text-[#6B7280]">Upgrade to keep publishing automatically every day.</p>
+            </div>
+            <Link to="/pricing">
+              <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="free-plan-upgrade-btn">
+                View plans →
+              </Button>
+            </Link>
+          </motion.div>
+        );
+      })()}
 
       <Tabs defaultValue="calendar" className="space-y-6">
         <TabsList className="bg-[#F0F0F0]">

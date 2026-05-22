@@ -124,13 +124,8 @@ export const DashboardHome = () => {
   const showOnboarding = !!activeSite && !onboardingDismissed && !onboardingDone;
   const showWelcomeBanner = !activeSite;
 
-  // Trial banner
-  const trialStatus = (subscription?.status || '').toLowerCase();
-  const trialDaysLeft = overview?.trial?.daysRemaining ?? subscription?.trialDaysLeft ?? subscription?.trial_days_left;
-  const isTrialing = (overview?.trial?.isTrialing ?? (trialStatus === 'trialing')) && trialDaysLeft != null;
-  const trialTotal = overview?.trial?.totalDays || subscription?.trialDays || 14;
-  const trialUsed = Math.max(0, trialTotal - (trialDaysLeft || 0));
-  const trialUrgent = (trialDaysLeft || 0) <= 3;
+  // Trial banner removed (Phase 2) — free plan replaces trial.
+  // Backend may still expose trial flags; we no longer surface them in UI.
 
   // Metrics from overview only
   const metrics = overview?.metrics || {};
@@ -145,29 +140,7 @@ export const DashboardHome = () => {
       className="space-y-6"
       data-testid="user-dashboard-home"
     >
-      {/* Trial banner */}
-      {isTrialing && (
-        <motion.div
-          variants={fadeInUp}
-          className={`rounded-xl p-5 flex flex-wrap items-center gap-4 border ${trialUrgent ? 'bg-[#FEF3C7] border-[#F59E0B]/30' : 'bg-[#E1F5EE] border-[#1D9E75]/30'}`}
-          data-testid="trial-banner"
-        >
-          <div className={`w-10 h-10 rounded-full ${trialUrgent ? 'bg-[#F59E0B]' : 'bg-[#1D9E75]'} flex items-center justify-center flex-shrink-0`}>
-            <Zap size={18} className="text-white" />
-          </div>
-          <div className="flex-1 min-w-[240px]">
-            <h2 className="font-syne text-lg font-bold text-[#0A0A0A]" data-testid="trial-days-text">
-              {trialUrgent ? `Only ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your trial` : `Trial: ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining`}
-            </h2>
-            <Progress value={(trialUsed / trialTotal) * 100} className="h-1.5 mt-2 max-w-md" />
-          </div>
-          <Link to="/pricing">
-            <Button className={trialUrgent ? 'bg-[#F59E0B] hover:bg-[#D97706] text-white' : 'bg-[#1D9E75] hover:bg-[#0F6E56] text-white'} data-testid="trial-upgrade-btn">
-              Upgrade now <ArrowRight size={14} className="ml-1.5" />
-            </Button>
-          </Link>
-        </motion.div>
-      )}
+      {/* Trial banner removed in Phase 2 — Free plan UI replaces trial messaging */}
 
       {/* Welcome banner */}
       {showWelcomeBanner && (
