@@ -157,7 +157,7 @@ export const NotificationsBell = () => {
             </div>
           ) : (
             items.map((n) => {
-              const meta = metaForType(n.type || n.kind || n.category);
+              const meta = metaForNotificationType(n.type || n.kind || n.category);
               const Icon = meta.icon;
               return (
                 <button

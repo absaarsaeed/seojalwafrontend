@@ -3,10 +3,8 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { notificationsApi } from '../../lib/api';
-import {
-  Bell, FileText, Search, AlertTriangle, CreditCard, Megaphone,
-  CheckCircle2, Mail, Sparkles, ShieldAlert, MailOpen, Check,
-} from 'lucide-react';
+import { metaForNotificationType } from '../../lib/notificationTypes';
+import { MailOpen, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fadeInUp = {
@@ -23,26 +21,6 @@ const timeAgo = (iso) => {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return d.toLocaleDateString();
 };
-
-const TYPE_META = {
-  ARTICLE_PUBLISHED:  { icon: FileText,      color: '#1D9E75', bg: '#E1F5EE' },
-  ARTICLE_SCHEDULED:  { icon: FileText,      color: '#3B82F6', bg: '#DBEAFE' },
-  ARTICLE_FAILED:     { icon: AlertTriangle, color: '#EF4444', bg: '#FEE2E2' },
-  AI_SCAN_COMPLETE:   { icon: Search,        color: '#3B82F6', bg: '#DBEAFE' },
-  AI_SCAN_FAILED:     { icon: AlertTriangle, color: '#EF4444', bg: '#FEE2E2' },
-  SUBSCRIPTION_TRIAL_ENDING: { icon: CreditCard, color: '#F59E0B', bg: '#FEF3C7' },
-  SUBSCRIPTION_RENEWED:      { icon: CreditCard, color: '#1D9E75', bg: '#E1F5EE' },
-  SUBSCRIPTION_FAILED:       { icon: CreditCard, color: '#EF4444', bg: '#FEE2E2' },
-  PAYMENT_FAILED:            { icon: CreditCard, color: '#EF4444', bg: '#FEE2E2' },
-  PLAN_LIMIT_REACHED: { icon: ShieldAlert,   color: '#EF4444', bg: '#FEE2E2' },
-  ANNOUNCEMENT:       { icon: Megaphone,     color: '#8B5CF6', bg: '#EDE9FE' },
-  WORDPRESS_CONNECTED:{ icon: CheckCircle2,  color: '#1D9E75', bg: '#E1F5EE' },
-  GSC_CONNECTED:      { icon: CheckCircle2,  color: '#1D9E75', bg: '#E1F5EE' },
-  EMAIL:              { icon: Mail,          color: '#3B82F6', bg: '#DBEAFE' },
-  FEATURE:            { icon: Sparkles,      color: '#8B5CF6', bg: '#EDE9FE' },
-};
-const DEFAULT_META = { icon: Bell, color: '#71717A', bg: '#F3F4F6' };
-const metaForType = (type) => TYPE_META[String(type || '').toUpperCase()] || DEFAULT_META;
 
 export const NotificationsPage = () => {
   const navigate = useNavigate();
@@ -109,7 +87,7 @@ export const NotificationsPage = () => {
           </div>
         ) : (
           items.map((n) => {
-            const meta = metaForType(n.type || n.kind || n.category);
+            const meta = metaForNotificationType(n.type || n.kind || n.category);
             const Icon = meta.icon;
             return (
             <button

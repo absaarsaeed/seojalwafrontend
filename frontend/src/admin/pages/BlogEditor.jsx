@@ -231,15 +231,24 @@ export const BlogEditor = () => {
                 <SelectItem value="SCHEDULED">Scheduled</SelectItem>
               </SelectContent>
             </Select>
-            {status === 'SCHEDULED' && (
-              <Input
-                type="datetime-local"
-                value={scheduledAt ? new Date(scheduledAt).toISOString().slice(0, 16) : ''}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className="admin-input mt-2"
-                data-testid="blog-scheduled-at"
-              />
-            )}
+            {status === 'SCHEDULED' && (() => {
+              let val = '';
+              if (scheduledAt) {
+                try {
+                  const t = new Date(scheduledAt).getTime();
+                  if (!isNaN(t)) val = new Date(t).toISOString().slice(0, 16);
+                } catch {}
+              }
+              return (
+                <Input
+                  type="datetime-local"
+                  value={val}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="admin-input mt-2"
+                  data-testid="blog-scheduled-at"
+                />
+              );
+            })()}
           </div>
 
           {/* Featured image */}

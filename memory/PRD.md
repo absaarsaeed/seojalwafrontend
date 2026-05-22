@@ -562,3 +562,29 @@ Shipped 7 of 13 Phase-3 parts. Parts 3, 8, 9, 10, 12, 13 queued for Batch 2.
 - 🔴 `PUT /api/user/dismiss-plugin-banner` 404 → frontend hides banner locally regardless
 - 🔴 `GET /api/admin/announcements/preview-count` 404 → em-dash shown
 - 🟡 Seed a user with active connected site + WP plugin + articles so PART 1 stats bar + calendar runtime is exercisable next iteration.
+
+## Phase 19: Phase-3 Batch 2 — 6 parts shipped (Feb 22, 2026)
+
+### Shipped
+1. **PART 3 — Rich-text Blog Editor** (`/adminpanel/blog/new` + `/adminpanel/blog/:id`). Uses **react-quill-new** (React 19 compatible — original `react-quill` removed because of `findDOMNode` removal in React 19). Toolbar: H1-H3, B/I/U/S, ordered/bullet lists, link, image (via `adminApi.blogUploadImage`), blockquote, code block. Sidebar: status (Draft/Published/Scheduled with datetime-local picker), featured image (uploader + alt text), collapsible SEO (meta-title 0/60 + meta-description 0/160 char counters), tag pills (Enter to add), category, author. Save Draft + Publish/Schedule buttons. App.js wires routes blog/new + blog/:id to BlogEditor. Defensive parse guard on scheduledAt iso conversion.
+2. **PART 8 — Admin Analytics Charts** (recharts). Backend `/api/admin/analytics/overview` returns nested `{users:{total,byPlan,newToday,newThisWeek,newThisMonth,dailySignups[]}, revenue:{mrr,arr,thisMonth,lastMonth,dailyRevenue[]}, content:{articlesGenerated,articlesThisMonth,aiScansRun,totalWordsWritten}, funnel:{visitors,signups,trial,connectedSite,generatedArticle,paid}}` — frontend parses precisely. 4 metric cards (users / monthly revenue / conversion rate / articles generated). Charts: dailySignups line, planDistribution donut (filters zero-count plans), dailyRevenue bars, 6-stage horizontal funnel. Content stats 4-tile grid (articles generated / this month / AI scans / words written). Empty-state for each chart when no data. `yarn add recharts` (was missing).
+3. **PART 9 — Email Log slide-in detail panel** (`/adminpanel/emails`). Replaced Dialog with right-side `Sheet` (`data-testid=email-detail-panel`). Lazy-fetches full email via `adminApi.email(id)` on row click. Metadata grid (From / Provider / Message ID / Attempts). Sandboxed iframe (`sandbox=""`, `srcDoc=htmlBody`) for safe preview at `data-testid=email-iframe-preview`. Resend button (`data-testid=email-resend-btn`) wired to `adminApi.emailResend`. Error banner when `email.error` present.
+4. **PART 10 — Audit Log slide-in detail panel** (`/adminpanel/audit-log`). Replaced Dialog with right-side `Sheet` (`data-testid=audit-detail-panel`). Lazy-fetches full entry via `adminApi.auditLogGet(id)`. **DiffTable component** flattens nested `before/after` objects (supports `before/after`, `changes.before/after`, `old/new`, `previous/current` shapes), renders 3-column Field / Before / After table with red-strikethrough on removed values + green-bold on new values + yellow-highlighted changed rows. Metadata block (admin / IP / userAgent). Optional collapsible raw payload `<details>`.
+5. **PART 12 — Connections 3-step state machine** (`/dashboard/connections`). `connection-state-machine` block renders three steps (Connected ✓ → Analyzing ⟳ → Setup complete ✓) with green-fill connector lines + active spinner ring on current step. Animated progress bar via new `@keyframes jalwa-analysis-progress` in index.css. Already-existing 3s `sitesApi.get` polling effect preserved. Step body switches between Just-connected confirmation / Analyzing card / Setup-complete card with "Review settings →" CTA.
+6. **PART 13 — NotificationsBell + Page type→icon+color mapping**. Extracted to `/lib/notificationTypes.js` (single source of truth, imported by both NotificationsBell and NotificationsPage). 15 types mapped: ARTICLE_PUBLISHED/SCHEDULED/FAILED, AI_SCAN_COMPLETE/FAILED, SUBSCRIPTION_TRIAL_ENDING/RENEWED/FAILED, PAYMENT_FAILED, PLAN_LIMIT_REACHED, ANNOUNCEMENT, WORDPRESS_CONNECTED, GSC_CONNECTED, EMAIL, FEATURE. Each gets `{icon, color, bg, label}`. Bell polls `/api/notifications/unread-count` every 60s, optimistic mark-read on click. Dropdown shows colored type-badge per row; NotificationsPage uses identical mapping for consistency.
+
+### Bugs caught + fixed during this batch
+- **CRASH**: `react-quill` incompatible with React 19 (`react_dom_1.default.findDOMNode is not a function`). Swapped to `react-quill-new` (community fork). Smoke-tested at `/adminpanel/blog/new`.
+- **CRASH**: Analytics page threw "Objects are not valid as a React child {total, byPlan, newToday, ...}" because backend shape is nested `data.users.dailySignups` not flat. Rewrote with explicit parse of nested envelope.
+
+### API additions
+None — all required endpoints were already wired in `api.js` from previous batches: `adminApi.{analytics, emails, email, emailResend, auditLog, auditLogGet, blog*}`, `notificationsApi.{list, unreadCount, markRead, markAllRead}`.
+
+### Verified (iteration_20.json)
+- **6/6 Phase-3 Batch 2 parts PASS** (5 runtime + 1 code-review for PART 12 which needs a seeded WP-connected site to runtime-exercise; current test user correctly drives the no-site-card branch).
+- All `data-testid` markers confirmed in DOM (blog-editor-page, admin-analytics-page, chart-signups, chart-plan-distribution, chart-revenue, chart-funnel, table-content-stats, email-detail-panel, email-iframe-preview, email-resend-btn, audit-detail-panel, diff-table, notifications-bell, notifications-view-all, notification-icon-{type}).
+- No new console errors, no React 19 incompatibility crashes.
+
+### Carry-overs
+- 🟡 Phase-3 PART 1 (AutoSEO dashboard stats bar + calendar) runtime path still requires a seeded user with active WP-connected site + articles. Frontend code is in place but not E2E exercised.
+- 🟡 PART 12 connection-state-machine code path same caveat — needs `activeSite.analyzing===true` to drive Analyzing state at runtime.
