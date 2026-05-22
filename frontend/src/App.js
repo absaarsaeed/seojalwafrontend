@@ -67,10 +67,23 @@ import { TeamPage } from "./pages/dashboard/TeamPage";
 import { SettingsPage } from "./pages/dashboard/SettingsPage";
 import { NotificationsPage } from "./pages/dashboard/NotificationsPage";
 
-// Redirect authenticated users away from auth pages
+// Redirect authenticated users away from auth pages.
+// We honour a one-time `jalwa_post_signup_redirect` localStorage flag so that
+// after /signup successfully creates the account (UserContext flips
+// isAuthenticated=true), we send the user to plan selection instead of dashboard.
 const AuthRedirect = ({ children }) => {
   const { isAuthenticated } = useUser();
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) {
+    let target = '/dashboard';
+    try {
+      const stored = localStorage.getItem('jalwa_post_signup_redirect');
+      if (stored) {
+        target = stored;
+        localStorage.removeItem('jalwa_post_signup_redirect');
+      }
+    } catch {}
+    return <Navigate to={target} replace />;
+  }
   return children;
 };
 

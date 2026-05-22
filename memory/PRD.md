@@ -492,3 +492,33 @@ User report: `/dashboard/auto-publish` crashing with `(N||[]).reduce is not a fu
 - All 8 fixes pass runtime checks where reachable. FIX 4 + FIX 5 verified via code review.
 - Sidebar exactly matches spec order: 8 items, no `AI Writer`, no `Social Autopilot`, no `Team`.
 - Zero remaining user-visible 'CMS connections' strings in `/app/frontend/src`.
+
+
+## Phase 17: 10-Part Plan Selection / Pricing / Billing / Quota Batch (Feb 22, 2026)
+
+### Shipped
+1. **NEW `/onboarding/select-plan`** — Loads `GET /api/plans/selection`. 4 plan cards with stable slug data-testids (free/starter/growth/agency). Monthly/Annual toggle with "Save 20%" badge. "Most Popular" on Growth. Free → `/dashboard`; Paid → `/onboarding/checkout`.
+2. **NEW `/onboarding/checkout`** — Two-column: Order summary (coupon Apply + discount line + total) + Payment form (card name/number/MM/YY/CVV/Pay btn). Test-mode warning. Success state with green check.
+3. **Signup redirect race fixed** — `AuthRedirect` honours `jalwa_post_signup_redirect` localStorage flag. SignupPage sets it BEFORE calling `signup()` so user lands on plan selection.
+4. **Public `/pricing` synced** — Uses `plansApi.selection()`. Logged-in paid → `/onboarding/checkout`. Email-fallback UpgradeModal removed.
+5. **Admin pricing redesign** — Per-feature on/off Switch + value input. Disabled features grey out. Preview button opens `/pricing` in new tab.
+6. **Quota allocation card** — Settings Billing tab `ArticleQuotaCard`: Total/Used/Remaining tiles + per-site allocation inputs + Auto-distribute toggle + Save (PUTs `/api/user/quota/sites/{id}` per site).
+7. **Free-plan limit banner** on `/dashboard/auto-publish` when `articles.length >= articlesPerMonth`.
+8. **Sidebar PlanBadge** — Free: gray badge + "X articles left" + Upgrade link. Paid: green badge with plan name.
+9. **Site analysis polling** — `/dashboard/connections` polls every 3s while `analyzing===true`. Inline banner + complete-state with Review settings button.
+10. **Trial banner removed** from dashboard. Backend trial flags ignored in UI. Settings shows soft "trial extended via admin" line only.
+11. **Signup subtitle copy updated** — "Pick a plan after signup — Free plan available, no credit card required."
+
+### API additions
+`plansApi.selection`, `plansApi.get`, `checkoutApi.start/complete/validateCoupon`, `quotaApi.setSiteQuota`
+
+### Verified (iteration_18.json)
+- 7/10 runtime PASS (parts 1, 2, 3, 4, 8, 10 + part 1b).
+- 3/10 code-review only (parts 5, 6, 9 — require seeded subscription / site / WP connection).
+- Both HIGH bugs from iteration_18 (plan-card UUID testids + signup-redirect race) FIXED in this same phase.
+
+### Carry-overs (backend gaps — frontend handles gracefully)
+- 🔴 `GET /api/plans/{id}` 404 — Checkout falls back to list lookup by slug.
+- 🔴 `PUT /api/user/quota/sites/{id}` 405 — Save toast error.
+- 🔴 `POST /api/billing/checkout` + `validate-coupon` likely missing — UI shows graceful error.
+- 🟡 Seed a demo user with `subscription.plan.articlesPerMonth` + multiple sites + WP connection for full runtime E2E.

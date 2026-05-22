@@ -71,6 +71,10 @@ export const SignupPage = () => {
     }
     setIsLoading(true);
     try {
+      // Set the post-signup target BEFORE calling signup() so that when
+      // UserContext flips isAuthenticated=true mid-render, the AuthRedirect
+      // wrapper on /signup honours our destination instead of /dashboard.
+      try { localStorage.setItem('jalwa_post_signup_redirect', '/onboarding/select-plan'); } catch {}
       await signup(formData);
       navigate('/onboarding/select-plan', { replace: true });
     } catch (err) {
@@ -139,7 +143,7 @@ export const SignupPage = () => {
           </div>
 
           <h1 className="font-syne text-3xl font-bold text-[#0A0A0A] mb-2">Create your account</h1>
-          <p className="text-[#6B7280] mb-8">Start your 14-day free trial. No credit card required.</p>
+          <p className="text-[#6B7280] mb-8">Pick a plan after signup — Free plan available, no credit card required.</p>
 
           {/* General error banner — top of form */}
           {generalError && (

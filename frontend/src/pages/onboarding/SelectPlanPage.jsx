@@ -132,13 +132,15 @@ export const SelectPlanPage = () => {
               const isFree = (plan.monthlyPrice ?? 0) === 0 || (plan.name || '').toLowerCase() === 'free' || plan.id === 'free';
               const isPopular = (plan.name || '').toLowerCase() === 'growth' || plan.popular === true;
               const { primary, suffix } = formatPrice(plan, interval);
+              // Stable slug for testids/CTAs — falls back to plan.slug/key, then name.
+              const slug = (plan.slug || plan.key || plan.name || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '-');
               return (
                 <motion.div
                   key={plan.id || plan.name}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={`relative bg-white rounded-2xl border p-6 flex flex-col ${isPopular ? 'border-[#1D9E75] shadow-lg ring-1 ring-[#1D9E75]/20' : 'border-[#F0F0F0]'}`}
-                  data-testid={`plan-card-${(plan.id || plan.name || '').toString().toLowerCase()}`}
+                  data-testid={`plan-card-${slug}`}
                 >
                   {isPopular && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#1D9E75] text-white text-xs font-semibold rounded-full">
@@ -171,7 +173,7 @@ export const SelectPlanPage = () => {
                       : isPopular
                         ? 'bg-[#1D9E75] hover:bg-[#0F6E56] text-white w-full'
                         : 'bg-white border border-[#1D9E75] text-[#1D9E75] hover:bg-[#E1F5EE] w-full'}
-                    data-testid={`plan-cta-${(plan.id || plan.name || '').toString().toLowerCase()}`}
+                    data-testid={`plan-cta-${slug}`}
                   >
                     {isFree ? 'Start for free' : 'Get started'}
                   </Button>
