@@ -273,6 +273,17 @@ const PlatformCard = ({ name, method, description, connected, comingSoon, onConn
           <span className="px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
             {method}
           </span>
+          {!comingSoon && (
+            connected ? (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#E1F5EE] text-[#1D9E75] text-[10px] font-semibold rounded-full" data-testid={`${testid}-status-badge`}>
+                <Check size={10} /> Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F0F0F0] text-[#6B7280] text-[10px] font-semibold rounded-full" data-testid={`${testid}-status-badge`}>
+                Not Connected
+              </span>
+            )
+          )}
         </div>
         <p className="text-xs text-[#6B7280] line-clamp-2">{description}</p>
         {comingSoon && (
@@ -290,10 +301,10 @@ const PlatformCard = ({ name, method, description, connected, comingSoon, onConn
         </span>
       ) : connected ? (
         <>
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#E1F5EE] text-[#1D9E75] text-xs font-medium rounded-full" data-testid={`${testid}-status-connected`}>
             <Check size={12} /> Connected
           </span>
-          <button onClick={onDisconnect} className="text-xs text-[#6B7280] hover:text-[#EF4444]">
+          <button onClick={onDisconnect} className="text-xs text-[#6B7280] hover:text-[#EF4444]" data-testid={`${testid}-disconnect-btn`}>
             Disconnect
           </button>
         </>
@@ -333,16 +344,77 @@ const SocialCard = ({ acc, onConnect, onDisconnect }) => (
 );
 
 export const ConnectionsPage = () => {
-  const { addSite } = useSite();
+  const { addSite, activeSite, refresh } = useSite();
   const [websitePlatforms, setWebsitePlatforms] = useState(WEBSITE_PLATFORMS);
   const [socialAccounts, setSocialAccounts] = useState(POST_DATA.socialAccounts);
   const [activeWebsite, setActiveWebsite] = useState(null);
   const [activeSocial, setActiveSocial] = useState(null);
   const [wpOpen, setWpOpen] = useState(false);
 
+  // Derive the WordPress "connected" status from the live SiteContext.
+  const isWpConnected = !!(activeSite && (
+    activeSite.wordpressConnected === true ||
+    activeSite.wordpress_connected === true ||
+    activeSite.isConnected === true ||
+    activeSite.connected === true ||
+    activeSite.status === 'connected'
+  ));
+
+  // Keep the WordPress card in sync with the live SiteContext.
+  useEffect(() => {
+    setWebsitePlatforms((arr) => arr.map((p) =>
+      p.name === 'WordPress'
+        ? {
+            ...p,
+            connected: isWpConnected,
+            description: isWpConnected
+              ? `Connected · ${activeSite?.domain || activeSite?.url || ''}`
+              : 'Install our free plugin, paste your API key',
+          }
+        : p
+    ));
+  }, [isWpConnected, activeSite?.domain, activeSite?.url]);
+
+  // Auto-poll for WordPress connection status: every 5s for up to 30s
+  // after the modal opens, refresh sites and notify when connection succeeds.
+  useEffect(() => {
+    if (!wpOpen || !activeSite?.id) return;
+    let pollCount = 0;
+    const maxPolls = 6;
+    let notified = false;
+    const interval = setInterval(async () => {
+      pollCount += 1;
+      try { await refresh(); } catch {}
+      if (pollCount >= maxPolls) {
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+    // We intentionally only re-run when the modal opens or the site changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wpOpen, activeSite?.id]);
+
+  // Toast once when WordPress flips to connected (catches both the explicit
+  // Test & Connect flow AND the case where the user finished in WP first).
+  const [seenConnected, setSeenConnected] = useState(isWpConnected);
+  useEffect(() => {
+    if (isWpConnected && !seenConnected) {
+      toast.success('WordPress connected!');
+      setSeenConnected(true);
+    }
+    if (!isWpConnected && seenConnected) {
+      setSeenConnected(false);
+    }
+  }, [isWpConnected, seenConnected]);
+
   const connectWebsite = async (name, payload = {}) => {
+    // WordPress: the site already exists (created during sign-up / add-site flow).
+    // Don't create a duplicate — just refresh from backend.
+    if (name === 'WordPress') {
+      try { await refresh(); } catch {}
+      return;
+    }
     setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: true, description: `Connected · ${payload.url || name.toLowerCase() + '.com'}` } : p));
-    // Try to register the connected site in the backend (best-effort)
     try {
       const platformSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '');
       const url = payload.url || `https://my-${platformSlug}.com`;
@@ -351,10 +423,15 @@ export const ConnectionsPage = () => {
       })();
       await addSite({ name: siteName, url, platform: platformSlug });
     } catch {
-      // Silent — UI still shows connected. Real backend may already track this site or reject duplicates.
+      // Silent — UI still shows connected.
     }
   };
   const disconnectWebsite = (name) => {
+    if (name === 'WordPress') {
+      // Real disconnection requires a backend endpoint we don't have yet.
+      toast.info('Disconnect coming soon — contact support to remove a site.');
+      return;
+    }
     setWebsitePlatforms((arr) => arr.map((p) => p.name === name ? { ...p, connected: false } : p));
     toast.success(`${name} disconnected`);
   };

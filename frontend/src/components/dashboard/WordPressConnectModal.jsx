@@ -46,7 +46,7 @@ const Stepper = ({ step }) => {
 };
 
 export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
-  const { activeSite } = useSite();
+  const { activeSite, refresh } = useSite();
   const [step, setStep] = useState(1);
   const [url, setUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
@@ -150,13 +150,17 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
       const res = await sitesApi.verifyConnection(activeSite.id);
       const ok = res?.success !== false && res?.connected !== false;
       if (!ok) {
-        const msg = res?.message || res?.error || 'Could not reach your WordPress site. Please ensure the plugin is installed and the API key is correct.';
+        const msg = res?.message || res?.error || 'Connection failed. Make sure you pasted the API key in your WordPress plugin and clicked Verify & Connect there first.';
         setVerifyError(msg);
         toast.error(msg);
         setTesting(false);
         return;
       }
       setDone(true);
+      // CRITICAL: refresh SiteContext so the dashboard reflects the new
+      // wordpressConnected status across the entire app.
+      try { await refresh(); } catch {}
+      toast.success('WordPress connected! Articles will publish automatically.');
       // Begin site-analysis polling — backend may flip site.analyzed=true async.
       try {
         if (typeof window !== 'undefined') {
