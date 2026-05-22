@@ -492,6 +492,35 @@ export const adminApi = {
     api.put(`/api/admin/plans/${id}`, payload, { auth: 'admin' }),
   coupons: () => api.get('/api/admin/coupons', { auth: 'admin' }),
   blog: () => api.get('/api/admin/blog', { auth: 'admin' }),
+  blogGet: (id) => api.get(`/api/admin/blog/${id}`, { auth: 'admin' }),
+  blogCreate: (payload) => api.post('/api/admin/blog', payload, { auth: 'admin' }),
+  blogUpdate: (id, payload) => api.put(`/api/admin/blog/${id}`, payload, { auth: 'admin' }),
+  blogDelete: (id) => api.del(`/api/admin/blog/${id}`, { auth: 'admin' }),
+  // Image upload uses multipart/form-data — bypass the JSON helper.
+  blogUploadImage: async (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const doFetch = (typeof window !== 'undefined' && window.__nativeFetch) || fetch;
+    const adminToken = tokenStore.getAdmin();
+    const res = await doFetch(`${BASE_URL}/api/admin/blog/upload-image`, {
+      method: 'POST',
+      headers: adminToken ? { 'X-Admin-Token': adminToken } : {},
+      body: fd,
+    });
+    let body = null;
+    try { body = await res.json(); } catch {}
+    if (!res.ok || body?.success === false) {
+      throw new ApiError(body?.error || `Upload failed (${res.status})`, {
+        status: res.status,
+        code: body?.code || '',
+      });
+    }
+    return body?.data || body;
+  },
+  analytics: () => api.get('/api/admin/analytics/overview', { auth: 'admin' }),
+  emailGet: (id) => api.get(`/api/admin/emails/${id}`, { auth: 'admin' }),
+  emailResend: (id) => api.post(`/api/admin/emails/${id}/resend`, {}, { auth: 'admin' }),
+  auditLogGet: (id) => api.get(`/api/admin/audit-log/${id}`, { auth: 'admin' }),
   announcements: () => api.get('/api/admin/announcements', { auth: 'admin' }),
   announcementPreviewCount: (targetAudience) =>
     api.get('/api/admin/announcements/preview-count', { auth: 'admin', query: { targetAudience } }),

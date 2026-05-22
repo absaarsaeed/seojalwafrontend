@@ -1,335 +1,121 @@
 import { useState, useEffect } from 'react';
-import { useAdmin } from '../context/AdminContext';
-import { TableSkeleton } from '../components/SkeletonLoaders';
-import { EmptyState } from '../components/EmptyState';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import { Label } from '../../components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../../components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '../../components/ui/alert-dialog';
+import { Plus, Edit2, Trash2, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Eye } from 'lucide-react';
+import { adminApi } from '../../lib/api';
 
 const StatusBadge = ({ status }) => {
-  const isPublished = status === 'Published';
+  const s = (status || 'DRAFT').toUpperCase();
+  const map = {
+    PUBLISHED: 'bg-[#E1F5EE] text-[#1D9E75]',
+    DRAFT:     'bg-[#F0F0F0] text-[#6B7280]',
+    SCHEDULED: 'bg-[#DBEAFE] text-[#2563EB]',
+  };
   return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-      isPublished ? 'bg-[#1D9E75]/10 text-[#1D9E75]' : 'bg-[#F59E0B]/10 text-[#F59E0B]'
-    }`}>
-      {status}
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[s] || map.DRAFT}`} data-testid={`blog-status-${s.toLowerCase()}`}>
+      {s}
     </span>
   );
 };
 
-const slugify = (text) => {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/--+/g, '-')
-    .trim();
-};
-
 export const Blog = () => {
-  const { blogPosts, addBlogPost, updateBlogPost, deleteBlogPost } = useAdmin();
-  const [isLoading, setIsLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPost, setEditingPost] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    slug: '',
-    content: '',
-    featuredImage: '',
-    metaTitle: '',
-    metaDescription: '',
-    status: 'Draft',
-    date: new Date().toISOString().split('T')[0]
-  });
+  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      slug: '',
-      content: '',
-      featuredImage: '',
-      metaTitle: '',
-      metaDescription: '',
-      status: 'Draft',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setEditingPost(null);
-  };
-
-  const handleTitleChange = (title) => {
-    setFormData(prev => ({
-      ...prev,
-      title,
-      slug: slugify(title),
-      metaTitle: prev.metaTitle || title
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.title) {
-      toast.error('Please enter a title');
-      return;
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await adminApi.blog();
+      const list = Array.isArray(res) ? res : res?.posts || res?.items || [];
+      setPosts(list);
+    } catch (err) {
+      toast.error(err?.message || 'Could not load posts');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (editingPost) {
-      updateBlogPost(editingPost.id, formData);
-      toast.success('Post updated successfully');
-    } else {
-      addBlogPost(formData);
-      toast.success('Post created successfully');
+  useEffect(() => { load(); }, []);
+
+  const handleDelete = async (post) => {
+    if (!window.confirm(`Delete "${post.title}"?`)) return;
+    try {
+      await adminApi.blogDelete(post.id);
+      toast.success('Post deleted');
+      setPosts((p) => p.filter((x) => x.id !== post.id));
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete');
     }
-    
-    setDialogOpen(false);
-    resetForm();
   };
-
-  const handleEdit = (post) => {
-    setEditingPost(post);
-    setFormData({
-      title: post.title,
-      slug: post.slug,
-      content: post.content || '',
-      featuredImage: post.featuredImage || '',
-      metaTitle: post.metaTitle || post.title,
-      metaDescription: post.metaDescription || '',
-      status: post.status,
-      date: post.date
-    });
-    setDialogOpen(true);
-  };
-
-  const handleDelete = (id) => {
-    deleteBlogPost(id);
-    toast.success('Post deleted successfully');
-  };
-
-  if (isLoading) {
-    return <TableSkeleton rows={10} columns={5} />;
-  }
 
   return (
-    <div className="space-y-6" data-testid="blog-page">
-      {/* Header */}
+    <div className="space-y-6" data-testid="admin-blog-list">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-[#09090B]">Blog Manager</h2>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="admin-btn-primary" data-testid="new-post-btn">
-              <Plus size={16} className="mr-2" />
-              New post
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingPost ? 'Edit Post' : 'Create New Post'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-[#71717A]">Title</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  placeholder="Enter post title"
-                  className="admin-input"
-                  data-testid="post-title-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-[#71717A]">Slug</Label>
-                <Input
-                  value={formData.slug}
-                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                  placeholder="auto-generated-from-title"
-                  className="admin-input"
-                  data-testid="post-slug-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-[#71717A]">Content</Label>
-                <Textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write your post content..."
-                  className="admin-input min-h-[200px]"
-                  data-testid="post-content-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-[#71717A]">Featured Image URL</Label>
-                <Input
-                  value={formData.featuredImage}
-                  onChange={(e) => setFormData(prev => ({ ...prev, featuredImage: e.target.value }))}
-                  placeholder="https://example.com/image.jpg"
-                  className="admin-input"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-[#71717A]">SEO Meta Title</Label>
-                  <Input
-                    value={formData.metaTitle}
-                    onChange={(e) => setFormData(prev => ({ ...prev, metaTitle: e.target.value }))}
-                    placeholder="SEO title"
-                    className="admin-input"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-[#71717A]">Status</Label>
-                  <Select 
-                    value={formData.status} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, status: v }))}
-                  >
-                    <SelectTrigger className="border-[#F0F0F0]" data-testid="post-status-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Draft">Draft</SelectItem>
-                      <SelectItem value="Published">Published</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-[#71717A]">SEO Meta Description</Label>
-                <Textarea
-                  value={formData.metaDescription}
-                  onChange={(e) => setFormData(prev => ({ ...prev, metaDescription: e.target.value }))}
-                  placeholder="Brief description for search engines..."
-                  className="admin-input min-h-[80px]"
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" className="admin-btn-primary" data-testid="save-post-btn">
-                  {editingPost ? 'Update Post' : 'Create Post'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => { setDialogOpen(false); resetForm(); }}
-                  className="admin-btn-secondary"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <div>
+          <h2 className="text-xl font-semibold text-[#09090B]">Blog</h2>
+          <p className="text-sm text-[#71717A]">Write and manage public blog posts.</p>
+        </div>
+        <Link to="/adminpanel/blog/new">
+          <Button className="admin-btn-primary" data-testid="new-post-btn">
+            <Plus size={16} className="mr-2" /> New post
+          </Button>
+        </Link>
       </div>
 
-      {/* Posts Table */}
-      {blogPosts.length === 0 ? (
-        <div className="admin-card">
-          <EmptyState
-            type="file"
-            title="No blog posts yet"
-            description="Create your first blog post to engage your audience."
-            action={
-              <Button onClick={() => setDialogOpen(true)} className="admin-btn-primary">
-                <Plus size={16} className="mr-2" />
-                New post
-              </Button>
-            }
-          />
-        </div>
-      ) : (
-        <div className="admin-card overflow-hidden">
+      <div className="admin-card">
+        {loading ? (
+          <div className="flex items-center justify-center py-16" data-testid="blog-loading">
+            <Loader2 className="animate-spin text-[#1D9E75]" size={24} />
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-16" data-testid="blog-empty">
+            <p className="text-sm text-[#71717A] mb-3">No blog posts yet.</p>
+            <Link to="/adminpanel/blog/new">
+              <Button className="admin-btn-primary">Write your first post</Button>
+            </Link>
+          </div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full admin-table" data-testid="blog-posts-table">
+            <table className="w-full admin-table">
               <thead>
                 <tr>
                   <th>Title</th>
                   <th>Status</th>
-                  <th>Date</th>
-                  <th>Views</th>
-                  <th>Actions</th>
+                  <th>Published</th>
+                  <th>Read time</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {blogPosts.map((post) => (
-                  <tr key={post.id} data-testid={`blog-row-${post.id}`}>
-                    <td>
-                      <div>
-                        <p className="font-medium text-[#09090B]">{post.title}</p>
-                        <p className="text-xs text-[#71717A]">/{post.slug}</p>
-                      </div>
+              <tbody data-testid="blog-posts-tbody">
+                {posts.map((p) => (
+                  <tr key={p.id} data-testid={`blog-row-${p.id}`}>
+                    <td className="font-medium">{p.title}</td>
+                    <td><StatusBadge status={p.status} /></td>
+                    <td className="text-xs text-[#71717A]">
+                      {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString() : '—'}
                     </td>
-                    <td><StatusBadge status={post.status} /></td>
-                    <td>{post.date}</td>
-                    <td>{post.views.toLocaleString()}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 w-7 p-0"
-                          onClick={() => handleEdit(post)}
-                          data-testid={`edit-post-${post.id}`}
-                        >
-                          <Edit size={14} />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-7 w-7 p-0 text-[#EF4444]"
-                              data-testid={`delete-post-${post.id}`}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Post</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{post.title}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDelete(post.id)}
-                                className="bg-[#EF4444] hover:bg-[#DC2626]"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                    <td className="text-xs text-[#71717A]">{p.readTime || p.read_time || '—'}</td>
+                    <td className="text-right">
+                      <div className="inline-flex items-center gap-2">
+                        {p.slug && p.status === 'PUBLISHED' && (
+                          <a
+                            href={`/blog/${p.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[#1D9E75] hover:underline inline-flex items-center gap-1"
+                            data-testid={`blog-view-${p.id}`}
+                          >
+                            <ExternalLink size={12} />
+                          </a>
+                        )}
+                        <Link to={`/adminpanel/blog/${p.id}`} className="text-[#2563EB] hover:underline" data-testid={`blog-edit-${p.id}`}>
+                          <Edit2 size={14} />
+                        </Link>
+                        <button onClick={() => handleDelete(p)} className="text-[#EF4444] hover:text-[#DC2626]" data-testid={`blog-delete-${p.id}`}>
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -337,8 +123,10 @@ export const Blog = () => {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
+
+export default Blog;
