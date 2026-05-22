@@ -118,7 +118,15 @@ export const PublishPage = () => {
       } catch { if (!cancelled) setLiveCalendar(null); }
       try {
         const list = await articlesApi.list({ siteId: activeSite.id });
-        const items = Array.isArray(list) ? list : list?.items || [];
+        const items = Array.isArray(list)
+          ? list
+          : Array.isArray(list?.items)
+            ? list.items
+            : Array.isArray(list?.articles)
+              ? list.articles
+              : Array.isArray(list?.data)
+                ? list.data
+                : [];
         if (!cancelled) setLiveArticles(items);
       } catch { if (!cancelled) setLiveArticles([]); }
     })();
@@ -180,7 +188,7 @@ export const PublishPage = () => {
     >
       <motion.div variants={fadeInUp}>
         <h1 className="font-syne text-2xl font-bold text-[#0A0A0A]">Auto Article Writing</h1>
-        <p className="text-sm text-[#6B7280]">Manage your content calendar and CMS connections</p>
+        <p className="text-sm text-[#6B7280]">Manage your content calendar and Website Connections</p>
       </motion.div>
 
       <Tabs defaultValue="calendar" className="space-y-6">
@@ -205,7 +213,14 @@ export const PublishPage = () => {
             </div>
             {(() => {
               const isTrial = (subscription?.status || '').toLowerCase() === 'trialing';
-              const trialArticles = (liveCalendar || []).reduce((acc, day) => acc + (Array.isArray(day?.articles) ? day.articles.length : (day?.article ? 1 : 0)), 0);
+              const calArr = Array.isArray(liveCalendar)
+                ? liveCalendar
+                : Array.isArray(liveCalendar?.days)
+                  ? liveCalendar.days
+                  : Array.isArray(liveCalendar?.items)
+                    ? liveCalendar.items
+                    : [];
+              const trialArticles = calArr.reduce((acc, day) => acc + (Array.isArray(day?.articles) ? day.articles.length : (day?.article ? 1 : 0)), 0);
               if (!isTrial || trialArticles === 0) return null;
               return (
                 <div className="mt-4 p-3 bg-[#E1F5EE]/40 border border-[#1D9E75]/30 rounded-lg text-sm text-[#0A0A0A]" data-testid="trial-articles-banner">

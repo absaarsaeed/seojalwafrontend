@@ -279,7 +279,7 @@ export const Pricing = () => {
                     isUnlimited={plan.limits.teamSeats === 'unlimited'}
                   />
                   <LimitInput
-                    label="CMS connections"
+                    label="Website connections"
                     value={plan.limits.cmsConnections}
                     onChange={(v) => handleLimitChange(planKey, 'cmsConnections', v)}
                     isUnlimited={plan.limits.cmsConnections === 'unlimited'}

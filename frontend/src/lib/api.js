@@ -348,6 +348,7 @@ export const userApi = {
   updateProfile: (payload) => api.put('/api/user/profile', payload),
   deleteAccount: (payload) => api.delWithBody('/api/user/account', payload),
   activity: () => api.get('/api/user/activity'),
+  updateOnboarding: (payload) => api.put('/api/user/onboarding', payload),
 };
 
 // Billing -----------------------------------------------------------------

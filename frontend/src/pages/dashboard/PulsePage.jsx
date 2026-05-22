@@ -6,29 +6,14 @@ import { useSite } from '../../context/SiteContext';
 import { aiVisibilityApi, aiVisibilityLatestApi } from '../../lib/api';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../../components/ui/collapsible';
-import { Progress } from '../../components/ui/progress';
-import { RefreshCw, Plus, ArrowRight, ChevronDown, MessageSquareText, Sparkles } from 'lucide-react';
+import { RefreshCw, ArrowRight, ChevronDown, MessageSquareText, Sparkles } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
-};
-
-const StatusBadge = ({ status }) => {
-  const colors = {
-    positive: 'bg-[#1D9E75]/10 text-[#1D9E75]',
-    warning: 'bg-[#F59E0B]/10 text-[#F59E0B]',
-    neutral: 'bg-[#6B7280]/10 text-[#6B7280]'
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[status]}`}>
-      {status === 'positive' ? 'Good' : status === 'warning' ? 'Needs Work' : 'Neutral'}
-    </span>
-  );
 };
 
 const DifficultyBadge = ({ difficulty }) => {
@@ -61,6 +46,30 @@ const ImpactBadge = ({ impact }) => {
   );
 };
 
+const VisibilityStatusBadge = ({ status, score }) => {
+  // Derive status from numeric score if backend didn't supply one.
+  let key = (status || '').toString().toUpperCase();
+  if (!key && typeof score === 'number') {
+    if (score >= 70) key = 'VISIBLE';
+    else if (score >= 40) key = 'PARTIAL';
+    else key = 'NOT_VISIBLE';
+  }
+  const map = {
+    VISIBLE:     { cls: 'bg-[#1D9E75]/10 text-[#1D9E75] border-[#1D9E75]/30', label: 'Visible on AI Engines ✓' },
+    PARTIAL:     { cls: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30', label: 'Partially Visible' },
+    NOT_VISIBLE: { cls: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30', label: 'Not Yet Visible' },
+  };
+  const cfg = map[key] || map.PARTIAL;
+  return (
+    <span
+      className={`inline-flex items-center px-3 py-1.5 rounded-full border text-sm font-semibold ${cfg.cls}`}
+      data-testid="visibility-status-badge"
+    >
+      {cfg.label}
+    </span>
+  );
+};
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -75,8 +84,6 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export const PulsePage = () => {
   const { activeSite } = useSite();
-  const [newCompetitor, setNewCompetitor] = useState('');
-  const [simulatorQuery, setSimulatorQuery] = useState('');
   const [scans, setScans] = useState([]);
   const [latest, setLatest] = useState(null);
   const [latestLoading, setLatestLoading] = useState(false);
@@ -194,7 +201,6 @@ export const PulsePage = () => {
   const liveScore = latest?.overallScore ?? scans?.[0]?.overallScore;
   const liveRecs = Array.isArray(latest?.recommendations) ? latest.recommendations : null;
   const liveQueries = Array.isArray(latest?.queries) ? latest.queries : null;
-  const liveModels = Array.isArray(latest?.models) ? latest.models : Array.isArray(latest?.modelBreakdown) ? latest.modelBreakdown : null;
   const liveHistory = Array.isArray(latest?.history) ? latest.history : Array.isArray(scans) && scans.length > 1
     ? scans.slice(0, 8).reverse().map((s, i) => ({ week: `Week ${i + 1}`, score: s.overallScore ?? 0 }))
     : null;
@@ -224,14 +230,21 @@ export const PulsePage = () => {
           )}
           <Button onClick={handleScan} disabled={isScanning || !activeSite} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white" data-testid="run-scan-btn">
             <RefreshCw size={16} className={`mr-2 ${isScanning ? 'animate-spin' : ''}`} />
-            {isScanning ? (scanStatus && scanStatus !== 'queued' && scanStatus !== 'in_progress' ? scanStatus : 'Scanning...') : 'Run new scan'}
+            {isScanning ? 'Scanning AI engines...' : 'Run new scan'}
           </Button>
         </div>
       </motion.div>
       {isScanning && (
-        <p className="text-xs text-[#6B7280] -mt-3" data-testid="scan-status">
-          {scanStatus && scanStatus !== 'queued' && scanStatus !== 'in_progress' ? scanStatus : 'Queued — this can take 30–90 seconds.'}
-        </p>
+        <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="scan-status">
+          <div className="flex items-center gap-3 mb-3">
+            <Sparkles size={18} className="text-[#1D9E75] animate-pulse" />
+            <p className="text-sm font-medium text-[#0A0A0A]">Scanning AI engines...</p>
+          </div>
+          <div className="h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
+            <div className="h-full bg-[#1D9E75] animate-pulse" style={{ width: '60%' }} />
+          </div>
+          <p className="text-xs text-[#6B7280] mt-3">This usually takes 30–90 seconds.</p>
+        </motion.div>
       )}
 
       {/* No active site */}
@@ -262,43 +275,30 @@ export const PulsePage = () => {
       {activeSite && hasAnyData && (
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="bg-[#F0F0F0]">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="competitors">Competitors</TabsTrigger>
-          <TabsTrigger value="simulator">Simulator</TabsTrigger>
-          <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+          <TabsTrigger value="recommendations" data-testid="tab-recommendations">Recommendations</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Queries tested — collapsible, only shown when backend supplied them */}
-          {liveQueries && liveQueries.length > 0 && (
-            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="queries-section">
-              <Collapsible open={queriesOpen} onOpenChange={setQueriesOpen}>
-                <CollapsibleTrigger asChild>
-                  <button
-                    type="button"
-                    className="w-full flex items-center justify-between"
-                    data-testid="queries-toggle"
-                  >
-                    <div className="flex items-center gap-2 text-left">
-                      <MessageSquareText size={16} className="text-[#1D9E75]" />
-                      <div>
-                        <h3 className="font-semibold text-[#0A0A0A]">Queries tested</h3>
-                        <p className="text-xs text-[#6B7280]">We asked these {liveQueries.length} questions to each AI model</p>
-                      </div>
-                    </div>
-                    <ChevronDown size={18} className={`text-[#6B7280] transition-transform ${queriesOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-4">
-                  <ol className="list-decimal pl-6 space-y-1.5 text-sm text-[#0A0A0A]">
-                    {liveQueries.map((q, i) => (
-                      <li key={i}>{q}</li>
-                    ))}
-                  </ol>
-                </CollapsibleContent>
-              </Collapsible>
-            </motion.div>
-          )}
+          {/* Visibility status + score circle */}
+          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-8">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="w-36 h-36 rounded-full border-8 border-[#1D9E75] flex items-center justify-center bg-[#E1F5EE]/30 flex-shrink-0">
+                <div className="text-center">
+                  <span className="font-syne text-5xl font-bold text-[#0A0A0A]">{liveScore}</span>
+                  <span className="text-lg text-[#6B7280]">/100</span>
+                </div>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <VisibilityStatusBadge status={latest?.visibilityStatus || latest?.status} score={liveScore} />
+                {(latest?.visibilityMessage || latest?.message) && (
+                  <p className="text-sm text-[#0A0A0A] mt-3" data-testid="visibility-message">
+                    {latest?.visibilityMessage || latest?.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </motion.div>
 
           {/* Score Over Time */}
           {liveHistory && liveHistory.length > 0 && (
@@ -316,70 +316,30 @@ export const PulsePage = () => {
             </motion.div>
           )}
 
-          {/* AI Model Breakdown */}
-          {liveModels && liveModels.length > 0 && (
-            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-              <h3 className="font-semibold text-[#0A0A0A] mb-4">AI Model Breakdown</h3>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {liveModels.map((model) => (
-                  <div key={model.name} className="text-center p-4 bg-[#F9FAFB] rounded-lg" data-testid={`ai-model-${(model.name || '').toLowerCase()}`}>
-                    <p className="text-sm text-[#6B7280] mb-2">{model.name}</p>
-                    <p className="text-2xl font-bold text-[#0A0A0A] mb-2">{model.score ?? 0}%</p>
-                    <Progress value={model.score ?? 0} className="h-2 mb-2" />
-                    {model.sentiment && <StatusBadge status={model.sentiment} />}
-                  </div>
-                ))}
-              </div>
+          {/* Queries tested — collapsible, only shown when backend supplied them */}
+          {liveQueries && liveQueries.length > 0 && (
+            <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6" data-testid="queries-section">
+              <Collapsible open={queriesOpen} onOpenChange={setQueriesOpen}>
+                <CollapsibleTrigger asChild>
+                  <button type="button" className="w-full flex items-center justify-between" data-testid="queries-toggle">
+                    <div className="flex items-center gap-2 text-left">
+                      <MessageSquareText size={16} className="text-[#1D9E75]" />
+                      <div>
+                        <h3 className="font-semibold text-[#0A0A0A]">Queries tested</h3>
+                        <p className="text-xs text-[#6B7280]">{liveQueries.length} questions tested across AI models</p>
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className={`text-[#6B7280] transition-transform ${queriesOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  <ol className="list-decimal pl-6 space-y-1.5 text-sm text-[#0A0A0A]">
+                    {liveQueries.map((q, i) => (<li key={i}>{q}</li>))}
+                  </ol>
+                </CollapsibleContent>
+              </Collapsible>
             </motion.div>
           )}
-        </TabsContent>
-
-        <TabsContent value="competitors" className="space-y-6">
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Input
-                placeholder="Add competitor domain (e.g., competitor.com)"
-                value={newCompetitor}
-                onChange={(e) => setNewCompetitor(e.target.value)}
-                className="max-w-sm border-[#F0F0F0]"
-                data-testid="add-competitor-input"
-              />
-              <Button onClick={() => { if (newCompetitor) { toast.success('Competitor added'); setNewCompetitor(''); } }} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
-                <Plus size={16} className="mr-1" />
-                Add
-              </Button>
-            </div>
-            <p className="text-sm text-[#6B7280] text-center py-8" data-testid="competitors-empty">
-              Add competitor domains above to compare your AI visibility against them.
-            </p>
-          </motion.div>
-        </TabsContent>
-
-        <TabsContent value="simulator" className="space-y-6">
-          <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-[#F0F0F0] p-6">
-            <h3 className="font-semibold text-[#0A0A0A] mb-2">AI Response Simulator</h3>
-            <p className="text-sm text-[#6B7280] mb-4">See how AI responds to questions about your industry</p>
-            <div className="flex gap-3 mb-6">
-              <Input
-                placeholder="Ask any question about your industry..."
-                value={simulatorQuery}
-                onChange={(e) => setSimulatorQuery(e.target.value)}
-                className="flex-1 border-[#F0F0F0]"
-              />
-              <Button className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">
-                Simulate
-              </Button>
-            </div>
-            
-            <div className="p-4 bg-[#F9FAFB] rounded-lg">
-              <p className="text-sm text-[#6B7280] mb-2">Example response:</p>
-              <p className="text-[#0A0A0A]">
-                "When looking for the best solutions in this space, there are several strong options. 
-                Your brand appears in recommendations but isn't consistently the top choice. 
-                Improving your content authority could boost your visibility."
-              </p>
-            </div>
-          </motion.div>
         </TabsContent>
 
         <TabsContent value="recommendations" className="space-y-6">

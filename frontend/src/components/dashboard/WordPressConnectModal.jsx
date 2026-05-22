@@ -148,30 +148,57 @@ export const WordPressConnectModal = ({ open, onClose, onConnected }) => {
     setTesting(true);
     try {
       const res = await sitesApi.verifyConnection(activeSite.id);
-      const ok = res?.success !== false && res?.connected !== false;
-      if (!ok) {
-        const msg = res?.message || res?.error || 'Connection failed. Make sure you pasted the API key in your WordPress plugin and clicked Verify & Connect there first.';
-        setVerifyError(msg);
-        toast.error(msg);
-        setTesting(false);
+      const connectedField = res?.data?.connected ?? res?.connected;
+      const ok = res?.success !== false && connectedField !== false;
+
+      if (ok) {
+        setDone(true);
+        try { await refresh(); } catch {}
+        toast.success('WordPress connected! Articles will publish automatically.');
+        try {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('jalwa:site-connected', {
+              detail: { siteId: activeSite.id },
+            }));
+          }
+        } catch {}
+        onConnected?.({ url, site: res });
         return;
       }
-      setDone(true);
-      // CRITICAL: refresh SiteContext so the dashboard reflects the new
-      // wordpressConnected status across the entire app.
-      try { await refresh(); } catch {}
-      toast.success('WordPress connected! Articles will publish automatically.');
-      // Begin site-analysis polling — backend may flip site.analyzed=true async.
+
+      // Verify reported failure — but the plugin may have just finished writing
+      // the connection on the WP side. Refresh sites once more and re-check
+      // before showing the error to the user.
+      let updatedSite = null;
       try {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('jalwa:site-connected', {
-            detail: { siteId: activeSite.id },
-          }));
-        }
+        updatedSite = await refresh();
       } catch {}
-      onConnected?.({ url, site: res });
+      const flipped = !!(updatedSite && (
+        updatedSite.wordpressConnected === true ||
+        updatedSite.wordpress_connected === true ||
+        updatedSite.isConnected === true ||
+        updatedSite.connected === true ||
+        updatedSite.status === 'connected'
+      ));
+      if (flipped) {
+        setDone(true);
+        toast.success('WordPress is connected!');
+        try {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('jalwa:site-connected', {
+              detail: { siteId: activeSite.id },
+            }));
+          }
+        } catch {}
+        onConnected?.({ url, site: updatedSite });
+        return;
+      }
+
+      const msg = res?.message || res?.error || "Couldn't verify connection. Make sure you pasted the API key in your WordPress plugin and clicked Verify & Connect there first.";
+      setVerifyError(msg);
+      toast.error(msg);
     } catch (err) {
-      const msg = err?.message || 'Connection failed. Please verify the plugin is installed and the API key is pasted correctly in WordPress.';
+      const msg = err?.message || 'Connection check failed. Please try again.';
       setVerifyError(msg);
       toast.error(msg);
     } finally {

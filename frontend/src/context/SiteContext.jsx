@@ -44,30 +44,40 @@ export const SiteProvider = ({ children }) => {
   const refresh = useCallback(async () => {
     if (!isAuthenticated) {
       setSites([]);
-      return;
+      return null;
     }
     setIsLoading(true);
     setError(null);
+    let finalList = [];
     try {
       const data = await sitesApi.list();
       const list = Array.isArray(data) ? data : data?.sites || [];
       if (list.length) {
-        setSites(list.map(normaliseSite));
+        finalList = list.map(normaliseSite);
       } else if (Array.isArray(authSites) && authSites.length) {
         // /api/sites empty — fall back to whatever /api/auth/me returned.
-        setSites(authSites.map(normaliseSite));
+        finalList = authSites.map(normaliseSite);
       } else {
-        setSites([]);
+        finalList = [];
       }
+      setSites(finalList);
     } catch (err) {
       setError(err);
       if (Array.isArray(authSites) && authSites.length) {
-        setSites(authSites.map(normaliseSite));
+        finalList = authSites.map(normaliseSite);
+        setSites(finalList);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, authSites]);
+    // Return the active site from the freshly-fetched list (if any) so callers
+    // (e.g., WordPressConnectModal) can re-check status without waiting for a
+    // React state flush.
+    if (activeSiteId) {
+      return finalList.find((s) => s.id === activeSiteId) || finalList[0] || null;
+    }
+    return finalList[0] || null;
+  }, [isAuthenticated, authSites, activeSiteId]);
 
   // Initial hydration from /api/auth/me sites
   useEffect(() => {

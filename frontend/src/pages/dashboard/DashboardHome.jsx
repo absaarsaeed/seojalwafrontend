@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 import { useSite } from '../../context/SiteContext';
-import { growthApi, analyticsApi, searchTermsApi, aiVisibilityLatestApi, dashboardApi } from '../../lib/api';
+import { growthApi, analyticsApi, searchTermsApi, aiVisibilityLatestApi, dashboardApi, userApi } from '../../lib/api';
 import { Button } from '../../components/ui/button';
 import { Progress } from '../../components/ui/progress';
 import { ArrowRight, ArrowUp, ArrowDown, FileText, Share2, Eye, TrendingUp, Globe, X as XIcon, Check, Sparkles, Zap } from 'lucide-react';
@@ -45,15 +45,25 @@ export const DashboardHome = () => {
   const [growth, setGrowth] = useState(null);
   const [analytics, setAnalytics] = useState(null);
 
-  // Per-site onboarding dismissal
+  // Per-site onboarding dismissal — backed by user.onboarding.dismissed
+  // (from DB on next /me hydration), with a localStorage fallback for the
+  // current session so the checklist never reappears on the same refresh.
   const onboardingKey = `jalwa_onboarding_dismissed_${activeSite?.id || 'none'}`;
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const dbDismissed = user?.onboarding?.dismissed === true;
+  const [onboardingDismissed, setOnboardingDismissed] = useState(dbDismissed);
   useEffect(() => {
+    if (dbDismissed) {
+      setOnboardingDismissed(true);
+      return;
+    }
     try { setOnboardingDismissed(localStorage.getItem(onboardingKey) === '1'); } catch {}
-  }, [onboardingKey]);
-  const dismissOnboarding = () => {
+  }, [onboardingKey, dbDismissed]);
+
+  const dismissOnboarding = async () => {
     try { localStorage.setItem(onboardingKey, '1'); } catch {}
     setOnboardingDismissed(true);
+    // Persist server-side so it never shows on any future session/device.
+    try { await userApi.updateOnboarding({ dismissed: true }); } catch {}
   };
 
   // Live onboarding signals

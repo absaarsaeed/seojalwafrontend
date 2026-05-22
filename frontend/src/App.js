@@ -48,6 +48,7 @@ import { GoogleCallbackPage } from "./pages/auth/GoogleCallbackPage";
 
 // Dashboard
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DashboardHome } from "./pages/dashboard/DashboardHome";
 import { GrowthScorePage } from "./pages/dashboard/GrowthScorePage";
 import { PulsePage } from "./pages/dashboard/PulsePage";
@@ -105,19 +106,19 @@ function App() {
 
               {/* User Dashboard (DashboardLayout itself enforces auth) */}
               <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<DashboardHome />} />
-                <Route path="growth-score" element={<GrowthScorePage />} />
-                <Route path="ai-visibility" element={<PulsePage />} />
-                <Route path="ai-writer" element={<WritePage />} />
-                <Route path="auto-publish" element={<PublishPage />} />
-                <Route path="auto-publish/article/:id" element={<ArticleViewPage />} />
-                <Route path="analytics" element={<AnalyticsPage />} />
-                <Route path="social-autopilot" element={<PostPage />} />
-                <Route path="article-settings" element={<ArticleSettingsPage />} />
-                <Route path="connections" element={<ConnectionsPage />} />
-                <Route path="team" element={<TeamPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="notifications" element={<NotificationsPage />} />
+                <Route index element={<ErrorBoundary><DashboardHome /></ErrorBoundary>} />
+                <Route path="growth-score" element={<ErrorBoundary><GrowthScorePage /></ErrorBoundary>} />
+                <Route path="ai-visibility" element={<ErrorBoundary><PulsePage /></ErrorBoundary>} />
+                <Route path="ai-writer" element={<ErrorBoundary><WritePage /></ErrorBoundary>} />
+                <Route path="auto-publish" element={<ErrorBoundary><PublishPage /></ErrorBoundary>} />
+                <Route path="auto-publish/article/:id" element={<ErrorBoundary><ArticleViewPage /></ErrorBoundary>} />
+                <Route path="analytics" element={<ErrorBoundary><AnalyticsPage /></ErrorBoundary>} />
+                <Route path="social-autopilot" element={<ErrorBoundary><PostPage /></ErrorBoundary>} />
+                <Route path="article-settings" element={<ErrorBoundary><ArticleSettingsPage /></ErrorBoundary>} />
+                <Route path="connections" element={<ErrorBoundary><ConnectionsPage /></ErrorBoundary>} />
+                <Route path="team" element={<ErrorBoundary><TeamPage /></ErrorBoundary>} />
+                <Route path="settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
+                <Route path="notifications" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
                 {/* Legacy redirects */}
                 <Route path="pulse" element={<Navigate to="/dashboard/ai-visibility" replace />} />
                 <Route path="write" element={<Navigate to="/dashboard/ai-writer" replace />} />

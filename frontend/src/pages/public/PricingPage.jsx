@@ -26,7 +26,7 @@ const allFeatures = [
   { name: 'Social posts per month', starter: '30', growth: '100', agency: 'Unlimited' },
   { name: 'AI visibility scans', starter: '5', growth: '20', agency: 'Unlimited' },
   { name: 'Team seats', starter: '1', growth: '3', agency: 'Unlimited' },
-  { name: 'CMS connections', starter: '2', growth: 'Unlimited', agency: 'Unlimited' },
+  { name: 'Website connections', starter: '2', growth: 'Unlimited', agency: 'Unlimited' },
   { name: 'Competitor comparison', starter: false, growth: true, agency: true },
   { name: 'Priority support', starter: false, growth: true, agency: true },
   { name: 'White-label reports', starter: false, growth: false, agency: true },

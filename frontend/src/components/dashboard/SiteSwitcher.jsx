@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Globe, ChevronDown, Plus, Check } from 'lucide-react';
 import { useSite } from '../../context/SiteContext';
 import {
@@ -41,6 +41,13 @@ export const SiteSwitcher = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [form, setForm] = useState({ url: '', name: '', platform: 'WordPress' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Allow any page to open the Add Site dialog via custom event.
+  useEffect(() => {
+    const handler = () => setOpenDialog(true);
+    window.addEventListener('jalwa:open-add-site', handler);
+    return () => window.removeEventListener('jalwa:open-add-site', handler);
+  }, []);
 
   const handleAdd = async () => {
     const url = normaliseUrl(form.url);

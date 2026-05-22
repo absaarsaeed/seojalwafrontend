@@ -87,8 +87,6 @@ export const ArticleSettingsPage = () => {
   });
   const [locationMode, setLocationMode] = useState('worldwide');
   const [locationCity, setLocationCity] = useState('');
-  const [competitors, setCompetitors] = useState(['competitor1.com', 'competitor2.com']);
-  const [newCompetitor, setNewCompetitor] = useState('');
   const [whatSell, setWhatSell] = useState('SEO consulting services, content marketing packages');
   const [whatNotSell, setWhatNotSell] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
@@ -96,13 +94,6 @@ export const ArticleSettingsPage = () => {
   const toggle = (key) => setToggles((t) => ({ ...t, [key]: !t[key] }));
 
   const handleSaveAll = () => toast.success('All article settings saved');
-
-  const addCompetitor = () => {
-    if (!newCompetitor.trim() || competitors.length >= 5) return;
-    setCompetitors([...competitors, newCompetitor.trim()]);
-    setNewCompetitor('');
-    toast.success('Competitor added');
-  };
 
   return (
     <motion.div
@@ -238,34 +229,7 @@ export const ArticleSettingsPage = () => {
         <Button onClick={() => toast.success('Location targeting saved')} className="mt-4 bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Save Location Targeting</Button>
       </Section>
 
-      {/* Section 8 — Competitors */}
-      <Section title="Competitors" subtitle="Add up to 5 competitor websites to help us understand your market.">
-        <div className="flex gap-2 mb-4">
-          <Input
-            placeholder="competitor.com"
-            value={newCompetitor}
-            onChange={(e) => setNewCompetitor(e.target.value)}
-            className="border-[#F0F0F0] flex-1 max-w-sm"
-            data-testid="competitor-input"
-          />
-          <Button onClick={addCompetitor} disabled={competitors.length >= 5} className="bg-[#1D9E75] hover:bg-[#0F6E56] text-white">Add Competitor</Button>
-        </div>
-        <ul className="space-y-2" data-testid="competitor-list">
-          {competitors.map((c) => (
-            <li key={c} className="flex items-center justify-between p-3 bg-[#F9FAFB] rounded-lg">
-              <span className="text-sm text-[#0A0A0A]">{c}</span>
-              <button
-                onClick={() => setCompetitors(competitors.filter((x) => x !== c))}
-                className="text-[#6B7280] hover:text-[#EF4444] text-sm"
-              >
-                <X size={14} className="inline" /> Remove
-              </button>
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      {/* Section 9 — Business Offerings */}
+      {/* Section 8 — Business Offerings */}
       <Section title="Business Offerings">
         <div className="space-y-6">
           <div>

@@ -13,7 +13,7 @@ import {
 } from '../../components/ui/dialog';
 import { PlatformLogo } from '../../components/public/PlatformLogo';
 import { POST_DATA } from '../../data/publicData';
-import { Check, Copy, X as XIcon, Download } from 'lucide-react';
+import { Check, Copy, X as XIcon, Download, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { WordPressConnectModal } from '../../components/dashboard/WordPressConnectModal';
 import { useSite } from '../../context/SiteContext';
@@ -508,21 +508,44 @@ export const ConnectionsPage = () => {
           <h2 className="font-syne text-xl font-bold text-[#0A0A0A]">Connect your website</h2>
           <p className="text-sm text-[#6B7280]">SEO Jalwa will publish articles directly to your connected website.</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {websitePlatforms.map((p) => (
-            <PlatformCard
-              key={p.name}
-              name={p.name}
-              method={p.method}
-              description={p.description}
-              connected={p.connected}
-              comingSoon={p.comingSoon}
-              onConnect={() => openWebsite(p)}
-              onDisconnect={() => disconnectWebsite(p.name)}
-              testid={`website-card-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-            />
-          ))}
-        </div>
+        {!activeSite ? (
+          <div
+            className="text-center p-8 border-2 border-dashed border-gray-200 rounded-xl bg-white"
+            data-testid="no-site-card"
+          >
+            <Globe className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+            <h3 className="font-semibold text-gray-800 mb-2">Add your website first</h3>
+            <p className="text-gray-500 text-sm mb-4 max-w-md mx-auto">
+              To connect WordPress, first add your website using the site
+              switcher in the top-left corner of the sidebar.
+            </p>
+            <button
+              onClick={() => {
+                try { window.dispatchEvent(new CustomEvent('jalwa:open-add-site')); } catch {}
+              }}
+              className="inline-flex items-center bg-[#1D9E75] hover:bg-[#0F6E56] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              data-testid="add-website-first-btn"
+            >
+              Add your website →
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {websitePlatforms.map((p) => (
+              <PlatformCard
+                key={p.name}
+                name={p.name}
+                method={p.method}
+                description={p.description}
+                connected={p.connected}
+                comingSoon={p.comingSoon}
+                onConnect={() => openWebsite(p)}
+                onDisconnect={() => disconnectWebsite(p.name)}
+                testid={`website-card-${p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+              />
+            ))}
+          </div>
+        )}
       </motion.section>
 
       {/* Section B — Social */}
